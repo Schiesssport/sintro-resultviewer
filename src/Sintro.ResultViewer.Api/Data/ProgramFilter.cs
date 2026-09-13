@@ -12,21 +12,15 @@ public sealed record ProgramFilter
     public DateOnly? From { get; init; }
     public DateOnly? To { get; init; }
 
-    /// <summary>
-    /// Include programs the device started but that carry no counting shots: aborted or cleared
-    /// runs. Excluded by default so result lists show results.
-    /// </summary>
+    /// <summary>Include passes with no counting shots (aborted or cleared runs); off by default so lists show results.</summary>
     public bool WithoutResult { get; init; }
 
-    /// <summary>Page size, already clamped by the caller. Required so no second default can drift from SintroOptions.</summary>
+    /// <summary>Page size, already clamped by the caller; required so no second default can drift from SintroOptions.</summary>
     public required int Limit { get; init; }
 
     /// <summary>Opaque keyset cursor from a previous page's <c>nextCursor</c>.</summary>
     public string? Cursor { get; init; }
 
-    /// <summary>
-    /// Oldest-first. This is the sync direction: store the last cursor, ask again with the same
-    /// cursor later, and receive exactly the programs added since. Default is newest-first.
-    /// </summary>
+    /// <summary>Oldest-first, the sync direction; the default is newest-first.</summary>
     public bool Ascending { get; init; }
 }

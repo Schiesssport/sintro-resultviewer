@@ -8,20 +8,13 @@ using Sintro.ResultViewer.Security;
 
 namespace Sintro.ResultViewer.Api.V2;
 
-/// <summary>
-/// Routes for API v2. v1 is the legacy Grapevine service that predates this repository, so this
-/// implementation starts at v2 and the version is always explicit in the path.
-/// </summary>
+/// <summary>API v2 routes. v1 is the legacy Grapevine service, so the version is always explicit in the path.</summary>
 public static class V2Endpoints
 {
     public const string Version = "v2";
     public const string RoutePrefix = "/api/v2";
 
-    /// <summary>
-    /// Tag order is the docs order. Reading order is: what is happening now, then the results and
-    /// who shot them, then reference data, then operations. The numeric prefix is what the docs
-    /// page sorts on, so the order is declared rather than incidentally alphabetical.
-    /// </summary>
+    // The numeric prefix is what the docs page sorts on: what is happening now, results, reference data, operations.
     public const string TagLive = "1 · Live";
     public const string TagResults = "2 · Resultate";
     public const string TagReference = "3 · Stammdaten";
@@ -31,11 +24,11 @@ public static class V2Endpoints
         Collection endpoints are cursor-paged, never offset-paged: the device inserts while you
         read and prunes old rows from the other end, so an offset would skip or repeat records.
 
-        Paging — read `nextCursor` from the response and pass it back as `cursor`. A null
-        `nextCursor` means you reached the end. There is deliberately no total: counting the whole
-        set costs a second scan per request and grows with the table, and paging never needs it.
-        A cursor that was not issued by this API, or was issued for the other sort order, is
-        answered with 400 `invalid_cursor` rather than silently restarting from page one.
+        Paging — read `nextCursor` from the response and pass it back as `cursor`; null means you
+        reached the end. There is deliberately no total: counting the whole set costs a second
+        scan per request and grows with the table, and paging never needs it. A cursor this API
+        did not issue, or one issued for the other sort order, is answered with 400
+        `invalid_cursor` rather than silently restarting from page one.
 
         Syncing — request `order=asc` and keep the last `nextCursor` you received. Passing it
         again later returns exactly the records added since, and nothing else. This is the
@@ -46,11 +39,15 @@ public static class V2Endpoints
 
     public static void MapV2(this WebApplication app)
     {
-        var api = app.MapGroup(RoutePrefix)
-                     .AddEndpointFilter(RejectInvalidCursor);
+        var api = app.MapGroup(RoutePrefix).AddEndpointFilter(RejectInvalidCursor);
 
-        // -- 1 · Live -------------------------------------------------------------
+        MapLive(api);
+        MapResults(api);
+        MapReference(api);
+        MapOperations(api);
+    }
 
+    private static void MapLive(RouteGroupBuilder api) =>
         api.MapGet("/live", Live)
            .WithTags(TagLive)
            .WithSummary("Lane state now — and the WebSocket for push updates")
@@ -65,8 +62,8 @@ public static class V2Endpoints
                 upgrade — and only the upgrade — accepts the token as ?token=<token>.
                 """);
 
-        // -- 2 · Resultate --------------------------------------------------------
-
+    private static void MapResults(RouteGroupBuilder api)
+    {
         api.MapGet("/programs", ListPrograms)
            .WithTags(TagResults)
            .WithSummary("Programs (Passen), newest first")
@@ -130,9 +127,10 @@ public static class V2Endpoints
                 programs is a cursor page like /programs, newest first, and includes passes with
                 no shots. Page it the same way, with cursor and limit.
                 """);
+    }
 
-        // -- 3 · Stammdaten -------------------------------------------------------
-
+    private static void MapReference(RouteGroupBuilder api)
+    {
         api.MapGet("/clubs", ListClubs)
            .WithTags(TagReference)
            .WithSummary("Swiss club register as held by the device")
@@ -147,9 +145,9 @@ public static class V2Endpoints
                 using the pairs listed here. lastStartedAt is when a program of that pair was
                 last started.
                 """);
+    }
 
-        // -- 4 · Betrieb ----------------------------------------------------------
-
+    private static void MapOperations(RouteGroupBuilder api) =>
         api.MapGet("/health", Health)
            .WithTags(TagOperations)
            .WithSummary("Database reachability")
@@ -159,7 +157,6 @@ public static class V2Endpoints
                 network ranges the server is configured to accept. Answers 503 with the same body
                 shape as every other error when the database cannot be reached.
                 """);
-    }
 
     // -- Handlers -----------------------------------------------------------------
 
@@ -173,13 +170,10 @@ public static class V2Endpoints
         if (!context.WebSockets.IsWebSocketRequest)
             return TypedResults.Ok(await repository.ListLanesAsync(token));
 
-        // Read the snapshot before upgrading: a database failure here is still an ordinary HTTP
-        // error the client can log. After the upgrade there is no response left to fail with.
+        // Read before upgrading: after the upgrade there is no HTTP response left to fail with.
         var snapshot = new { type = "lanes", lanes = await repository.ListLanesAsync(token) };
 
-        // RequestAborted fires only once Kestrel gives up draining connections, which for an
-        // idle socket is the whole shutdown timeout. Stopping the application must end the
-        // session at once, or Ctrl+C sits for half a minute whenever a display is connected.
+        // RequestAborted fires only after Kestrel's shutdown drain; without ApplicationStopping, Ctrl+C waits on every idle display.
         using var session = CancellationTokenSource.CreateLinkedTokenSource(token, lifetime.ApplicationStopping);
         using var socket = await context.WebSockets.AcceptWebSocketAsync();
 
@@ -205,15 +199,10 @@ public static class V2Endpoints
         [FromQuery] string? cursor = null,
         [FromQuery] int? limit = null)
     {
-        if (!TryParseState(state, out var parsedState, out var stateError))
-            return TypedResults.BadRequest(stateError!);
+        if (ParseState(state, out var parsedState) is { } stateError) return TypedResults.BadRequest(stateError);
+        if (ParseOrder(order, out var ascending) is { } orderError) return TypedResults.BadRequest(orderError);
 
-        if (!TryParseOrder(order, out var ascending, out var orderError))
-            return TypedResults.BadRequest(orderError!);
-
-        // Today-only unless the caller asks for a window. One consistent rule beats
-        // special-casing the viewer; a pass that runs past midnight is still filed under the day
-        // it started, which is how the range thinks of it too.
+        // Today only unless a window is given; a pass that runs past midnight is filed under the day it started.
         var explicitWindow = from is not null || to is not null;
 
         var filter = new ProgramFilter
@@ -263,15 +252,12 @@ public static class V2Endpoints
         [FromQuery] string? cursor = null,
         [FromQuery] int? limit = null)
     {
-        if (!TryParseOrder(order, out var ascending, out var orderError))
-            return TypedResults.BadRequest(orderError!);
+        if (ParseOrder(order, out var ascending) is { } orderError) return TypedResults.BadRequest(orderError);
 
         var shooters = await repository.FindShootersByLicenseAsync(license, token);
         if (shooters.Count == 0)
             return TypedResults.NotFound(new ApiError("not_found", "No shooter carries this licence number."));
 
-        // Paged like every other collection. A shooter with more passes than one page used to
-        // simply lose the older ones, with nothing in the response to say so.
         var programs = await repository.ListProgramsAsync(
             new ProgramFilter
             {
@@ -319,10 +305,9 @@ public static class V2Endpoints
                 statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 
-    /// <summary>
-    /// Cursors are decoded where their shape is known — in the repository — so the 400 for a bad
-    /// one is produced here for every collection at once instead of in each handler.
-    /// </summary>
+    // -- Helpers ------------------------------------------------------------------
+
+    /// <summary>Cursors are decoded in the repository, where their shape is known, so the 400 for a bad one is produced here for every collection at once.</summary>
     private static async ValueTask<object?> RejectInvalidCursor(
         EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
@@ -339,47 +324,36 @@ public static class V2Endpoints
     private static int ClampLimit(int? limit, SintroOptions settings) =>
         Math.Clamp(limit ?? settings.DefaultPageSize, 1, settings.MaxPageSize);
 
-    /// <summary>
-    /// A misspelled filter is rejected, never ignored.
-    ///
-    /// Silently dropping ?state=finishd returned *everything* — the opposite of what the caller
-    /// asked for. For software importing results that means quietly taking in passes it meant to
-    /// exclude, and nothing in the response hints at it. A 400 costs one obvious error instead.
-    /// </summary>
-    private static bool TryParseState(string? state, out ProgramState? parsed, out ApiError? error)
+    // Both return the 400 body for an unrecognised value and null when accepted: a misspelled filter is rejected,
+    // never ignored, because ?state=finishd returning everything is the opposite of what was asked for.
+    private static ApiError? ParseState(string? state, out ProgramState? parsed)
     {
         parsed = null;
-        error = null;
+        if (string.IsNullOrWhiteSpace(state)) return null;
 
-        if (string.IsNullOrWhiteSpace(state)) return true;
-
-        switch (state.Trim().ToLowerInvariant())
+        parsed = state.Trim().ToLowerInvariant() switch
         {
-            case "active": parsed = ProgramState.Active; return true;
-            case "finished": parsed = ProgramState.Finished; return true;
-            case "abandoned": parsed = ProgramState.Abandoned; return true;
-            default:
-                error = new ApiError("invalid_state",
-                    $"Unknown state '{state}'. Expected one of: active, finished, abandoned.");
-                return false;
-        }
+            "active" => ProgramState.Active,
+            "finished" => ProgramState.Finished,
+            "abandoned" => ProgramState.Abandoned,
+            _ => null,
+        };
+
+        return parsed is null
+            ? new ApiError("invalid_state", $"Unknown state '{state}'. Expected one of: active, finished, abandoned.")
+            : null;
     }
 
-    private static bool TryParseOrder(string? order, out bool ascending, out ApiError? error)
+    private static ApiError? ParseOrder(string? order, out bool ascending)
     {
         ascending = false;
-        error = null;
-
-        if (string.IsNullOrWhiteSpace(order)) return true;
+        if (string.IsNullOrWhiteSpace(order)) return null;
 
         switch (order.Trim().ToLowerInvariant())
         {
-            case "asc": ascending = true; return true;
-            case "desc": return true;
-            default:
-                error = new ApiError("invalid_order",
-                    $"Unknown order '{order}'. Expected 'asc' or 'desc'.");
-                return false;
+            case "asc": ascending = true; return null;
+            case "desc": return null;
+            default: return new ApiError("invalid_order", $"Unknown order '{order}'. Expected 'asc' or 'desc'.");
         }
     }
 }

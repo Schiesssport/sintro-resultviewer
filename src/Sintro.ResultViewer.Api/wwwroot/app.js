@@ -1,7 +1,4 @@
-// =============================================================================
-// Sintro Result Viewer — app layer. Owns the DOM; all pure logic lives in core/.
-// No framework, no build step (same approach as OpenRangeOffice).
-// =============================================================================
+// DOM layer of the viewer; all pure logic lives in core/. No framework, no build step.
 
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
 import {
@@ -18,11 +15,7 @@ import {
 import { SintroApi } from './api.js';
 
 const RESULT_LIMIT = 100;
-
-/** How often availability is re-evaluated when no new data arrives. */
 const IDLE_SWEEP_MS = 15_000;
-
-/** Fallback row height before anything has been measured. */
 const ESTIMATED_ROW_HEIGHT = 44;
 
 const api = new SintroApi(window.SINTRO_TOKEN);
@@ -31,8 +24,7 @@ let ticker = tickerConfig(location.search);
 let language = DEFAULT_LANGUAGE;
 let programs = [];
 let lanes = [];
-
-/** What each line last showed, so a result outlives the device clearing the line. */
+// What each line last showed, so a result outlives the device clearing the line.
 let laneMemory = new Map();
 let filterText = '';
 let mode = 'dashboard';
@@ -41,17 +33,15 @@ let tickerItems = [];
 let tickerKey = null;
 let liveStatus = 'connecting';
 let health = null;
-
-/** Sequence number of the latest result request; older responses are discarded. */
 let resultsRequest = 0;
 
 const t = (key, params) => translate(TRANSLATIONS[language], key, params);
 const el = (id) => document.getElementById(id);
 
-/** Read from the markup so the colspan of a message row cannot drift from the <colgroup>. */
+// Read from the markup so a message row's colspan cannot drift from the <colgroup>.
 const resultColumns = () => document.querySelectorAll('.results colgroup col').length;
 
-/** Wall clock, shifted onto the data's day when a ReferenceDate is pinning development. */
+// Wall clock shifted onto the data's day when a ReferenceDate pins development.
 const now = () => Date.now() + clockOffsetMs;
 
 // -- Shared cells -------------------------------------------------------------
@@ -79,22 +69,15 @@ const clubCell = (program) => {
     return name ? escapeHtml(name) : '<span class="value-none">–</span>';
 };
 
-/**
- * The direction ring drawn AROUND a shot's ring value: eight wedges, the reported sector
- * filled. Sector 1 is twelve o'clock running clockwise, derived from the stored X/Y data.
- * The number always stays readable in the middle — the ring is context, not a replacement.
- */
+// Eight wedges around the ring value with the reported sector filled; the number stays readable.
 const shotRing = (sector) => {
     const dial = shotDial({ hitSector: sector });
     const { cx, cy } = dial.geometry;
-
     const wedges = dial.wedges.map((wedge) =>
         `<path d="${wedge.ringPath}" class="${wedge.filled ? 'ring-wedge is-hit' : 'ring-wedge'}"/>`)
         .join('');
 
-    // A true circle, never stretched: the dial is a target face, and an ellipse reads wrong.
-    const centreClass = dial.isCentre ? ' is-centre' : '';
-    return `<svg class="shot-ring${centreClass}" viewBox="0 0 ${cx * 2} ${cy * 2}" aria-hidden="true">${wedges}</svg>`;
+    return `<svg class="shot-ring${dial.isCentre ? ' is-centre' : ''}" viewBox="0 0 ${cx * 2} ${cy * 2}" aria-hidden="true">${wedges}</svg>`;
 };
 
 const shotHtml = (shot, withRing) => {
@@ -104,34 +87,31 @@ const shotHtml = (shot, withRing) => {
     return `<span class="shot${withRing ? ' is-ringed' : ''}">${ring}${value}</span>`;
 };
 
-/** One chip per series: [A10 | 7 6 0 6 | 96]. A chip never breaks internally. */
-const shotGroupsCell = (program, { withRings = false } = {}) => {
-    const groups = shotGroups(program);
-    if (groups.length === 0) return '';
-
-    return `<div class="shot-groups">${groups.map((group) => `
+const shotGroupChip = (group, withRings) => `
         <span class="shot-group" title="${escapeHtml(t('series.subtotal'))} ${group.subtotal}">
             <span class="shot-group-code">${escapeHtml(group.code)}</span>
             <span class="shot-group-values">${group.shots.map((shot) => shotHtml(shot, withRings)).join('')}</span>
             ${group.bestFineValue === null ? '' :
                 `<span class="shot-group-fine" title="${escapeHtml(t('series.bestFine'))}">${group.bestFineValue}</span>`}
-        </span>`).join('')}</div>`;
+        </span>`;
+
+// One chip per series: [A10 | 7 6 0 6 | 96].
+const shotGroupsCell = (program, { withRings = false } = {}) => {
+    const groups = shotGroups(program);
+    if (groups.length === 0) return '';
+
+    return `<div class="shot-groups">${groups.map((group) => shotGroupChip(group, withRings)).join('')}</div>`;
 };
 
 // -- Lines --------------------------------------------------------------------
 
-const lineRow = (lane) => {
-    const program = lane.currentProgram;
-    const available = isLineAvailable(program, now());
-
-    if (!program || available) {
-        return `
+const freeLineRow = (lane) => `
             <tr class="lane-row is-free">
                 <td class="lane-number">${lane.number}</td>
                 <td class="lane-free" colspan="3">${escapeHtml(t('lane.available'))}</td>
             </tr>`;
-    }
 
+const occupiedLineRow = (lane, program) => {
     const { label, html } = shooterName(program);
 
     return `
@@ -146,8 +126,13 @@ const lineRow = (lane) => {
         </tr>`;
 };
 
+const lineRow = (lane) => {
+    const program = lane.currentProgram;
+    return !program || isLineAvailable(program, now()) ? freeLineRow(lane) : occupiedLineRow(lane, program);
+};
+
 const renderLines = () => {
-    // Recomputed on every render, not only on new data: a hold ends purely through time.
+    // A hold ends purely through time, so recompute on every render, not only on new data.
     const held = holdClearedLines(laneMemory, lanes, now());
     laneMemory = held.memory;
 
@@ -155,37 +140,30 @@ const renderLines = () => {
         ? `<tr><td class="message" colspan="4">${escapeHtml(t('msg.noLanes'))}</td></tr>`
         : held.lanes.map(lineRow).join('');
 
-    // The line-only view spreads the lines over the whole screen, so the row height has to
-    // come from how many there are. CSS cannot count rows; this is the one number it needs.
+    // CSS cannot count rows, and the line-only view spreads them over the whole screen.
     document.body.style.setProperty('--lane-count', String(Math.max(1, lanes.length)));
 };
 
 // -- Results ------------------------------------------------------------------
 
-const programCells = (program) => {
+const programRow = (program) => {
     const { label, html } = shooterName(program);
 
-    return `
+    return `<tr>
         <td class="col-club">${clubCell(program)}</td>
         <td class="col-shooter ${label.fallback ? 'shooter-fallback' : 'shooter-name'}">${html}</td>
         <td class="col-total">${totalCell(program)}</td>
         <td class="col-shots">${shotGroupsCell(program)}</td>
-        <td class="col-program">${escapeHtml(programLabel(program))}</td>`;
+        <td class="col-program">${escapeHtml(programLabel(program))}</td></tr>`;
 };
 
-const programRow = (program) => `<tr>${programCells(program)}</tr>`;
+const messageRow = (text) =>
+    `<tr><td colspan="${resultColumns()}" class="message">${escapeHtml(text)}</td></tr>`;
 
 const visibleResults = () => programs.filter(
     (program) => matchesFilter(program, filterText, shooterLabel(program, t).text));
 
-/**
- * How many result rows fit in the space the layout gave the table. Only meaningful in
- * fullscreen, where there is nothing to scroll and the overflow has to go to the ticker.
- *
- * The ticker is not subtracted here: the layout already reserves its strip (--ticker-space),
- * so the box being measured excludes it whether or not one is showing. Reserving it always
- * is what keeps this measurement from depending on its own result.
- */
+// Fullscreen only. The layout always reserves the ticker strip, so the measured box excludes it.
 const measureResultCapacity = () => {
     const scroll = el('results-scroll');
     const head = scroll.querySelector('thead');
@@ -198,20 +176,55 @@ const measureResultCapacity = () => {
     return rowsThatFit(available, rowHeight);
 };
 
-/**
- * A continuously scrolling ticker rather than a row that swaps: it fits far more results,
- * and a moving line is easier to follow than one that jumps.
- *
- * The content is rendered twice and translated by exactly -50%, which makes the loop
- * seamless — the second copy is in the first copy's place at the moment it restarts.
- */
+// Rendered once so a row can be measured, then split and rendered again.
+const renderFullscreenResults = (body, visible) => {
+    body.innerHTML = visible.map(programRow).join('');
+
+    const split = splitForTicker(visible, measureResultCapacity(), ticker.count);
+    body.innerHTML = split.visible.map(programRow).join('');
+
+    return split.ticker;
+};
+
+const renderResults = () => {
+    const visible = visibleResults();
+    const body = el('results-body');
+
+    if (visible.length === 0) {
+        body.innerHTML = messageRow(t('msg.empty'));
+        tickerItems = [];
+    } else if (!layoutFor(mode).fullscreen) {
+        body.innerHTML = visible.map(programRow).join('');
+        tickerItems = [];
+    } else {
+        tickerItems = renderFullscreenResults(body, visible);
+    }
+
+    renderTicker();
+    el('result-count').textContent = t('msg.count', { shown: visible.length });
+};
+
+// -- Ticker -------------------------------------------------------------------
+
+const tickerMarkup = () => {
+    const entries = tickerItems
+        .map((item) => `<span class="ticker-entry">${escapeHtml(tickerEntry(item, t))}</span>`)
+        .join('');
+
+    // The run is doubled and translated by exactly -50%, which makes the loop seamless.
+    return `
+        <div class="ticker-viewport">
+            <div class="ticker-track">
+                <span class="ticker-run">${entries}</span>
+                <span class="ticker-run" aria-hidden="true">${entries}</span>
+            </div>
+        </div>`;
+};
+
+// Rebuilding restarts the marquee, and results reload on every live message: hence the key guard.
 const renderTicker = () => {
     const bar = el('results-ticker');
     const key = tickerContentKey(tickerItems);
-
-    // Rebuilding restarts the CSS animation, and results reload on every live message —
-    // every shot fired anywhere. Without this guard the marquee snaps back to the start
-    // several times a minute. Untouched DOM keeps running undisturbed.
     if (key === tickerKey) return;
     tickerKey = key;
 
@@ -221,31 +234,15 @@ const renderTicker = () => {
         return;
     }
 
-    // When the content genuinely changed, resume at the same point in the loop rather than
-    // jumping to the beginning.
-    const elapsed = document.querySelector('.ticker-track')
-        ?.getAnimations?.()[0]?.currentTime ?? 0;
-
-    const entries = tickerItems
-        .map((item) => `<span class="ticker-entry">${escapeHtml(tickerEntry(item, t))}</span>`)
-        .join('');
+    // Resume at the same point in the loop rather than jumping back to the start.
+    const elapsed = document.querySelector('.ticker-track')?.getAnimations?.()[0]?.currentTime ?? 0;
 
     bar.classList.remove('hidden');
-    bar.innerHTML = `
-        <div class="ticker-viewport">
-            <div class="ticker-track">
-                <span class="ticker-run">${entries}</span>
-                <span class="ticker-run" aria-hidden="true">${entries}</span>
-            </div>
-        </div>`;
-
+    bar.innerHTML = tickerMarkup();
     applyTickerSpeed(elapsed);
 };
 
-/**
- * Speed is set from measurement, not guessed: each entry should stay legible for the
- * configured number of seconds whatever the screen width or the length of the names.
- */
+// Speed comes from measurement, so each entry stays legible for the configured seconds.
 const applyTickerSpeed = (resumeAtMs = 0) => {
     const viewport = document.querySelector('.ticker-viewport');
     const track = document.querySelector('.ticker-track');
@@ -267,32 +264,7 @@ const applyTickerSpeed = (resumeAtMs = 0) => {
     }
 };
 
-const renderResults = () => {
-    const visible = visibleResults();
-    const body = el('results-body');
-
-    if (visible.length === 0) {
-        body.innerHTML = `<tr><td colspan="${resultColumns()}" class="message">${escapeHtml(t('msg.empty'))}</td></tr>`;
-        tickerItems = [];
-        renderTicker();
-    } else if (!layoutFor(mode).fullscreen) {
-        // The office view scrolls its own table, so every row stays reachable.
-        body.innerHTML = visible.map(programRow).join('');
-        tickerItems = [];
-        renderTicker();
-    } else {
-        // Render everything once so a row can be measured, then split and re-render.
-        body.innerHTML = visible.map(programRow).join('');
-
-        const split = splitForTicker(visible, measureResultCapacity(), ticker.count);
-        body.innerHTML = split.visible.map(programRow).join('');
-
-        tickerItems = split.ticker;
-        renderTicker();
-    }
-
-    el('result-count').textContent = t('msg.count', { shown: visible.length });
-};
+// -- Static text --------------------------------------------------------------
 
 const renderStaticText = () => {
     document.documentElement.lang = language;
@@ -311,7 +283,6 @@ const renderStaticText = () => {
         node.setAttribute('aria-label', t(node.dataset.i18nAriaLabel));
     }
 
-    // Texts that are set from state rather than from a key in the markup.
     liveState(liveStatus);
     showExposureWarning();
 };
@@ -323,15 +294,12 @@ const renderAll = () => {
 
 // -- Data ---------------------------------------------------------------------
 
+// Requests overlap on every live message; only the latest may render, or a stale list lands last.
 const loadResults = async () => {
-    // Every live message triggers a reload, so two requests routinely overlap. Only the most
-    // recent may render: a slow older response landing last would put a stale list — or
-    // today's list over a date the operator just picked — on screen until the next message.
     const request = ++resultsRequest;
 
     try {
-        // Finished only: a pass still being shot appears on its line above, never twice.
-        // The API already returns newest first, so no client-side sorting is needed.
+        // Finished only: a running pass shows on its line, never twice. The API sends newest first.
         const page = await api.programs({
             date: el('date-input').value || undefined,
             limit: RESULT_LIMIT,
@@ -347,8 +315,7 @@ const loadResults = async () => {
         programs = [];
         tickerItems = [];
         renderTicker();
-        el('results-body').innerHTML =
-            `<tr><td colspan="${resultColumns()}" class="message">${escapeHtml(t('msg.error', { detail: error.message }))}</td></tr>`;
+        el('results-body').innerHTML = messageRow(t('msg.error', { detail: error.message }));
         el('result-count').textContent = '';
     }
 };
@@ -399,34 +366,30 @@ const applyMode = (next) => {
     renderAll();
 };
 
-const goTo = (next, { replace = false, query = location.search } = {}) => {
-    const url = pathForMode(next) + query;
-    if (replace) history.replaceState({}, '', url); else history.pushState({}, '', url);
-
-    // The display settings live in the URL, so navigating re-reads them.
+// The display settings live in the URL, so every navigation re-reads them.
+const applyRoute = (next, query) => {
     ticker = tickerConfig(query);
     tickerKey = null;
-
     applyMode(next);
 };
 
-/**
- * The settings the dialog currently shows, as the display will actually apply them — clamped
- * and whole — so the URL beside each mode is exactly what that display gets.
- */
+const goTo = (next, query = location.search) => {
+    history.pushState({}, '', pathForMode(next) + query);
+    applyRoute(next, query);
+};
+
+// -- Fullscreen picker --------------------------------------------------------
+
+// Clamped and whole, so the URL beside each mode is exactly what that display gets.
 const pickerTicker = () => normaliseTickerSettings({
     seconds: el('ticker-seconds-input').value,
     count: el('ticker-count-input').value,
 });
 
-// Always spelled out in the URL, so what an operator copies is exactly what the display gets.
 const absoluteUrlFor = (target) =>
     new URL(pathForMode(target) + tickerQuery(pickerTicker()), location.origin).href;
 
-/**
- * The picker exists because a wall display is usually a *different* screen: opening the view
- * here is only half of it, so every mode also offers its URL for pasting into the TV browser.
- */
+// A wall display is usually another screen, so every mode also offers its URL for pasting.
 const renderFullscreenModes = () => {
     el('fullscreen-modes').innerHTML = FULLSCREEN_MODES.map((target) => `
         <div class="picker-item">
@@ -449,11 +412,10 @@ const openFullscreenPicker = () => {
 const showFullscreen = async (target) => {
     const query = tickerQuery(pickerTicker());
     el('fullscreen-dialog').close();
-    goTo(target, { query });
+    goTo(target, query);
 
     try {
-        // Needs a user gesture, so this only works from the picker — opening a /fullscreen/*
-        // URL directly still strips the chrome, which is what a TV actually needs.
+        // Needs a user gesture; a /fullscreen/* URL opened directly still drops the chrome.
         await document.documentElement.requestFullscreen();
     } catch {
         // Denied or unsupported; the chrome-less layout stands on its own.
@@ -461,13 +423,10 @@ const showFullscreen = async (target) => {
 };
 
 const copyFullscreenUrl = async (target, button) => {
-    const url = absoluteUrlFor(target);
-
     try {
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(absoluteUrlFor(target));
     } catch {
-        // Clipboard access needs a secure context; on plain http the operator can still
-        // select the URL shown beside the button.
+        // Clipboard needs a secure context; on plain http the URL beside the button is still selectable.
         button.textContent = t('fullscreen.copyFailed');
         return;
     }
@@ -483,14 +442,23 @@ const exitFullscreen = async () => {
 
 // -- Wiring -------------------------------------------------------------------
 
-const attachHandlers = () => {
+const attachToolbarHandlers = () => {
     el('filter-input').addEventListener('input', (event) => {
         filterText = event.target.value;
         renderResults();
     });
-
     el('date-input').addEventListener('change', loadResults);
     el('reload-button').addEventListener('click', loadResults);
+
+    el('language-select').addEventListener('change', (event) => {
+        language = event.target.value;
+        tickerKey = null;   // anonymous ticker entries are language-dependent, the key is id-based
+        renderStaticText();
+        renderAll();
+    });
+};
+
+const attachFullscreenHandlers = () => {
     el('fullscreen-button').addEventListener('click', openFullscreenPicker);
     el('fullscreen-exit').addEventListener('click', exitFullscreen);
     el('fullscreen-dialog-close').addEventListener('click', () => el('fullscreen-dialog').close());
@@ -507,20 +475,18 @@ const attachHandlers = () => {
         if (copy) copyFullscreenUrl(copy.dataset.copyMode, copy);
     });
 
-    window.addEventListener('popstate', () => {
-        ticker = tickerConfig(location.search);
-        tickerKey = null;
-        applyMode(parseViewMode(location.pathname));
-    });
-
     // Leaving browser fullscreen with Esc bypasses the button, so follow its state back.
     document.addEventListener('fullscreenchange', () => {
         if (!document.fullscreenElement && layoutFor(mode).fullscreen) exitFullscreen();
     });
+};
 
-    // A resize changes both how many rows fit and how fast the ticker must run. Coalesced to
-    // one re-render per frame: a drag fires dozens of events, each of which would rebuild
-    // the whole table.
+const attachWindowHandlers = () => {
+    window.addEventListener('popstate', () => {
+        applyRoute(parseViewMode(location.pathname), location.search);
+    });
+
+    // A drag fires dozens of resize events; one re-render per frame is enough.
     let resizeFrame = 0;
     window.addEventListener('resize', () => {
         if (resizeFrame) return;
@@ -531,24 +497,12 @@ const attachHandlers = () => {
             applyTickerSpeed();
         });
     });
-
-    el('language-select').addEventListener('change', (event) => {
-        language = event.target.value;
-        // Anonymous ticker entries ("Linie 3 · 20:45") are language-dependent, and the ticker
-        // key is id-based, so force one rebuild.
-        tickerKey = null;
-        renderStaticText();
-        renderAll();
-    });
 };
 
-const start = async () => {
-    renderStaticText();
-    attachHandlers();
-    applyMode(parseViewMode(location.pathname));
+// -- Start --------------------------------------------------------------------
 
-    // Ask the API which day it treats as today, so the date box agrees with the today-only
-    // default and idle detection is measured against the data's day, not the wall clock.
+// The API says which day is "today", so the date box and idle detection follow the data's day.
+const syncClock = async () => {
     try {
         health = await api.health();
         el('date-input').value = health.today;
@@ -556,23 +510,31 @@ const start = async () => {
     } catch {
         el('date-input').value = new Date().toISOString().slice(0, 10);
     }
+};
 
+// Lines arrive over the feed; results are re-fetched because a finished pass moves into the list.
+const openLiveFeed = () => api.openLive({
+    onMessage: (payload) => {
+        if (payload?.type === 'lanes') applyLanes(payload.lanes);
+        loadResults();
+    },
+    onStateChange: liveState,
+});
+
+const start = async () => {
+    renderStaticText();
+    attachToolbarHandlers();
+    attachFullscreenHandlers();
+    attachWindowHandlers();
+    applyMode(parseViewMode(location.pathname));
+
+    await syncClock();
     await Promise.all([loadLanes(), loadResults()]);
     showExposureWarning();
 
-    // A line frees up purely through the passage of time, so re-render on a slow sweep
-    // even when the device sends nothing.
+    // A line frees up purely through time, so sweep even when the device sends nothing.
     setInterval(renderLines, IDLE_SWEEP_MS);
-
-    // The live feed carries line state directly; results are re-fetched too because a
-    // finished pass leaves the lines and joins the list below.
-    api.openLive({
-        onMessage: (payload) => {
-            if (payload?.type === 'lanes') applyLanes(payload.lanes);
-            loadResults();
-        },
-        onStateChange: liveState,
-    });
+    openLiveFeed();
 };
 
 start();

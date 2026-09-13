@@ -36,7 +36,6 @@ public class ScoreCalculatorTests
 
         Assert.Equal(2, score.Series.Count);
         Assert.Equal(34, score.Total!.Value);
-        Assert.Equal(4, score.Total.ShotCount);
         Assert.Equal(10, score.Total.Valuation);
         Assert.Null(score.TotalUnavailable);
         Assert.Equal([8, 9, 10, 7], score.ShotValues);
@@ -45,8 +44,7 @@ public class ScoreCalculatorTests
     [Fact]
     public void mixedValuation_yieldsNoTotalButKeepsSubtotals()
     {
-        // The device can switch target and valuation mid-pass, and demo programs ship that
-        // do exactly this: adding a 5er series to a 10er one would be meaningless.
+        // The device can switch valuation mid-pass; adding a 5er series to a 10er one is meaningless.
         var shots = new[] { Shot(1, 1, 5, 1), Shot(2, 2, 9, 2) };
         var targets = new[] { Target(1, 5), Target(2, 10) };
 
@@ -71,7 +69,6 @@ public class ScoreCalculatorTests
     [Fact]
     public void duplicateTargetInfo_takesTheHighestId()
     {
-        // (program, series) pairs can carry duplicate rows; the latest write is current.
         var score = Calculate(
             [Shot(1, 1, 9, 1)],
             [Target(1, 5, id: 10), Target(1, 10, id: 42)]);
@@ -82,7 +79,7 @@ public class ScoreCalculatorTests
     [Fact]
     public void markerRows_areNotShots()
     {
-        // ShotNr 9999 / TotalType 7 is a synthetic end-of-program record.
+        // ShotNr 9999 / TotalType 7 is the synthetic end-of-program record.
         var score = Calculate(
             [Shot(1, 1, 9, 1), Shot(2, 9999, 0, 0, totalType: 7, hitPosition: 255, shotTime: null)],
             [Target(1, 10)]);
@@ -123,7 +120,6 @@ public class ScoreCalculatorTests
         Assert.Equal(2, sighting.ShotCount);
         Assert.Equal(5, sighting.Subtotal);
 
-        // The sighting series must not drag its 5er valuation into the total.
         Assert.Equal(19, score.Total!.Value);
         Assert.Equal(10, score.Total.Valuation);
         Assert.Equal(2, score.ShotCount);
@@ -132,8 +128,7 @@ public class ScoreCalculatorTests
     [Fact]
     public void countingShotsInGroupZero_areNotMistakenForSighting()
     {
-        // Counting shots do occur in ShotGroup 0, so ShotType is what identifies a
-        // sighting shot — grouping on ShotGroup 0 would silently discard them.
+        // ShotType identifies a sighting shot; grouping on ShotGroup 0 would silently discard these.
         var score = Calculate([Shot(1, 1, 9, 0, shotType: 1)], [Target(0, 10)]);
 
         Assert.Empty(score.Sighting);
@@ -144,7 +139,6 @@ public class ScoreCalculatorTests
     [Fact]
     public void sightingShotsOutsideGroupZero_areStillSighting()
     {
-        // The converse case: sighting shots also occur in higher groups.
         var score = Calculate(
             [Shot(1, 1, 3, 4, shotType: 0), Shot(2, 1, 9, 5, shotType: 1)],
             [Target(4, 5), Target(5, 10)]);
@@ -157,8 +151,7 @@ public class ScoreCalculatorTests
     [Fact]
     public void sightingShotsInSeveralGroups_stayOneSeriesPerGroup()
     {
-        // Merging them would add a 5er group to a 10er one — the very sum Total refuses to
-        // make — and would price every shot with the first group's scale.
+        // Merging them would add a 5er group to a 10er one, the very sum Total refuses to make.
         var shots = new[]
         {
             Shot(1, 1, 4, 0, shotType: 0),
@@ -178,9 +171,7 @@ public class ScoreCalculatorTests
     [Fact]
     public void theLastRealShotCarriesTotalTypeSevenAndStillCounts()
     {
-        // Measured: the final shot of a pass is flagged TotalType 7 just like the marker row
-        // that follows it. Only ShotNr 9999 identifies the synthetic row; filtering on the
-        // flag would drop every last shot.
+        // Only ShotNr 9999 identifies the marker; filtering on TotalType 7 would drop every last shot.
         var score = Calculate(
             [Shot(1, 1, 9, 1), Shot(2, 2, 8, 1, totalType: 7), Shot(3, 9999, 0, 1, totalType: 7)],
             [Target(1, 10)]);
@@ -192,8 +183,7 @@ public class ScoreCalculatorTests
     [Fact]
     public void unknownValuationWinsOverMixedWhenBothApply()
     {
-        // A series with no scale at all is the more fundamental problem; a client that sees
-        // mixedValuation would look for the second scale and not find it.
+        // A client seeing mixedValuation would look for the second scale and not find it.
         var score = Calculate(
             [Shot(1, 1, 5, 1), Shot(2, 1, 9, 2), Shot(3, 1, 7, 3)],
             [Target(1, 5), Target(2, 10)]);
@@ -261,10 +251,10 @@ public class ScoreCalculatorTests
     }
 
     [Theory]
-    [InlineData(0, 10, "A10")]   // A target, 10er scale
+    [InlineData(0, 10, "A10")]
     [InlineData(0, 5, "A5")]
     [InlineData(0, 100, "A100")]
-    [InlineData(1, 4, "B4")]     // B target, 4er scale
+    [InlineData(1, 4, "B4")]
     [InlineData(1, 100, "B100")]
     public void targetCodeCombinesTheTargetLetterAndTheRingScale(int targetType, int valuation, string expected)
     {
@@ -276,7 +266,6 @@ public class ScoreCalculatorTests
     [Fact]
     public void theSauSilhouetteIsItsOwnTarget()
     {
-        // TargetType 3 is the Sau silhouette.
         var score = Calculate([Shot(1, 1, 9, 1)], [Target(1, 10, targetType: 3)]);
         Assert.Equal("S10", score.Series[0].TargetCode);
     }

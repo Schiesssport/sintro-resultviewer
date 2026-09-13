@@ -62,8 +62,7 @@ describe('isLineAvailable', () => {
     });
 
     test('a program loaded but not yet started is occupied, not free', () => {
-        // The shooter is setting up. Freeing the line here would flicker it away
-        // the moment it was assigned.
+        // The shooter is setting up; freeing the line would flicker it away on assignment.
         assert.equal(isLineAvailable(program({ series: [], sighting: [] }), NOW), false);
     });
 
@@ -92,9 +91,7 @@ describe('isLineAvailable', () => {
     });
 
     test('a resumed program reclaims its line, carrying everything already shot', () => {
-        // The weather-break case. Availability is derived from the data every time rather
-        // than latched, so a new shot simply makes the line occupied again — there is no
-        // expiry to undo and no state to reset.
+        // The weather-break case: derived from the data, so a new shot simply re-occupies the line.
         const before = program({ series: [{ shots: [shot('2026-07-08T18:00:00+02:00')] }] });
         assert.equal(isLineAvailable(before, NOW), true);
 

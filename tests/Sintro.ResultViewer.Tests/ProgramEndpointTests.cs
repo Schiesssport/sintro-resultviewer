@@ -6,14 +6,7 @@ using Sintro.ResultViewer.Domain;
 
 namespace Sintro.ResultViewer.Tests;
 
-/// <summary>
-/// Runs against whatever device export is loaded in the dev database.
-///
-/// Deliberately asserts invariants rather than counts: exports differ per installation — number
-/// of lines, programs shot, shooters registered — so a hard-coded total would only ever be true
-/// for one club, and would tell a contributor with their own export that the code is broken when
-/// it is not. Reference values are read from the API at run time.
-/// </summary>
+/// <summary>Runs against whatever export is loaded and asserts invariants, never counts: exports differ per installation, so reference values are read from the API at run time.</summary>
 [Collection(ApiCollection.Name)]
 public class ProgramEndpointTests(ApiFixture fixture)
 {
@@ -46,7 +39,6 @@ public class ProgramEndpointTests(ApiFixture fixture)
 
         Assert.True(everything.Items.Count >= withResult.Items.Count);
 
-        // Whatever the extra ones are, they are exactly the ones with nothing shot.
         var extra = everything.Items.Select(program => program.Id)
             .Except(withResult.Items.Select(program => program.Id))
             .ToHashSet();
@@ -58,10 +50,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task theThreeStateFiltersPartitionTheList()
     {
-        // Every pass is in exactly one state, and each filter returns exactly that state.
-        // A two-state model failed here: passes with no end total that are no longer on a line
-        // are neither active nor finished, and reporting them as finished made an item's own
-        // state disagree with ?state=finished.
+        // The third state exists because a pass off the line with no end total is neither active nor finished.
         var everything = await AllProgramsAsync();
 
         var byState = new Dictionary<ProgramState, List<int>>();
@@ -128,9 +117,6 @@ public class ProgramEndpointTests(ApiFixture fixture)
         Assert.All(scored, program =>
         {
             Assert.Equal(program.Series.Sum(series => series.Subtotal), program.Total!.Value);
-            Assert.Equal(program.Series.Sum(series => series.ShotCount), program.Total.ShotCount);
-
-            // One valuation throughout, or there would be no total at all.
             Assert.Single(program.Series.Select(series => series.Valuation).Distinct());
         });
     }
@@ -146,7 +132,6 @@ public class ProgramEndpointTests(ApiFixture fixture)
                                            .Select(shot => shot.Value).ToList();
 
             Assert.Equal(fromSeries, program.ShotValues);
-            Assert.Equal(string.Join(' ', fromSeries), program.ShotValuesText);
             Assert.Equal(fromSeries.Count, program.ShotCount);
         });
     }
@@ -160,7 +145,6 @@ public class ProgramEndpointTests(ApiFixture fixture)
         Assert.NotEmpty(withSighting);
         Assert.All(withSighting, program =>
         {
-            // Counting shots alone make up the result; the sighting series sit beside it.
             Assert.Equal(program.Series.Sum(series => series.ShotCount), program.ShotCount);
             Assert.All(program.Sighting, series => Assert.True(series.ShotCount > 0));
         });
@@ -184,15 +168,14 @@ public class ProgramEndpointTests(ApiFixture fixture)
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
         var unscored = page.Items.Where(program => program.Total is null).ToList();
 
-        // Every one of these has shots — the default filter guarantees it — so the only honest
-        // reasons are a mixed or an unknown ring scale.
+        // The default filter guarantees shots, so the only honest reasons are a mixed or an unknown ring scale.
         Assert.All(unscored, program => Assert.NotNull(program.TotalUnavailable));
 
         var mixed = unscored
             .Where(program => program.TotalUnavailable == TotalUnavailableReason.MixedValuation)
             .ToList();
 
-        // Only assert the detail if the export happens to contain such a pass.
+        // Asserted only if the export happens to contain such a pass.
         Assert.All(mixed, program =>
             Assert.True(program.Series.Select(series => series.Valuation).Distinct().Count() > 1));
     }
@@ -256,8 +239,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task statesSerializeExactlyAsTheDocsPromiseThem()
     {
-        // The documentation names the states as "active", "finished" and "abandoned" —
-        // the wire must carry those, not the C# enum spellings.
+        // The wire carries "active", "finished" and "abandoned", not the C# enum spellings.
         var raw = await Client().GetStringAsync(
             $"/api/v2/programs?{ApiFixture.WholeRange}&withoutResult=true&limit=200");
 

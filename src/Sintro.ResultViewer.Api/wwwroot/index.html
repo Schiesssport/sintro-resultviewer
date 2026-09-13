@@ -29,7 +29,6 @@
     <div class="card">
         <div id="exposure-warning" class="exposure-warning hidden"></div>
 
-        <!-- Lines: the firing line as it stands right now, always every line. -->
         <section class="section section-lanes" id="section-lanes">
             <h2 class="section-title" data-i18n="section.lanes">Linien</h2>
             <table class="lanes">
@@ -43,13 +42,11 @@
             </table>
         </section>
 
-        <!-- Leaderboard: not built yet, but it has its own fullscreen route already. -->
         <section class="section section-leaderboard hidden" id="section-leaderboard">
             <h2 class="section-title" data-i18n="section.leaderboard">Rangliste</h2>
             <p class="placeholder" data-i18n="leaderboard.placeholder"></p>
         </section>
 
-        <!-- Results: the most recent finished passes. -->
         <section class="section section-results" id="section-results">
             <div class="section-head">
                 <h2 class="section-title" data-i18n="section.results">Letzte Resultate</h2>
@@ -93,8 +90,7 @@
     </footer>
 </div>
 
-<!-- The ticker is pinned to the bottom edge of the screen, so it lives outside the table it
-     reports on rather than inside it as a footer row. See styles.css. -->
+<!-- Pinned to the bottom edge of the screen, so it lives outside the table it reports on. -->
 <div id="results-ticker" class="hidden"></div>
 
 <button id="fullscreen-exit" class="fullscreen-exit hidden" data-i18n-title="aria.exitFullscreen"

@@ -1,8 +1,6 @@
-// =============================================================================
 // Reading the generated OpenAPI document for the docs page. Pure — no DOM.
-// =============================================================================
 
-/** A short type label for a parameter schema: "integer", "string date", "Shot[]", "Club". */
+// A short type label for a parameter schema: "integer", "string date", "Shot[]", "Club".
 export const typeOf = (schema) => {
     if (!schema) return '';
     if (schema.type === 'array') return `${typeOf(schema.items)}[]`;
@@ -10,13 +8,7 @@ export const typeOf = (schema) => {
     return [schema.type, schema.format].filter(Boolean).join(' ');
 };
 
-/**
- * Groups endpoints by their first OpenAPI tag, in tag order.
- *
- * Tags are numbered ("1 · Live", "2 · Resultate") so the reading order is the one the API
- * author declared. The sort is numeric-aware: a plain string compare would file "10 · …"
- * before "2 · …" the day a tenth group appears.
- */
+// Tags are numbered ("1 · Live"); a plain string compare would file "10 · …" before "2 · …".
 export const groupByTag = (spec) => {
     const groups = new Map();
 
@@ -32,12 +24,7 @@ export const groupByTag = (spec) => {
         .sort(([left], [right]) => left.localeCompare(right, undefined, { numeric: true }));
 };
 
-/**
- * Whether the docs page may call a URL with the session token attached.
- *
- * The try box sends the bearer token with whatever is typed. Only this origin's API and
- * schema may receive it; a pasted external address must not carry the token off the LAN.
- */
+// The try box sends the bearer token with whatever is typed; it must not leave this origin's API.
 export const isProbeAllowed = (input, origin) => {
     let url;
     try {

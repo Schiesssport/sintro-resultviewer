@@ -1,12 +1,4 @@
-/* =============================================================================
-   Schiesssport Design System — design tokens
-   Shared visual language for Swiss shooting-range tools.
-
-   Drop into your :root and reference everything through the variables —
-   never hard-code a hex again. The system is a light, paper-ground identity.
-
-   Live guide: https://schiesssport.github.io/design-system/
-   ============================================================================= */
+/* Schiesssport Design System — design tokens. Live guide: https://schiesssport.github.io/design-system/ */
 
 :root {
     /* Ground & ink */
@@ -48,15 +40,10 @@
     --shadow:       0 10px 40px rgba(0,0,0,.22);  /* modal overlays only */
 }
 
-/* -----------------------------------------------------------------------------
-   Project-local tokens. Not part of the upstream design system: candidates for
-   proposing there, kept here so styles.css still never names a hex directly.
-   ----------------------------------------------------------------------------- */
+/* Project-local tokens, not in the upstream design system; kept here so styles.css never names a hex. */
 :root {
-    --border:        #ddd6c8;  /* card and table edges, a shade below --line on paper */
     --border-strong: #c9c3b4;  /* emphasised edges: table head, dialog frame */
     --row-focus:     #e4ece8;  /* keyboard-focused table row */
     --on-dark:       #ffffff;  /* text and icons on forest/emerald chrome */
     --code-ink:      #e8f0ec;  /* response text on the forest code block */
-    --tab-idle:      #e3dfd3;  /* inactive tab face, a step deeper than paper */
 }

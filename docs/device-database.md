@@ -220,7 +220,7 @@ Target and valuation combine into the notation the sport already uses — `A10`,
 | Column | Notes |
 |---|---|
 | `StartNr` | **The SSV licence number**, not a start number: six digits, zero-padded, non-sequential. A 7–9 digit format is planned, so never assume six. Carries no unique constraint, so a collision is possible and the API reports duplicates rather than guessing |
-| `RFID` | **Deprecated.** Card identification never saw real use; installations share a single all-zero placeholder across many shooters. Registration happens by barcode on the licence number. The viewer surfaces the field but never keys on it, and nothing should be built on it |
+| `RFID` | **Deprecated.** Card identification never saw real use; installations share a single all-zero placeholder across many shooters. Registration happens by barcode on the licence number. The API does not expose it, and nothing should be built on it |
 | `Club.ClubID` | The club number as an integer: `102104133` ↔ `1.02.1.04.133` |
 
 ### `Lanes`

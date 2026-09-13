@@ -17,14 +17,12 @@ public class ClientAddressTests
     [Fact]
     public void withoutTrustedProxies_theSocketPeerDecides()
     {
-        // The default. Anyone able to reach the port could otherwise claim any address.
         Assert.Equal("203.0.113.9", Resolve("203.0.113.9", "10.0.0.5"));
     }
 
     [Fact]
     public void aHeaderFromAnUntrustedPeerIsIgnored()
     {
-        // The peer is not a listed proxy, so its claim about the client carries no weight.
         Assert.Equal("203.0.113.9", Resolve("203.0.113.9", "10.0.0.5", "192.168.1.10/32"));
     }
 
@@ -37,8 +35,7 @@ public class ClientAddressTests
     [Fact]
     public void aChainIsUnwoundOnlyThroughTrustedHops()
     {
-        // client → outer proxy (untrusted) → our proxy. The outer one is where trust stops,
-        // so it is the furthest we can believe.
+        // client → outer proxy (untrusted) → our proxy; trust stops at the outer one.
         Assert.Equal("198.51.100.7",
             Resolve("192.168.1.10", "203.0.113.9, 198.51.100.7", "192.168.1.0/24"));
     }
@@ -60,9 +57,6 @@ public class ClientAddressTests
     [Fact]
     public void aForgedHeaderCannotPromoteAnOutsiderToTheLan()
     {
-        // The whole point: an internet client hitting a forwarded port claims a private
-        // address. Its peer is not a trusted proxy, so the claim is discarded and the gate
-        // still sees a public address.
         Assert.Equal("203.0.113.9",
             Resolve("203.0.113.9", "192.168.1.50", "192.168.1.0/24"));
     }
@@ -77,9 +71,7 @@ public class ClientAddressTests
     [Fact]
     public void aGarbledHopBehindATrustedProxyCannotBeNamed_soNobodyIsLetIn()
     {
-        // The proxy is inside the allowed network by definition. Falling back to its address
-        // would admit anyone who sends "X-Forwarded-For: unknown" through it — nginx appends
-        // the real peer, but the unparseable entry then sits nearest to us. Refuse instead.
+        // Falling back to the proxy's own (allowed) address would admit anyone who sends "X-Forwarded-For: unknown" through it.
         Assert.Null(Resolve("192.168.1.10", "not-an-address", "192.168.1.0/24"));
         Assert.Null(Resolve("192.168.1.10", "203.0.113.9, junk", "192.168.1.0/24"));
     }
@@ -87,7 +79,6 @@ public class ClientAddressTests
     [Fact]
     public void aGarbledHopBeyondAnUntrustedOneIsNeverReached()
     {
-        // Trust stops at 198.51.100.7; whatever it claims about earlier hops is not examined.
         Assert.Equal("198.51.100.7",
             Resolve("192.168.1.10", "junk, 198.51.100.7", "192.168.1.0/24"));
     }
@@ -116,7 +107,6 @@ public class ClientAddressTests
     [Fact]
     public void aMissingPeerCountsAsLoopback()
     {
-        // No remote address means an in-process or Unix-socket transport, both local.
         Assert.Equal("127.0.0.1", Resolve(null, null));
     }
 }

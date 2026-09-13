@@ -7,14 +7,14 @@ using Sintro.ResultViewer.Data;
 
 namespace Sintro.ResultViewer.Tests;
 
-/// <summary>
-/// Boots the real API against the seeded dev database (scripts/db-restore.sh).
-/// "Today" is pinned to the backup's last shooting day so the today-only default has data.
-/// </summary>
+/// <summary>Boots the real API against the seeded dev database, with "today" pinned to the backup's last shooting day.</summary>
 public sealed class ApiFixture : WebApplicationFactory<SintroRepository>
 {
     public const string BackupDate = "2026-07-08";
     public const string Token = "integration-test-token-0123456789";
+
+    /// <summary>A window wide enough to cover any export; tests must not assume a particular shooting day.</summary>
+    public const string WholeRange = "from=2000-01-01&to=2100-12-31";
 
     private static string ConnectionString =>
         Environment.GetEnvironmentVariable("ConnectionStrings__Sintro")
@@ -27,7 +27,7 @@ public sealed class ApiFixture : WebApplicationFactory<SintroRepository>
         builder.UseSetting("Sintro:ReferenceDate", BackupDate);
         builder.UseSetting("Sintro:TimeZone", "Europe/Zurich");
         builder.UseSetting("Sintro:MaxPageSize", "5000");
-        // Keep the lane watcher from polling during tests.
+        // Keeps the lane watcher from polling during tests.
         builder.UseSetting("Sintro:Live:PollMilliseconds", "600000");
     }
 
@@ -41,16 +41,7 @@ public sealed class ApiFixture : WebApplicationFactory<SintroRepository>
     public Task<bool> DatabaseReachableAsync() =>
         Services.GetRequiredService<SintroRepository>().CanReachDatabaseAsync(CancellationToken.None);
 
-    /// <summary>
-    /// A window wide enough to cover any export. Tests must not assume a particular shooting
-    /// day — only the ReferenceDate-pinned default-window test does, and it derives it.
-    /// </summary>
-    public const string WholeRange = "from=2000-01-01&to=2100-12-31";
-
-    /// <summary>
-    /// A licence number taken from the loaded export, so tests never name a real shooter.
-    /// Null when the export has no registered shooters at all.
-    /// </summary>
+    /// <summary>A licence number from the loaded export, so tests never name a real shooter; null when it has none.</summary>
     public async Task<string?> AnyLicenceAsync()
     {
         using var client = CreateAuthorizedClient();
@@ -77,10 +68,7 @@ public sealed class ApiCollection : ICollectionFixture<ApiFixture>
     public const string Name = "api";
 }
 
-/// <summary>
-/// Skips rather than fails when no database is reachable, so `dotnet test` outside the
-/// compose environment still runs the pure unit tests.
-/// </summary>
+/// <summary>Skips rather than fails without a database, so the pure unit tests still run outside compose.</summary>
 public sealed class RequiresDatabaseFactAttribute : FactAttribute
 {
     public RequiresDatabaseFactAttribute()

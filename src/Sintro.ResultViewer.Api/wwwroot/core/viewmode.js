@@ -1,9 +1,4 @@
-// =============================================================================
-// Which view the URL asks for. Pure — parses a pathname, touches no DOM.
-//
-// Fullscreen variants are real routes so a wall display can be pointed straight at one,
-// bookmarked, and driven by the back button.
-// =============================================================================
+// Fullscreen variants are real routes so a wall display can be pointed straight at one. Pure.
 
 export const MODES = {
     dashboard: { fullscreen: false, lanes: true, results: true, leaderboard: false },
@@ -15,38 +10,28 @@ export const MODES = {
 
 export const DEFAULT_FULLSCREEN_MODE = 'live+results';
 
-/** Offered by the picker, in the order an operator is most likely to want them. */
+// Picker order: the one an operator most likely wants comes first.
 export const FULLSCREEN_MODES = ['live+results', 'live', 'results', 'leaderboard'];
-export const FULLSCREEN_PREFIX = '/fullscreen';
+const FULLSCREEN_PREFIX = '/fullscreen';
 
-/** The path for a mode, so links and history entries are built in exactly one place. */
 export const pathForMode = (mode) =>
     mode === 'dashboard' ? '/' : `${FULLSCREEN_PREFIX}/${mode}`;
 
-/**
- * Resolves a pathname to a mode name.
- *
- * A bare /fullscreen keeps working and means live+results, which is what it did before the
- * variants existed; anything unrecognised under /fullscreen falls back to the same rather
- * than showing a blank screen on a TV nobody can reach.
- */
+// decodeURIComponent throws on "%E0", and this runs before anything is on screen.
+const decodeOrEmpty = (raw) => {
+    try {
+        return decodeURIComponent(raw);
+    } catch {
+        return '';
+    }
+};
+
+// Anything unrecognised under /fullscreen falls back to live+results rather than blanking a TV.
 export const parseViewMode = (pathname) => {
     const path = String(pathname ?? '/').replace(/\/+$/, '') || '/';
+    if (path !== FULLSCREEN_PREFIX && !path.startsWith(`${FULLSCREEN_PREFIX}/`)) return 'dashboard';
 
-    if (path !== FULLSCREEN_PREFIX && !path.startsWith(`${FULLSCREEN_PREFIX}/`)) {
-        return 'dashboard';
-    }
-
-    const raw = path.slice(FULLSCREEN_PREFIX.length).replace(/^\//, '');
-
-    // A malformed escape ("/fullscreen/%E0") makes decodeURIComponent throw, and this runs
-    // before anything is on screen — so a typo in a TV's bookmark must not blank the display.
-    let requested;
-    try {
-        requested = decodeURIComponent(raw);
-    } catch {
-        return DEFAULT_FULLSCREEN_MODE;
-    }
+    const requested = decodeOrEmpty(path.slice(FULLSCREEN_PREFIX.length).replace(/^\//, ''));
     if (requested === '') return DEFAULT_FULLSCREEN_MODE;
 
     // "live results" arrives when a "+" is percent-decoded or typed as a space.

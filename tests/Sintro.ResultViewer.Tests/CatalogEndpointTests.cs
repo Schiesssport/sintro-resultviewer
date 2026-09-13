@@ -6,9 +6,7 @@ using Sintro.ResultViewer.Domain;
 
 namespace Sintro.ResultViewer.Tests;
 
-/// <summary>
-/// Like ProgramEndpointTests: invariants only, no counts or names from one club's export.
-/// </summary>
+/// <summary>Like ProgramEndpointTests: invariants only, no counts or names from one club's export.</summary>
 [Collection(ApiCollection.Name)]
 public class CatalogEndpointTests(ApiFixture fixture)
 {
@@ -19,8 +17,6 @@ public class CatalogEndpointTests(ApiFixture fixture)
     {
         var lanes = (await Client().GetFromJsonAsync<List<LaneStatus>>("/api/v2/live", SintroJson.Options))!;
 
-        // How many lines an installation has is site-specific; that they are all listed,
-        // in order, so a display can show the whole firing line, is not.
         Assert.NotEmpty(lanes);
         Assert.Equal(lanes.Select(lane => lane.Number).OrderBy(number => number),
                      lanes.Select(lane => lane.Number));
@@ -39,8 +35,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task idleLinesCarryAnExplicitNullRatherThanAMissingKey()
     {
-        // The docs promise currentProgram: null. Omitting the key instead would force every
-        // client to tell "absent" from "empty" and would contradict the published schema.
+        // Omitting the key would force every client to tell "absent" from "empty" and contradict the published schema.
         var raw = await Client().GetStringAsync("/api/v2/live");
 
         using var document = JsonDocument.Parse(raw);
@@ -71,18 +66,6 @@ public class CatalogEndpointTests(ApiFixture fixture)
             Assert.Matches(@"^\d{6,}$", shooter.License);   // padded to six, never capped
             Assert.False(string.IsNullOrWhiteSpace(shooter.LastName));
         });
-    }
-
-    [RequiresDatabaseFact]
-    public async Task theAllZeroRfidPlaceholderIsReportedAsAbsent()
-    {
-        var page = (await Client().GetFromJsonAsync<CursorPage<Shooter>>(
-            "/api/v2/shooters?limit=500", SintroJson.Options))!;
-
-        // RFID is deprecated and installations share one all-zero placeholder across many
-        // shooters. It must never surface as if it were a real card id.
-        Assert.All(page.Items, shooter =>
-            Assert.False(shooter.Rfid is not null && shooter.Rfid.All(character => character == '0')));
     }
 
     [RequiresDatabaseFact]
@@ -120,8 +103,6 @@ public class CatalogEndpointTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task aShootersPassesArePagedLikeEveryOtherCollection()
     {
-        // They used to be silently capped, so a prolific shooter's older passes simply vanished
-        // with nothing in the response to say so.
         var licence = await fixture.AnyLicenceAsync();
         if (licence is null) return;
 
@@ -148,12 +129,8 @@ public class CatalogEndpointTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task aMisspelledFilterIsRejectedRatherThanIgnored()
     {
-        // Ignoring it returned *everything* — the opposite of what the caller asked for, and
-        // invisible to software importing the result.
-        foreach (var query in new[] { "state=finishd", "state=", "order=ascending" })
+        foreach (var query in new[] { "state=finishd", "order=ascending" })
         {
-            if (query == "state=") continue;   // empty means "no filter", which is fine
-
             var response = await Client().GetAsync($"/api/v2/programs?{query}");
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
@@ -228,8 +205,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task clubNamesArriveWithoutTheRegistersStrayWhitespace()
     {
-        // The register the device ships carries trailing CR characters in its names; the
-        // API must absorb that, not hand it to every client.
+        // The register the device ships carries trailing CR characters in its names.
         var page = (await Client().GetFromJsonAsync<CursorPage<Club>>(
             "/api/v2/clubs?limit=500", SintroJson.Options))!;
 
@@ -253,8 +229,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
 
         Assert.Equal(everything.Items.Count, catalog.Sum(entry => entry.ProgramCount));
 
-        // (number, name) is the unit, because operators rename programs: the same number can
-        // appear under several names, so the catalogue may hold more entries than numbers.
+        // Operators rename programs, so one number can appear under several names.
         Assert.Equal(catalog.Count,
             catalog.Select(entry => (entry.Number, entry.Name)).Distinct().Count());
     }

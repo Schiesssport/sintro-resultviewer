@@ -18,8 +18,7 @@ public class LicenseNumberTests
     [InlineData("123456789", "123456789")]
     public void Normalize_leavesLongerNumbersAlone(string input, string expected)
     {
-        // The planned 7-9 digit licence format must work without a code change,
-        // so normalisation imposes no upper bound.
+        // The planned 7-9 digit licence format must work without a code change.
         Assert.Equal(expected, LicenseNumber.Normalize(input));
     }
 
@@ -30,24 +29,4 @@ public class LicenseNumberTests
     [InlineData("abc")]
     public void Normalize_returnsEmptyWhenThereAreNoDigits(string? input) =>
         Assert.Equal(string.Empty, LicenseNumber.Normalize(input));
-
-    [Fact]
-    public void AreSame_comparesAfterNormalising() =>
-        Assert.True(LicenseNumber.AreSame("12345", "012345"));
-
-    [Fact]
-    public void AreSame_isFalseForEmptyInput()
-    {
-        // Two unidentifiable shooters are not the same shooter.
-        Assert.False(LicenseNumber.AreSame("", ""));
-        Assert.False(LicenseNumber.AreSame(null, "004321"));
-    }
-
-    [Theory]
-    [InlineData("000000000000000", null)]  // the placeholder many shooters share
-    [InlineData("", null)]
-    [InlineData(null, null)]
-    [InlineData("000000000000123", "000000000000123")]
-    public void RfidCard_treatsAllZeroesAsAbsent(string? input, string? expected) =>
-        Assert.Equal(expected, RfidCard.Clean(input));
 }

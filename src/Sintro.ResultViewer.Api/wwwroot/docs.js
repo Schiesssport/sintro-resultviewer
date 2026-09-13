@@ -1,7 +1,4 @@
-// =============================================================================
-// API browser — renders the generated OpenAPI spec and calls endpoints in place.
-// Plain HTML on purpose: no vendored spec-viewer bundle to keep up to date.
-// =============================================================================
+// API browser: renders the OpenAPI spec and calls endpoints in place, with no vendored spec viewer.
 
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
 import { escapeHtml } from './core/format.js';
@@ -12,8 +9,7 @@ const api = new SintroApi(window.SINTRO_TOKEN);
 const language = DEFAULT_LANGUAGE;
 const t = (key, params) => translate(TRANSLATIONS[language], key, params);
 
-/** Blob URLs opened for the JSON viewer, revoked when the page goes away. */
-const openedBlobs = [];
+const openedBlobs = [];   // revoked when the page goes away
 
 const parameterTable = (parameters) => {
     if (!parameters?.length) return `<p class="endpoint-note">${t('docs.noParameters')}</p>`;
@@ -35,11 +31,7 @@ const parameterTable = (parameters) => {
 
 const hasPathParameter = (path) => path.includes('{');
 
-/**
- * The try-URL keeps its {placeholder} rather than stripping it. Stripping produced
- * "/api/v2/programs/", which quietly behaves like the list endpoint and leaves a
- * newcomer wondering why the detail call returns the same thing.
- */
+// The try-URL keeps its {placeholder}: stripped, "/api/v2/programs/" quietly behaves like the list.
 const endpointCard = (path, method, operation, index) => `
     <section class="endpoint">
         <div class="endpoint-head" data-toggle="${index}">
@@ -83,11 +75,35 @@ const showResponse = (index, result) => {
     openButton.dataset.payload = result.body;
 };
 
-/** Hands the response to the browser's own JSON viewer in a new tab. */
+// Hands the response to the browser's own JSON viewer in a new tab.
 const openInBrowser = (payload) => {
     const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
     openedBlobs.push(url);
     window.open(url, '_blank', 'noopener');
+};
+
+const toggleEndpoint = (index) =>
+    document.querySelector(`[data-body="${index}"]`)?.classList.toggle('hidden');
+
+const sendProbe = async (index) => {
+    const url = document.querySelector(`[data-url="${index}"]`).value;
+    const output = document.querySelector(`[data-response="${index}"]`);
+
+    output.classList.remove('hidden');
+    output.textContent = '…';
+
+    showResponse(index, await api.probe(url));
+};
+
+const onEndpointClick = (event) => {
+    const head = event.target.closest('[data-toggle]');
+    if (head) return void toggleEndpoint(head.dataset.toggle);
+
+    const open = event.target.closest('[data-open]');
+    if (open) return void openInBrowser(open.dataset.payload ?? '');
+
+    const send = event.target.closest('[data-send]');
+    if (send) sendProbe(send.dataset.send);
 };
 
 const render = (spec) => {
@@ -101,31 +117,7 @@ const render = (spec) => {
                 endpointCard(path, method, operation, index++)).join('')}
         </section>`).join('');
 
-    container.addEventListener('click', async (event) => {
-        const head = event.target.closest('[data-toggle]');
-        if (head) {
-            document.querySelector(`[data-body="${head.dataset.toggle}"]`)?.classList.toggle('hidden');
-            return;
-        }
-
-        const open = event.target.closest('[data-open]');
-        if (open) {
-            openInBrowser(open.dataset.payload ?? '');
-            return;
-        }
-
-        const send = event.target.closest('[data-send]');
-        if (!send) return;
-
-        const key = send.dataset.send;
-        const url = document.querySelector(`[data-url="${key}"]`).value;
-        const output = document.querySelector(`[data-response="${key}"]`);
-
-        output.classList.remove('hidden');
-        output.textContent = '…';
-
-        showResponse(key, await api.probe(url));
-    });
+    container.addEventListener('click', onEndpointClick);
 };
 
 const start = async () => {

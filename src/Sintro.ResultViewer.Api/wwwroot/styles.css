@@ -1,21 +1,11 @@
-/* =============================================================================
-   Sintro Result Viewer — styles
-   Built on the Schiesssport design system (tokens.css, vendored from
-   github.com/Schiesssport/design-system). Never hard-code a colour here.
-   ============================================================================= */
+/* Sintro Result Viewer — styles on the Schiesssport design system tokens. Never hard-code a colour here. */
 
 @import "tokens.css";
 
 :root {
     --content-max-width: 1600px;
 
-    /* Every box in a shot group is sized for its widest possible value — the 100er
-       valuation scores 0-100 and its target code is "A100". Fixed widths are what make
-       two rows of the same program align column for column.
-
-       The dial is a circle, never an ellipse: it depicts a target face, and stretching it
-       to fit wider numbers reads as a mistake. So it is sized once, for "100", and every
-       shot gets that same circle whatever its value. */
+    /* Every shot box is sized for its widest value ("A100", "100") so rows align; the dial stays a circle. */
     --shot-code-width: 4.2ch;
     --shot-value-width: 3.4ch;
     --shot-fine-width: 3.4ch;
@@ -60,12 +50,6 @@ body {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-}
-
-.app-header .header-date {
-    font-size: 13px;
-    color: color-mix(in srgb, var(--on-dark) 72%, transparent);
-    font-variant-numeric: tabular-nums;
 }
 
 .header-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
@@ -196,26 +180,14 @@ table.results tbody td {
 
 table.results tbody tr:hover td { background: var(--row-hover); }
 
-/* Active passes are pinned on top and marked, not merely sorted first. */
-table.results tbody tr.is-active td {
-    background: var(--row-focus);
-    box-shadow: inset 3px 0 0 var(--ok);
-}
-table.results tbody tr.is-active:hover td { background: var(--row-hover); }
+.col-total { font-variant-numeric: tabular-nums; }
 
-.col-lane, .col-total, .col-license { font-variant-numeric: tabular-nums; }
-
-/* Column widths live on the <colgroup>, never on the cells.
-   With table-layout: fixed the browser takes widths from the FIRST ROW, and that row is
-   routinely a colspan message ("Keine Passen…") or a free line — neither of which contains
-   the cells whose widths matter. A colgroup is read regardless of row content.
-   Schüsse declares no width and so absorbs everything left over. */
+/* Widths live on the <colgroup>: table-layout: fixed reads the first row, often a colspan message row. */
 .cg-club    { width: 17%; }
 .cg-shooter { width: 16%; }
 .cg-total   { width: 84px; }
 .cg-program { width: 20%; }
 
-.col-lane  { text-align: center; }
 .col-total { text-align: right; font-weight: 700; font-size: 15px; }
 
 .col-program, .col-shooter, .col-club { overflow-wrap: anywhere; }
@@ -223,14 +195,12 @@ table.results tbody tr.is-active:hover td { background: var(--row-hover); }
 /* Club and the folded-in time/line are supporting detail, not the result. */
 .col-club { color: var(--ink-soft); }
 .col-program { color: var(--ink-soft); }
-.lanes-table .col-program { color: var(--ink); }
 .value-none { color: var(--disabled); }
 
 .shooter-name { font-weight: 600; }
 
 /* An unidentified shooter is the common case, so it reads as neutral, not broken. */
 .shooter-fallback { color: var(--muted); font-style: italic; }
-.shooter-club { color: var(--label); font-size: 11px; }
 
 .badge {
     display: inline-block;
@@ -241,20 +211,13 @@ table.results tbody tr.is-active:hover td { background: var(--row-hover); }
     padding: 2px 6px;
     border-radius: var(--radius);
 }
-.badge-active { background: var(--ok); color: var(--on-dark); }
-.badge-valuation { background: var(--paper); color: var(--ink-soft); }
-.badge-warn { background: var(--warn-tint); color: var(--warn); }
 .badge-dup { background: var(--danger-tint); color: var(--danger-ink); }
 
 .total-missing { color: var(--warn); font-weight: 600; font-size: 11px; }
 
 /* -- Shot groups ---------------------------------------------------------- */
 
-/* One chip per series. The cell wraps between chips first, so a series that no longer fits
-   beside its neighbours moves to a line of its own whole. Only a series wider than the whole
-   cell — 60-shot programs exist — wraps inside the chip, between shots; the chip's border keeps
-   it readable as one series. Nothing may overflow the cell: the table layout is fixed and an
-   overflowing chip ran under the next column. */
+/* One chip per series; the cell wraps between chips first, only an over-wide series wraps inside. */
 .shot-groups {
     display: flex;
     flex-wrap: wrap;
@@ -308,8 +271,7 @@ table.results tbody tr.is-active:hover td { background: var(--row-hover); }
     line-height: 1;
 }
 
-/* Ringed shots keep a fixed square too — including shots with no reported sector, which
-   draw no ring but must still occupy the same space or the row stops aligning. */
+/* Shots without a reported sector draw no ring but keep the same square, or the row stops aligning. */
 .shot.is-ringed {
     flex-basis: var(--shot-dial-size);
     width: var(--shot-dial-size);
@@ -373,8 +335,7 @@ table.results tbody tr.is-active:hover td { background: var(--row-hover); }
 }
 .app-footer a { color: var(--emerald); }
 
-/* The API docs are a secondary destination, not a peer view of the results —
-   hence a quiet link in the footer rather than a tab. */
+/* The API docs are a secondary destination: a quiet footer link, not a tab. */
 .footer-api-link {
     margin-left: auto;
     text-decoration: none;
@@ -386,8 +347,7 @@ table.results tbody tr.is-active:hover td { background: var(--row-hover); }
 
 /* -- Fullscreen ------------------------------------------------------------ */
 
-/* Everything but the table itself is chrome; fullscreen drops all of it so a
-   projector or spectator screen shows results and nothing else. */
+/* Fullscreen drops every piece of chrome so a spectator screen shows results and nothing else. */
 body.is-fullscreen { padding: 0; }
 body.is-fullscreen [data-chrome] { display: none !important; }
 body.is-fullscreen #ui-wrapper { max-width: none; }
@@ -547,26 +507,6 @@ pre.response {
 }
 pre.response.hidden { display: none; }
 
-.tabs { display: flex; gap: 4px; padding-left: 10px; }
-.tab-btn {
-    border: 1px solid var(--border);
-    background: var(--tab-idle);
-    color: var(--ink-soft);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    padding: 9px 20px;
-    font-weight: 600;
-    font-size: 13px;
-    height: auto;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-}
-.tab-btn.active {
-    background: var(--forest);
-    border-color: var(--forest);
-    color: var(--on-dark);
-}
-
 /* -- Sections -------------------------------------------------------------- */
 
 .section { margin-bottom: 26px; }
@@ -589,11 +529,6 @@ pre.response.hidden { display: none; }
 }
 .section-head .toolbar { flex: 1; margin-bottom: 10px; }
 
-/* An idle lane is normal, not a fault — it reads quiet rather than empty. */
-tr.lane-empty td { background: var(--surface); }
-.lane-idle { color: var(--muted); font-style: italic; }
-
-/* Fullscreen is read from across a room, so the rings and values scale up. */
 /* Fullscreen is read from across a room, so the dial and its value scale up together. */
 body.is-fullscreen {
     --shot-dial-size: 42px;
@@ -602,8 +537,7 @@ body.is-fullscreen {
 
 /* -- Line view -------------------------------------------------------------- */
 
-/* Built for reading at a distance: the name and the running total carry the row, the
-   club and program sit under the name as context, and the series fill the rest. */
+/* Read at a distance: name and running total carry the row, club and program sit under the name. */
 table.lanes {
     width: 100%;
     table-layout: fixed;
@@ -646,8 +580,7 @@ table.lanes tr:last-child td { border-bottom: 0; }
     overflow-wrap: anywhere;
 }
 
-/* The running total is the number a spectator looks for, but it is three digits at most —
-   big enough to read across the room, not so big it starves the shots beside it. */
+/* Three digits at most: big enough to read across the room, not so big it starves the shots beside it. */
 .lane-total {
     text-align: right;
     font-size: 32px;
@@ -657,8 +590,6 @@ table.lanes tr:last-child td { border-bottom: 0; }
     font-variant-numeric: tabular-nums;
     padding-right: 16px;
 }
-
-/* The shots are the content of the row and take everything the colgroup leaves over. */
 
 /* A free line stays listed — the firing line is only complete with its gaps. */
 tr.lane-row.is-free td { background: var(--paper); }
@@ -678,8 +609,7 @@ body.is-fullscreen .lane-free { font-size: 19px; }
 
 /* -- Office view: results scroll inside their own box ----------------------- */
 
-/* The lines must stay visible while the operator scrolls results, so the table scrolls
-   rather than the page. */
+/* The lines must stay visible while the operator scrolls results, so the table scrolls, not the page. */
 body:not(.is-fullscreen) #results-scroll {
     max-height: min(52vh, 620px);
     overflow-y: auto;
@@ -687,11 +617,8 @@ body:not(.is-fullscreen) #results-scroll {
 
 /* -- Fullscreen layout ------------------------------------------------------ */
 
-/* Nothing scrolls on a wall display, so the card owns the viewport height and the
-   results table takes whatever the lines leave over. */
-/* The bottom strip belongs to the ticker overlay. Reserved whether or not there is one to
-   show: a stable box is worth more here than the few pixels an empty strip costs, because it
-   is what the row-capacity measurement is taken against. */
+/* Nothing scrolls on a wall display: the card owns the viewport and results take what the lines leave. */
+/* The ticker strip is reserved even when empty, so the row-capacity measurement has a stable box. */
 body.is-fullscreen { --ticker-space: 54px; }
 
 body.is-fullscreen #ui-wrapper {
@@ -714,9 +641,7 @@ body.is-fullscreen .section-results {
     min-height: 0;
 }
 
-/* Line-only view: nothing else is competing for the screen, so the lines share all of it
-   evenly. Every row gets the same fraction of the table's height rather than sizing to its
-   own content, which would leave free lines short and occupied ones tall. */
+/* Line-only view: rows share the table height evenly instead of sizing to their own content. */
 body[data-mode="live"] .section-lanes {
     flex: 1;
     display: flex;
@@ -745,18 +670,7 @@ body.is-fullscreen table.results tbody td { padding: 11px 12px; }
 
 /* -- Result ticker ---------------------------------------------------------- */
 
-/* The tail of results no screen can show at once, scrolling continuously. One compact line
-   per result instead of a full row, which is what lets it carry sixty of them.
-
-   Pinned to the bottom edge of the viewport rather than rendered as the table's footer row.
-   As a footer it sat wherever the last body row left it, so where it appeared — and whether
-   it appeared at all — depended on the row-capacity measurement being exactly right: one row
-   too many and it was pushed outside the clipped table box and vanished, one too few and it
-   floated above the bottom edge. Fixed to the viewport it is in the same place on every
-   display, whatever the count, and a miscount costs at most a partly shown row.
-
-   The height is reserved (--ticker-space) rather than measured, so results are never laid out
-   underneath it and the capacity measurement has a box that already excludes it. */
+/* The result overflow, fixed to the viewport: as a table footer row it needed an exact row count. */
 #results-ticker {
     position: fixed;
     left: 0;
@@ -786,8 +700,7 @@ body.is-fullscreen table.results tbody td { padding: 11px 12px; }
 
 .ticker-run { display: flex; flex: 0 0 auto; }
 
-/* The bar's own height positions the text; entries add none of their own, so the reserved
-   space and the rendered height cannot drift apart. */
+/* The bar's own height positions the text; entries add none, so reserved and rendered height cannot drift. */
 .ticker-entry {
     display: inline-block;
     white-space: nowrap;
@@ -797,8 +710,7 @@ body.is-fullscreen table.results tbody td { padding: 11px 12px; }
     font-variant-numeric: tabular-nums;
 }
 
-/* Exactly -50%: the track holds the run twice, so the second copy sits where the first
-   started at the moment the animation restarts, and the loop has no seam. */
+/* Exactly -50%: the track holds the run twice, so the second copy sits where the first started — no seam. */
 @keyframes ticker-scroll {
     from { transform: translateX(0); }
     to { transform: translateX(-50%); }
@@ -823,8 +735,7 @@ body.is-fullscreen .ticker-entry { font-size: 19px; }
     padding: 60px 20px;
 }
 
-/* No section titles on a wall display: a table of lines and a table of results are obvious
-   from their own content, and the space is better spent on rows. */
+/* No section titles on a wall display: the tables are obvious from their own content. */
 body.is-fullscreen .section-title { display: none; }
 body.is-fullscreen .section { margin-bottom: 0; }
 
@@ -898,8 +809,7 @@ body.is-fullscreen .section { margin-bottom: 0; }
 .picker-text { flex: 1; min-width: 0; }
 .picker-name { font-size: 14px; font-weight: 600; }
 
-/* The URL is shown, not just copied: on plain http the clipboard is unavailable and the
-   operator has to be able to read it off the screen. */
+/* The URL is shown, not only copied: on plain http the clipboard is unavailable. */
 .picker-url {
     font-family: var(--font-mono);
     font-size: 11px;

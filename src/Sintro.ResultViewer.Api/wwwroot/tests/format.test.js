@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
     escapeHtml, formatTime, shooterLabel, totalDisplay, matchesFilter, laneContext,
-    shotText, shotGroups, programLabel, tickerEntry,
+    shotGroups, programLabel, tickerEntry,
 } from '../core/format.js';
 import { TRANSLATIONS, translate } from '../core/i18n.js';
 
@@ -18,11 +18,11 @@ const program = (overrides = {}) => ({
     state: 'finished',
     shooter: null,
     contestShooterName: null,
-    total: { value: 31, shotCount: 10, valuation: 5 },
+    total: { value: 31, valuation: 5 },
     totalUnavailable: null,
-    shotValuesText: '4 3 4 3 3 5 3 4 2 0',
+    shotValues: [4, 3, 4, 3, 3, 5, 3, 4, 2, 0],
     series: [],
-    sighting: null,
+    sighting: [],
     ...overrides,
 });
 
@@ -53,8 +53,7 @@ describe('escapeHtml', () => {
 
 describe('formatTime', () => {
     test('shows the wall-clock time the API sent', () => {
-        // Not the viewer's local zone: a tablet set to the wrong timezone must
-        // not shift the shooting times shown on the range.
+        // Not the viewer's local zone: a tablet in the wrong timezone must not shift range times.
         assert.equal(formatTime('2026-07-08T20:45:54+02:00'), '20:45');
     });
 
@@ -77,7 +76,7 @@ describe('shooterLabel', () => {
     });
 
     test('falls back to the licence when the name is blank', () => {
-        // The shooter was identified by barcode but the name lookup came back empty.
+        // Identified by barcode, but the name lookup came back empty.
         const label = shooterLabel(program({ shooter: shooter({ firstName: '', lastName: '' }) }), t);
         assert.equal(label.text, 'Lizenz 012345');
         assert.equal(label.fallback, true);
@@ -90,7 +89,7 @@ describe('shooterLabel', () => {
     });
 
     test('falls back to lane and time when nothing identifies the shooter', () => {
-        // The 85% case. The pass must stay identifiable for manual processing.
+        // The common case; the pass must stay identifiable for manual processing.
         const label = shooterLabel(program(), t);
         assert.equal(label.text, 'Linie 6 · 20:45');
         assert.equal(label.fallback, true);
@@ -111,11 +110,10 @@ describe('shooterLabel', () => {
 });
 
 describe('totalDisplay', () => {
-    test('reports the total and its valuation', () => {
+    test('reports the total', () => {
         const display = totalDisplay(program());
         assert.equal(display.hasTotal, true);
         assert.equal(display.value, 31);
-        assert.equal(display.valuation, 5);
     });
 
     test('names mixed valuation as the reason no total exists', () => {
@@ -186,23 +184,6 @@ describe('matchesFilter', () => {
     });
 });
 
-
-describe('shotText', () => {
-    test('a plain shot is just its ring value', () => {
-        assert.equal(shotText({ value: 7, mouche: false }), '7');
-        assert.equal(shotText({ value: 10, mouche: false }), '10');
-        assert.equal(shotText({ value: 0, mouche: false }), '0');
-    });
-
-    test('a mouche shows its plain ring value, never a glyph', () => {
-        assert.equal(shotText({ value: 10, mouche: true }), '10');
-        // On 5er and 4er targets a centre hit scores 5 or 4; a glyph in place of that
-        // single digit read as a zero on the range.
-        assert.equal(shotText({ value: 5, mouche: true }), '5');
-        assert.equal(shotText({ value: 4, mouche: true }), '4');
-    });
-});
-
 describe('shotGroups', () => {
     const withSeries = (series) => program({ series });
 
@@ -227,7 +208,7 @@ describe('shotGroups', () => {
             { index: 2, targetCode: 'A10', subtotal: 8, shots: [{ value: 8 }] },
         ]));
 
-        assert.deepEqual(groups.map((group) => group.index), [1, 2]);
+        assert.deepEqual(groups.map((group) => group.subtotal), [9, 8]);
     });
 
     test('a B target keeps its own code', () => {
@@ -260,25 +241,32 @@ describe('shotGroups', () => {
     });
 });
 
-
 describe('shotGroups shot entries', () => {
-    test('each shot carries its text and the raw sector for the ring', () => {
-        const groups = shotGroups(program({
-            series: [{
-                index: 1, targetCode: 'A10', subtotal: 19, bestFineValue: 96,
-                shots: [
-                    { value: 9, mouche: false, hitSector: 3 },
-                    { value: 10, mouche: true, hitSector: 0 },
-                    { value: 8, mouche: false, hitSector: null },
-                ],
-            }],
-        }));
+    const shotsOf = (shots) => shotGroups(program({
+        series: [{ index: 1, targetCode: 'A10', subtotal: 19, shots }],
+    }))[0].shots;
 
-        assert.deepEqual(groups[0].shots, [
-            { text: '9', sector: 3, mouche: false },
-            { text: '10', sector: 0, mouche: true },
-            { text: '8', sector: null, mouche: false },
+    test('each shot carries its text and the raw sector for the ring', () => {
+        assert.deepEqual(shotsOf([
+            { value: 9, mouche: false, hitSector: 3 },
+            { value: 10, mouche: true, hitSector: 0 },
+            { value: 8, mouche: false, hitSector: null },
+            { value: 0, mouche: false, hitSector: 6 },
+        ]), [
+            { text: '9', sector: 3 },
+            { text: '10', sector: 0 },
+            { text: '8', sector: null },
+            { text: '0', sector: 6 },
         ]);
+    });
+
+    test('a mouche shows its plain ring value, never a glyph', () => {
+        // On 5er and 4er targets a centre hit scores 5 or 4; a glyph in place of that digit read as a zero.
+        const texts = shotsOf([
+            { value: 10, mouche: true }, { value: 5, mouche: true }, { value: 4, mouche: true },
+        ]).map((shot) => shot.text);
+
+        assert.deepEqual(texts, ['10', '5', '4']);
     });
 
     test('a missing hitSector becomes null rather than undefined', () => {

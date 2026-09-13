@@ -23,7 +23,7 @@ public class SintroTimeTests
     [Fact]
     public void parseStartTime_isDayFirstNotMonthFirst()
     {
-        // 08.07 is 8 July. Reading it as 7 August would silently shift results by a month.
+        // Reading 08.07 as 7 August would silently shift results by a month.
         var parsed = SintroTime.ParseStartTime("08.07.2026-20:45:54");
         Assert.Equal(7, parsed!.Value.Month);
         Assert.Equal(8, parsed.Value.Day);
@@ -49,8 +49,7 @@ public class SintroTimeTests
     [Fact]
     public void combineShotTime_toleratesSlightlyEarlierTimes()
     {
-        // A shot logged a few seconds before the recorded start is clock jitter,
-        // not a rollover to the following day.
+        // A shot a few seconds before the recorded start is clock jitter, not a rollover.
         var start = new DateTime(2026, 7, 8, 20, 45, 54);
         Assert.Equal(new DateTime(2026, 7, 8, 20, 45, 50),
             SintroTime.CombineShotTime(start, "20:45:50.00"));
@@ -70,8 +69,7 @@ public class SintroClockTests
     [Fact]
     public void referenceDate_pinsToday()
     {
-        // Without this, the today-only default returns nothing when working from an
-        // old backup and the viewer looks broken.
+        // Without it the today-only default returns nothing when working from an old backup.
         Assert.Equal(new DateOnly(2026, 7, 8), Build("2026-07-08").Today);
     }
 

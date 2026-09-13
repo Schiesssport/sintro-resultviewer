@@ -10,7 +10,7 @@ import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from '../core/i18n.js';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const source = (file) => readFileSync(join(root, file), 'utf8');
 
-/** Every key the markup and the DOM layer name literally. Dynamic keys are listed by hand. */
+// Every key the markup and the DOM layer name literally; dynamic keys are listed by hand.
 const keysInUse = () => {
     const keys = new Set();
     const files = ['app.js', 'docs.js', 'core/format.js', 'index.html', 'docs.html'];
@@ -59,8 +59,7 @@ describe('dictionaries', () => {
     });
 
     test('French covers exactly the same keys as German', () => {
-        // A missing key silently renders as the raw key in the UI, so this is
-        // the check that keeps the two languages honest.
+        // A missing key silently renders as the raw key in the UI.
         const de = Object.keys(TRANSLATIONS.de).sort();
         const fr = Object.keys(TRANSLATIONS.fr).sort();
         assert.deepEqual(fr, de);
@@ -85,16 +84,14 @@ describe('dictionaries', () => {
     });
 
     test('uses "Passe" vocabulary, not OpenRangeOffice\'s "Stich"', () => {
-        // A Sintro program is one pass at the target; a Stich is the competition
-        // a participant registers for. Mixing the words would confuse both tools.
+        // A Stich is the competition a participant registers for, not one pass at the target.
         const german = Object.values(TRANSLATIONS.de).join(' ');
         assert.ok(german.includes('Passe'), 'expected the German UI to say "Passe"');
         assert.ok(!/Stich/.test(german), 'the German UI must not say "Stich"');
     });
 
     test('every key the UI names exists, and every key that exists is named somewhere', () => {
-        // Both directions: a missing key renders as itself on screen, and an orphaned one
-        // is a translation nobody will ever see drift out of date.
+        // A missing key renders as itself on screen; an orphaned one drifts out of date unseen.
         const used = keysInUse();
         const defined = new Set(Object.keys(TRANSLATIONS.de));
 

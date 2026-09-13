@@ -4,7 +4,6 @@ import assert from 'node:assert/strict';
 import {
     tickerConfig, rowsThatFit, splitForTicker, tickerDurationSeconds,
     tickerContentKey, tickerQuery, normaliseTickerSettings,
-    DEFAULT_TICKER_SECONDS, DEFAULT_TICKER_COUNT, MAX_TICKER_COUNT,
 } from '../core/ticker.js';
 
 const items = (count) => Array.from({ length: count }, (_, index) => ({ id: index + 1 }));
@@ -13,8 +12,8 @@ const ids = (list) => list.map((item) => item.id);
 describe('tickerConfig', () => {
     test('defaults to the documented count and reading time', () => {
         const config = tickerConfig('');
-        assert.equal(config.seconds, DEFAULT_TICKER_SECONDS);
-        assert.equal(config.count, DEFAULT_TICKER_COUNT);
+        assert.equal(config.seconds, 20);
+        assert.equal(config.count, 50);
     });
 
     test('reads per-display overrides from the query string', () => {
@@ -25,8 +24,8 @@ describe('tickerConfig', () => {
 
     test('ignores nonsense instead of producing NaN timers', () => {
         const config = tickerConfig('?tickerSeconds=abc&tickerCount=');
-        assert.equal(config.seconds, DEFAULT_TICKER_SECONDS);
-        assert.equal(config.count, DEFAULT_TICKER_COUNT);
+        assert.equal(config.seconds, 20);
+        assert.equal(config.count, 50);
     });
 
     test('clamps values that would freeze or thrash the display', () => {
@@ -105,14 +104,14 @@ describe('splitForTicker', () => {
 
 describe('normaliseTickerSettings', () => {
     test('a cleared count box does not silently switch the ticker off', () => {
-        // Number('') is 0, which used to be written into the URL as tickerCount=0.
-        assert.equal(normaliseTickerSettings({ seconds: '', count: '' }).count, DEFAULT_TICKER_COUNT);
+        // Number('') is 0; the URL must not end up saying tickerCount=0.
+        assert.equal(normaliseTickerSettings({ seconds: '', count: '' }).count, 50);
     });
 
     test('clamps and truncates the way the display will read them back', () => {
         const settings = normaliseTickerSettings({ seconds: '7.9', count: '9999' });
         assert.equal(settings.seconds, 7);
-        assert.equal(settings.count, MAX_TICKER_COUNT);
+        assert.equal(settings.count, 500);
     });
 
     test('the built query round-trips through tickerConfig unchanged', () => {
@@ -121,7 +120,7 @@ describe('normaliseTickerSettings', () => {
     });
 
     test('tickerQuery normalises too, so a URL never carries an unreadable value', () => {
-        assert.equal(tickerQuery({ seconds: 'abc', count: -4 }), `?tickerSeconds=${DEFAULT_TICKER_SECONDS}&tickerCount=0`);
+        assert.equal(tickerQuery({ seconds: 'abc', count: -4 }), '?tickerSeconds=20&tickerCount=0');
     });
 });
 
@@ -129,8 +128,7 @@ describe('tickerDurationSeconds', () => {
     const base = { containerWidth: 1200, contentWidth: 6000, entryCount: 20, secondsVisible: 6 };
 
     test('derives the pass duration from the reading time per entry', () => {
-        // Average entry 300px, so an entry travels 1200 + 300 = 1500px while visible.
-        // 1500px in 6s is 250px/s, and 6000px of content takes 24s.
+        // An average 300px entry travels 1200 + 300 = 1500px in 6s, so 6000px of content takes 24s.
         assert.equal(tickerDurationSeconds(base), 24);
     });
 
@@ -140,8 +138,6 @@ describe('tickerDurationSeconds', () => {
     });
 
     test('a wider screen keeps the same reading time by scrolling faster', () => {
-        // The point of the formula: an entry is legible for secondsVisible regardless of
-        // how much screen it has to cross.
         const wide = tickerDurationSeconds({ ...base, containerWidth: 2400 });
         assert.ok(wide < tickerDurationSeconds(base));
     });

@@ -60,8 +60,7 @@ tests/Sintro.ResultViewer.Tests/
 ```
 
 **Layering:** anything testable without a browser belongs in `wwwroot/core/` — `app.js` may touch
-the DOM, `core/` may not. Server-side the pure classes (`ScoreCalculator`, `LicenseNumber`,
-`SintroTime`, `TargetKind`, `Cursor`) carry the test weight.
+the DOM, `core/` may not. Server-side the pure `Data/` classes carry the test weight.
 
 **API versioning.** `Api/V2/` owns routes, tags, descriptions and wire envelopes; everything else is
 shared, so v3 is a new folder plus one `app.MapV3()` line. **v1 is the legacy Grapevine service.**
@@ -70,9 +69,9 @@ shared, so v3 is a new folder plus one `app.MapV3()` line. **v1 is the legacy Gr
 
 - **SQL** → `Data/SintroRepository.cs`. A query anywhere else is a bug.
 - **Scoring** → `Data/ScoreCalculator.cs`. **Hit sectors** → `wwwroot/core/sectors.js`.
-- **Translations** → `wwwroot/core/i18n.js` (`de` default, `fr`). `data-i18n` / `data-i18n-title` /
-  `data-i18n-aria-label` in HTML, `t('key', {params})` in JS. Tests assert both languages carry
-  identical keys and placeholders, and that every key is used and every used key exists.
+- **Translations** → `wwwroot/core/i18n.js` (`de` default, `fr`). `data-i18n[-title|-aria-label]` in
+  HTML, `t('key', {params})` in JS. Tests assert identical keys in both languages and that every key
+  is used and every used key exists.
 - **Colours** → `wwwroot/tokens.css`, from the
   [design system](https://github.com/Schiesssport/design-system) plus a marked local block at its
   end. Never hard-code a hex in `styles.css`; derive tints with `color-mix()` on a token.
@@ -108,7 +107,7 @@ The integration tests assert the resulting counts.
 | Parse `StartTime` as `dd.MM.yyyy-HH:mm:ss`, emit ISO 8601 | Day-first text; its order is meaningless |
 | `(number, name)` is free text, not a key | Operators rename programs |
 | `TargetType` is the Scheibe: `0`=A, `1`=B, `3`=S (Sau) | Matches the A/B prefixes in program names |
-| `hitSector` 1 is twelve o'clock, **clockwise** in 45° steps | Mean `atan2(y,x)`: 90°, 43°, −2°, −45°, −89°, −136°, 180°, 137° |
+| `hitSector` 1 is twelve o'clock, **clockwise** in 45° steps | Derived from the mean `atan2(y,x)` per sector |
 | Nulls are serialized, never omitted | `shooter`/`currentProgram` null are documented states |
 | Cursor paging on `ProgramID`, never offset, no `total` | The device inserts and prunes while a client reads; a count is a second scan |
 | A pass is `Active`, `Finished` **or `Abandoned`** | Off the line with no end total is neither; `state` must agree with `?state=` |
@@ -136,10 +135,9 @@ that fail silently if broken:
   the only accepted header — do not add a second. Tokens are compared as SHA-256 digests.
 - **`TrustedProxies` is a list, not a switch** — `X-Forwarded-For` is unwound only through hops in
   it, stopping at the first stranger (`Security/ClientAddress.cs`).
-- **`UseWebSockets()` must stay before `UseTokenAuth()`** — the token check accepts `?token=` only
-  on a genuine upgrade request (`IsWebSocketRequest`), which that middleware makes meaningful;
-  without it every handshake 401s, and a plain GET with `?token=` is always 401. `LiveFeedTests`
-  guards both.
+- **`UseWebSockets()` must stay before `UseTokenAuth()`** — `?token=` is accepted only on a genuine
+  upgrade (`IsWebSocketRequest`), which that middleware makes meaningful; a plain GET with `?token=`
+  is always 401. `LiveFeedTests` guards both.
 - **A forwarded hop that does not parse resolves to *no* client**, and the gate refuses it. Falling
   back to the proxy's own address would admit anyone behind a public proxy (`ClientAddressTests`).
 - **`/openapi/v2.json` is token-free** (schema, not data), on the *web* surface. Never put a real
@@ -160,6 +158,8 @@ that fail silently if broken:
 
 ## Style
 
-Write for the next developer. Names carry the intent; comment only the non-obvious *why* — usually
-a measured fact about the device data. Never cite one export's counts as schema facts. No emojis. No
-speculative abstractions.
+Simplicity first. Comments are short to non-existent: names and structure explain *what*, and a
+comment is one line for a *why* that cannot be inferred (a measured device fact, a security
+reason). Functions and methods stay readable, about 25 lines; split rather than comment sections.
+YAGNI: no speculative abstractions, options or helpers for one caller. Never cite one export's
+counts as schema facts. No emojis.

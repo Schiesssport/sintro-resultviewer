@@ -1,20 +1,9 @@
-// =============================================================================
 // When a line stops counting as occupied. Pure — takes "now" as an argument.
-// =============================================================================
 
-/** After the device wrote an end total, the line stays shown briefly, then frees up. */
 export const IDLE_AFTER_FINISH_MS = 5 * 60 * 1000;
-
-/** No end total (the device does not always write one), so fall back to the last shot. */
+// The device does not always write an end total, so the last shot is the fallback signal.
 export const IDLE_AFTER_LAST_SHOT_MS = 6 * 60 * 1000;
-
-/**
- * How long a line keeps showing its last program after the device has cleared it.
- *
- * The device drops Lanes.ProgramID the moment it writes the end marker, so without this the
- * result would vanish from the line the instant the last shot lands and reappear in the list
- * below — before anyone at the firing point has read it.
- */
+// The device drops Lanes.ProgramID with the end marker; without a hold the result would vanish unread.
 export const HOLD_AFTER_CLEAR_MS = 30 * 1000;
 
 const parse = (iso) => {
@@ -22,7 +11,7 @@ const parse = (iso) => {
     return Number.isFinite(value) ? value : null;
 };
 
-/** Timestamp of the most recent shot on a program, sighting shots included. */
+// Sighting shots included: the shooter is present either way.
 export const lastActivityAt = (program) => {
     const times = [...(program?.series ?? []), ...(program?.sighting ?? [])]
         .flatMap((series) => series.shots ?? [])
@@ -32,14 +21,7 @@ export const lastActivityAt = (program) => {
     return times.length === 0 ? null : Math.max(...times);
 };
 
-/**
- * Whether the line should read as available.
- *
- * Derived from the data every time rather than latched by a timer, which is what makes a
- * long interruption work: if the range breaks for weather and the same shooter resumes an
- * hour later, the next shot moves lastActivityAt forward and the line simply fills again
- * with everything already shot. Nothing has to be un-expired.
- */
+// Derived from the data every time, never latched: a resumed program simply fills its line again.
 export const isLineAvailable = (program, nowMs) => {
     if (!program) return true;
 
@@ -47,22 +29,12 @@ export const isLineAvailable = (program, nowMs) => {
     if (finished !== null) return nowMs - finished >= IDLE_AFTER_FINISH_MS;
 
     const last = lastActivityAt(program);
-
-    // Loaded but nothing fired yet: the shooter is setting up, not gone.
-    if (last === null) return false;
+    if (last === null) return false;   // loaded but nothing fired yet: setting up, not gone
 
     return nowMs - last >= IDLE_AFTER_LAST_SHOT_MS;
 };
 
-/**
- * Applies the hold above to a fresh lane snapshot.
- *
- * `memory` is what each line last showed (Map: lane number → { program, clearedAt }); the
- * returned memory replaces it. A line reporting a program shows that program and forgets any
- * hold. A line reporting nothing keeps showing what it had for HOLD_AFTER_CLEAR_MS from the
- * first empty snapshot, then frees up. The pass may already be in the result list meanwhile;
- * that is fine — the hold is about the firing point, not about where the result is listed.
- */
+// memory: lane number → { program, clearedAt }. A cleared line keeps its program for HOLD_AFTER_CLEAR_MS.
 export const holdClearedLines = (memory, lanes, nowMs) => {
     const next = new Map();
 
@@ -87,13 +59,7 @@ export const holdClearedLines = (memory, lanes, nowMs) => {
     return { lanes: shown, memory: next };
 };
 
-/**
- * Offset between the wall clock and the day the data is from.
- *
- * Only ever non-zero in development, where ReferenceDate pins "today" to an old backup.
- * Without it every line on the demo data reads as available, because its last shot is
- * weeks old. Production has no reference date, so this is exactly zero.
- */
+// Non-zero only in development, where ReferenceDate pins "today" to an old backup.
 export const dayOffsetMs = (referenceDate, nowMs) => {
     const reference = parse(`${referenceDate}T00:00:00`);
     if (reference === null) return 0;

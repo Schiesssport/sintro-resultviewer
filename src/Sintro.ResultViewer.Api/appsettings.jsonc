@@ -1,34 +1,23 @@
-// =============================================================================
-// Sintro Resultviewer — configuration
+// Sintro Resultviewer — configuration. Every setting is explained here; edit with any text editor.
 //
-// Everything you can change is in this file, and every setting is explained below. Edit it with
-// any text editor; the .jsonc extension tells editors that these comments belong here.
+// Restart Sintro.ResultViewer.Api.exe after a change. A wrong setting is reported on startup and
+// the service stops, rather than running in a state you did not intend.
 //
-// After changing anything, restart Sintro.ResultViewer.Api.exe. If a setting is wrong the service
-// says so on startup and stops, rather than running in a state you did not intend.
-//
-// Every setting can also be given as an environment variable, which wins over this file:
-//   Sintro__ApiReadTokens__0=<token>        (double underscores, zero-based for lists)
-// =============================================================================
+// Any setting can also be given as an environment variable, which wins over this file:
+//   Sintro__ApiReadTokens__0=<token>        (double underscores; lists are zero-based)
 {
-  // -- Where the service listens ---------------------------------------------
+  // Where the service listens. "+" means every network interface, which a display on the club
+  // LAN needs; "http://localhost:8080" keeps the service to this machine. Change the port if 8080
+  // is taken; several addresses may be separated by semicolons. Who may connect is decided by the
+  // network ranges below, not here.
   //
-  // "+" means every network interface of this machine, which is what a display on the club LAN
-  // needs: without it the service answers only to this machine itself and a TV would find
-  // nothing. Who may actually connect is decided by the network ranges below, not here.
-  //
-  // Change the port if 8080 is taken; use "http://localhost:8080" to deliberately keep the
-  // service to this machine. Several addresses can be given, separated by semicolons.
-  //
-  // Windows will ask once whether to allow the service through its firewall — say yes for
-  // private networks, or no display outside this machine will connect.
+  // Windows asks once whether to allow the service through its firewall: say yes for private
+  // networks, or no display outside this machine will connect.
   "Urls": "http://+:8080",
 
   "ConnectionStrings": {
-    // The Sintro machine's own SQL Server, holding the target system's database.
-    //
-    // Use a READ-ONLY login (db_datareader). This service never writes, and the credentials it
-    // is given should not permit writing either — the device owns that database.
+    // The Sintro machine's own SQL Server. Use a READ-ONLY login (db_datareader): this service
+    // never writes, and its credentials should not permit writing either.
     //
     // With a Windows login, as here, the service must run as a user SQL Server knows. For a SQL
     // login instead:
@@ -38,43 +27,31 @@
 
   "Sintro": {
 
-    // -- Who may read the API ------------------------------------------------
+    // Tokens for anything other than the bundled displays that reads the API: event software, a
+    // scoreboard, another club's tooling. Leave empty otherwise; the viewer authenticates itself
+    // and nothing else gets in.
     //
-    // Only needed if something other than the bundled displays reads the API: event software, a
-    // scoreboard, another club's tooling. Leave the list empty otherwise — the viewer
-    // authenticates itself and nothing else gets in.
-    //
-    // Give each consumer its own token so one can be revoked without disturbing the others.
-    // Minimum 16 characters, 128 recommended; the service refuses to start on a shorter one.
-    // Generate one however you like, for example in PowerShell:
+    // One token per consumer, so one can be revoked without disturbing the others. Minimum 16
+    // characters, 128 recommended; the service refuses to start on a shorter one. For example,
+    // in PowerShell:
     //   [Convert]::ToBase64String((1..64 | % { Get-Random -Max 256 }))
     "ApiReadTokens": [
       // "paste-a-long-random-token-here"
     ],
 
-    // PLANNED — nothing writes yet. Reserved so that adding a write endpoint later does not
-    // change how every installation is configured. A write token also grants read, so a
-    // consumer never needs two.
+    // Reserved: nothing writes yet. A write token also grants read, so a consumer never needs two.
     "ApiWriteTokens": [],
 
-    // -- Who may connect at all ----------------------------------------------
+    // Who may connect at all, as CIDR ranges, checked before the token so an outsider never gets
+    // to guess. Api is the JSON API; Web is the viewer, its assets and the API documentation.
     //
-    // Checked before the token, so a machine outside these ranges is refused without ever
-    // getting to guess. Given as CIDR ranges.
+    // Shipped as the private network ranges of an ordinary club LAN. Delete any you do not use.
+    // An empty list is refused at startup (it would lock out even this machine). 0.0.0.0/0 or ::/0
+    // opens the service to the whole internet: allowed, but warned about on every start and
+    // shown in red in the viewer, because shooter names are personal data.
     //
-    //   Api — the JSON API that event software reads
-    //   Web — the viewer, its assets and the API documentation
-    //
-    // Listed here rather than hidden in the program, so the policy is visible and yours to
-    // change. An empty list is refused at startup: it would lock out even this machine.
-    //
-    // What ships below is the private network ranges — an ordinary club LAN — and nothing else.
-    // Delete any you do not use. Adding 0.0.0.0/0 or ::/0 opens the service to the whole
-    // internet; that is allowed, but warned about on every start and shown in red in the
-    // viewer, because shooter names are personal data.
-    //
-    // To replace the whole list, edit it here. An environment variable overrides one entry at a
-    // time (Sintro__Network__Api__0=...), which merges rather than replaces.
+    // An environment variable overrides one entry at a time (Sintro__Network__Api__0=...) and
+    // merges with this list rather than replacing it.
     "Network": {
       "Api": [
         "127.0.0.0/8",      // this machine
@@ -99,56 +76,47 @@
     },
 
     // Reverse proxies whose X-Forwarded-For header may be believed, as addresses or CIDR ranges.
-    // Leave empty unless a proxy really does sit in front: with nothing listed the header is
-    // ignored and the connecting address decides, which is what you want.
-    //
-    // Never list a range wider than the proxies themselves — anything in here is trusted to
-    // claim who its client is.
+    // Leave empty unless a proxy really sits in front: with nothing listed the header is ignored
+    // and the connecting address decides. Never list a range wider than the proxies themselves;
+    // anything here is trusted to say who its client is.
     "TrustedProxies": [],
 
-    // -- Times and sizes -----------------------------------------------------
-
     // The target system records times without a timezone, so the API adds this machine's own.
-    // Leave as null: it is right whenever the computer's clock is set for where the range is.
-    // Set it only if this machine is configured for somewhere else, e.g. "Europe/Zurich". An
-    // unknown name is logged as a warning at startup and this machine's zone is used instead.
+    // Leave null unless this machine's clock is set for somewhere the range is not, e.g.
+    // "Europe/Zurich". An unknown name is logged as a warning and this machine's zone is used.
     "TimeZone": null,
 
-    // Development only. Makes the service treat a fixed date as "today" so an old exported
-    // database still shows results. Leave null on a range.
+    // Development only: treats a fixed date as "today" so an old exported database still shows
+    // results. Leave null on a range.
     "ReferenceDate": null,
 
-    // How many records a list returns when the caller does not say, and the most it will return
-    // however large a limit is asked for. Larger pages mean fewer requests but bigger responses.
-    // Both must be at least 1 and the default may not exceed the maximum; the service refuses
-    // to start otherwise.
+    // How many records a list returns when the caller does not say, and the most it returns
+    // however large a limit is asked for. Both at least 1, default not above maximum; the service
+    // refuses to start otherwise.
     "DefaultPageSize": 200,
     "MaxPageSize": 2000,
 
     "Live": {
-      // How often the target system is checked for changes, in milliseconds. This is what makes
-      // the live view live. A handful of lines at one second is negligible load; raising it makes
-      // the display lag behind the shooting, lowering it gains little.
+      // How often the target system is checked for changes, in milliseconds. A handful of lines
+      // at one second is negligible load; raising it makes the display lag behind the shooting.
       "PollMilliseconds": 1000
     }
   },
 
-  // -- Logging ---------------------------------------------------------------
-  //
-  // "Information" is a good default: it records startup, connected displays and refused
-  // connections. Use "Debug" when chasing a problem, "Warning" for near-silence.
+  // "Information" records startup, connected displays and refused connections. "Debug" when
+  // chasing a problem, "Warning" for near-silence.
   "Logging": {
     "LogLevel": {
       "Default": "Information",
       "Microsoft.AspNetCore": "Warning",
 
-      // The framework announces the same start this service announces in its own words, in the
-      // frame above. Raise to "Information" to see the raw listening address as well.
+      // The framework's own start-up line repeats what the frame above already says. Raise to
+      // "Information" to see the raw listening address as well.
       "Microsoft.Hosting.Lifetime": "Warning"
     }
   },
 
-  // Which Host header the service answers to. "*" means any, which is right when the network
-  // ranges above already decide who may connect.
+  // Which Host header the service answers to. "*" is right when the network ranges above already
+  // decide who may connect.
   "AllowedHosts": "*"
 }

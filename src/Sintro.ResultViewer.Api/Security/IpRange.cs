@@ -3,22 +3,24 @@ using System.Net.Sockets;
 
 namespace Sintro.ResultViewer.Security;
 
-/// <summary>A CIDR block, matched bitwise. Handles IPv4-mapped IPv6 sources (::ffff:10.0.0.1).</summary>
+/// <summary>A CIDR block, matched bitwise; IPv4-mapped IPv6 sources (::ffff:10.0.0.1) match IPv4 blocks.</summary>
 public sealed class IpRange
 {
+    private static readonly Lazy<IReadOnlyList<IpRange>> PrivateSpace =
+        new(() => ParseAll(NetworkOptions.PrivateSpace));
+
     private readonly byte[] _network;
+    private readonly AddressFamily _family;
 
     private IpRange(byte[] network, AddressFamily family, int prefixLength)
     {
         _network = network;
-        Family = family;
+        _family = family;
         PrefixLength = prefixLength;
     }
 
-    /// <summary>The block's first address, host bits cleared: "10.5.5.5/8" is reported as 10.0.0.0/8.</summary>
     public IPAddress NetworkAddress => new(_network);
     public int PrefixLength { get; }
-    private AddressFamily Family { get; }
 
     public static bool TryParse(string? text, out IpRange range)
     {
@@ -28,14 +30,12 @@ public sealed class IpRange
         var parts = text.Trim().Split('/', 2);
         if (!IPAddress.TryParse(parts[0], out var address)) return false;
 
-        // IPAddress.TryParse accepts legacy shorthand ("192.168.1" parses as 192.168.0.1),
-        // which would turn a typo'd CIDR into a silently different subnet. Full quads only.
+        // Full quads only: IPAddress.TryParse reads "192.168.1" as 192.168.0.1, turning a typo into a different subnet.
         if (address.AddressFamily == AddressFamily.InterNetwork &&
             parts[0].Count(character => character == '.') != 3)
             return false;
 
         var maximum = address.AddressFamily == AddressFamily.InterNetwork ? 32 : 128;
-
         var prefix = maximum;
         if (parts.Length == 2 && (!int.TryParse(parts[1], out prefix) || prefix < 0 || prefix > maximum))
             return false;
@@ -53,24 +53,18 @@ public sealed class IpRange
     {
         if (candidate is null) return false;
 
-        if (candidate.IsIPv4MappedToIPv6 && Family == AddressFamily.InterNetwork)
+        if (candidate.IsIPv4MappedToIPv6 && _family == AddressFamily.InterNetwork)
             candidate = candidate.MapToIPv4();
 
-        if (candidate.AddressFamily != Family) return false;
+        if (candidate.AddressFamily != _family) return false;
 
         return Mask(candidate.GetAddressBytes(), PrefixLength).AsSpan().SequenceEqual(_network);
     }
 
-    /// <summary>
-    /// Whether this block sits wholly inside RFC1918/loopback/link-local space. Used only to
-    /// decide whether to warn the operator, never to allow or deny.
-    /// </summary>
+    /// <summary>Wholly inside loopback, RFC1918 or link-local space. Decides whether to warn, never whether to allow.</summary>
     public bool IsPrivate() =>
         PrivateSpace.Value.Any(known =>
             known.Contains(NetworkAddress) && PrefixLength >= known.PrefixLength);
-
-    private static readonly Lazy<IReadOnlyList<IpRange>> PrivateSpace =
-        new(() => ParseAll(NetworkOptions.PrivateSpace));
 
     private static byte[] Mask(byte[] address, int prefixLength)
     {

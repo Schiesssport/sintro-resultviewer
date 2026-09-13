@@ -11,8 +11,7 @@ describe('parseViewMode', () => {
     });
 
     test('a malformed percent escape falls back rather than throwing', () => {
-        // decodeURIComponent throws on "%E0"; this runs before anything is on screen, so a
-        // typo in a TV's bookmark must not leave the display blank.
+        // decodeURIComponent throws on "%E0", and a typo in a TV's bookmark must not blank the display.
         assert.equal(parseViewMode('/fullscreen/%E0'), DEFAULT_FULLSCREEN_MODE);
     });
 

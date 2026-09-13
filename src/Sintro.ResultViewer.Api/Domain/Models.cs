@@ -8,12 +8,7 @@ public enum ProgramState
     /// <summary>The device wrote an end-of-program total (TotalType 7).</summary>
     Finished,
 
-    /// <summary>
-    /// Neither: no end total was ever written, and the pass is no longer on a line — started
-    /// and then abandoned, or displaced when the line was reassigned. Calling these "finished"
-    /// would be a lie, and it also made an item's own state disagree with ?state=finished.
-    /// They usually carry no shots at all.
-    /// </summary>
+    /// <summary>No end total and no longer on a line: started and dropped, or displaced when the line was reassigned.</summary>
     Abandoned,
 }
 
@@ -34,7 +29,6 @@ public sealed record Shooter(
     string FirstName,
     string LastName,
     int ShooterId,
-    string? Rfid,
     Club? Club,
     bool DuplicateLicense);
 
@@ -52,23 +46,17 @@ public sealed record Shot(
 public sealed record ShotSeries(
     int Index,
     int? Valuation,
-    int? TargetType,
-    // Target letter + ring scale, e.g. "A10" or "B4" — the notation used in program names.
+    // Target letter plus ring scale, e.g. "A10" or "B4", the notation used in program names.
     string TargetCode,
     int ShotCount,
     int Subtotal,
-    // The highest fine value (SecondaryResult, in tenths) among the hits, or null when nothing hit.
-    // Shown as a tie-break hint; misses report 0 and are excluded so they cannot win it.
+    // Highest fine value (SecondaryResult, tenths) among the hits; misses report 0 and are excluded so they cannot win it.
     int? BestFineValue,
     IReadOnlyList<Shot> Shots);
 
-public sealed record ProgramTotal(int Value, int ShotCount, int Valuation);
+public sealed record ProgramTotal(int Value, int Valuation);
 
-/// <summary>
-/// One row of dbo.Programs: one shooter shooting one program on one lane at one time
-/// ("Passe"). Named ShootingProgram because <c>Program</c> is the application entry point;
-/// it is exposed as the <c>program</c> resource.
-/// </summary>
+/// <summary>One row of dbo.Programs, a "Passe"; named ShootingProgram because <c>Program</c> is the entry point, exposed as the <c>program</c> resource.</summary>
 public sealed record ShootingProgram(
     int Id,
     int Number,
@@ -82,14 +70,10 @@ public sealed record ShootingProgram(
     ProgramTotal? Total,
     TotalUnavailableReason? TotalUnavailable,
     int ShotCount,
-    // Counting-shot ring values in firing order — what result software usually wants.
+    // Counting-shot ring values in firing order.
     IReadOnlyList<int> ShotValues,
-    // The same values space-joined, for the viewer's single-column display.
-    string ShotValuesText,
     IReadOnlyList<ShotSeries> Series,
-    // Sighting shots (Probe), one series per ShotGroup they were fired in. Never counted towards
-    // Total. Kept per group because the ring scale can differ between groups, and one merged
-    // series would add 5er and 10er values together — the very sum Total refuses to make.
+    // Sighting shots (Probe), one series per ShotGroup and never counted towards Total; kept per group because ring scales can differ between groups.
     IReadOnlyList<ShotSeries> Sighting);
 
 public sealed record LaneStatus(int Number, ShootingProgram? CurrentProgram);

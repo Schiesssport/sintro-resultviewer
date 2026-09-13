@@ -2,33 +2,21 @@ using Sintro.ResultViewer.Domain;
 
 namespace Sintro.ResultViewer.Data;
 
-/// <summary>
-/// Turns raw device rows into scored series. Pure — no database, no clock of its own — because
-/// this is where every scoring subtlety of the schema lives and it must be testable in isolation.
-///
-/// Measured facts this encodes:
-///   - ShotNr 9999 rows are synthetic end-of-program markers, not shots. TotalType 7 alone
-///     does NOT mark one: the last real shot of a pass carries it too (645 such shots against
-///     438 markers in one export), so filtering on it would drop every final shot.
-///   - Sighting shots are identified by ShotType 0, NOT by ShotGroup 0: counting shots do occur
-///     in ShotGroup 0, and sighting shots do occur in higher groups.
-///   - Ring scale comes from Targetinformation per (ProgramID, ShotGroup) and can change between
-///     series inside one program, so a grand total is only meaningful when it is uniform.
-///   - (ProgramID, ShotGroup) can carry several Targetinformation rows, which occasionally
-///     disagree; the highest TargeinformationID is the current one.
-/// </summary>
+/// <summary>Turns raw device rows into scored series. Pure, so every scoring rule is testable in isolation; the measured facts behind the rules are in docs/device-database.md.</summary>
 public static class ScoreCalculator
 {
-    public const int MarkerShotNumber = 9999;
-    public const int EndOfProgramTotalType = 7;
-    public const int SightingShotType = 0;
+    private const int MarkerShotNumber = 9999;
+    private const int EndOfProgramTotalType = 7;
+    private const int SightingShotType = 0;
 
     /// <summary>HitPosition uses this for "no sector reported"; 0 legitimately means a centre hit.</summary>
     private const int NoHitSector = 255;
 
-    public static bool IsMarker(ShotRow row) => row.ShotNr == MarkerShotNumber;
+    // ShotNr 9999 alone marks the synthetic end row: the last real shot of a pass carries TotalType 7 as well.
+    private static bool IsMarker(ShotRow row) => row.ShotNr == MarkerShotNumber;
 
-    public static bool IsSighting(ShotRow row) => row.ShotType == SightingShotType;
+    // ShotType, never ShotGroup 0: counting shots occur in group 0 and sighting shots in higher groups.
+    private static bool IsSighting(ShotRow row) => row.ShotType == SightingShotType;
 
     public sealed record ProgramScore(
         IReadOnlyList<ShotSeries> Series,
@@ -63,13 +51,13 @@ public static class ScoreCalculator
             countingShots.Count);
     }
 
-    /// <summary>The end-of-program marker carries the finishing time, so it is read before markers are dropped.</summary>
     public static string? FindEndShotTime(IEnumerable<ShotRow> shots) =>
         shots.Where(row => row.TotalType == EndOfProgramTotalType)
              .OrderByDescending(row => row.ShotID)
              .Select(row => row.ShotTime)
              .FirstOrDefault();
 
+    // Duplicate rows per (program, group) exist and can disagree; the highest TargeinformationID is current.
     private static Dictionary<int, (int? Valuation, int? TargetType)> ResolveTargetInfo(
         IEnumerable<TargetInfoRow> rows) =>
         rows.GroupBy(row => row.ShotGroup)
@@ -107,7 +95,6 @@ public static class ScoreCalculator
         return new ShotSeries(
             index,
             target.Valuation,
-            target.TargetType,
             TargetKind.Code(target.TargetType, target.Valuation),
             ordered.Count,
             ordered.Sum(row => row.PrimaryResult),
@@ -142,9 +129,6 @@ public static class ScoreCalculator
         if (valuations.Count > 1)
             return (null, TotalUnavailableReason.MixedValuation);
 
-        return (new ProgramTotal(
-            series.Sum(entry => entry.Subtotal),
-            series.Sum(entry => entry.ShotCount),
-            valuations[0]!.Value), null);
+        return (new ProgramTotal(series.Sum(entry => entry.Subtotal), valuations[0]!.Value), null);
     }
 }

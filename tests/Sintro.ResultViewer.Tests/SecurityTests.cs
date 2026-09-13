@@ -32,8 +32,7 @@ public class SecurityTests(ApiFixture fixture)
         bearer.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiFixture.Token);
         Assert.NotEqual(HttpStatusCode.Unauthorized, (await bearer.GetAsync("/api/v2/live")).StatusCode);
 
-        // There used to be an undocumented X-Api-Token path. One documented way in is easier to
-        // reason about than two, and an undocumented one survives by accident.
+        // One documented way in; a second header would survive by accident.
         var custom = fixture.CreateClient();
         custom.DefaultRequestHeaders.Add("X-Api-Token", ApiFixture.Token);
         Assert.Equal(HttpStatusCode.Unauthorized, (await custom.GetAsync("/api/v2/live")).StatusCode);
@@ -49,8 +48,6 @@ public class SecurityTests(ApiFixture fixture)
     [Fact]
     public async Task everyRefusalCarriesTheSameErrorEnvelope()
     {
-        // The viewer has exactly one error parser; a middleware answering in a different shape
-        // would render as a bare "HTTP 401".
         var response = await fixture.CreateClient().GetAsync("/api/v2/live");
         var body = await response.Content.ReadFromJsonAsync<Api.V2.ApiError>(SintroJson.Options);
 
@@ -84,14 +81,12 @@ public class SecurityTests(ApiFixture fixture)
         var html = await fixture.CreateClient().GetStringAsync("/");
 
         Assert.Contains("window.SINTRO_TOKEN", html);
-        // The placeholder must have been replaced, or the viewer cannot call the API.
         Assert.DoesNotContain("{{SESSION_TOKEN}}", html);
     }
 
     [Fact]
     public async Task theRawTemplateIsNeverServedAsAStaticFile()
     {
-        // /index.html must go through the renderer too, not the static file handler.
         var html = await fixture.CreateClient().GetStringAsync("/index.html");
         Assert.DoesNotContain("{{SESSION_TOKEN}}", html);
     }
@@ -105,8 +100,7 @@ public class SecurityTests(ApiFixture fixture)
     [InlineData("/fullscreen/anything-else")]
     public async Task everyFullscreenVariantServesTheViewer(string path)
     {
-        // These are client-side routes; the server must hand out the same page for all of
-        // them, including ones it has never heard of, or a bookmarked TV shows a 404.
+        // Including variants the server has never heard of, or a bookmarked TV shows a 404.
         var response = await fixture.CreateClient().GetAsync(path);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -118,9 +112,7 @@ public class SecurityTests(ApiFixture fixture)
     [InlineData("/fullscreen/live+results")]
     public async Task fullscreenPagesReferenceAssetsAbsolutely(string path)
     {
-        // Regression guard: a relative src="app.js" on /fullscreen/live resolves to
-        // /fullscreen/app.js, which the SPA catch-all answers with HTML — and the browser
-        // then fails to parse HTML as a module, breaking every fullscreen view.
+        // A relative src="app.js" resolves to /fullscreen/app.js, which the catch-all answers with HTML.
         var html = await fixture.CreateClient().GetStringAsync(path);
 
         Assert.Contains("src=\"/app.js\"", html);
@@ -153,7 +145,6 @@ public class SecurityTests(ApiFixture fixture)
     [Fact]
     public async Task staticAssetsAreServedWithoutAToken()
     {
-        // The web surface is guarded by the network gate, not by the API token.
         Assert.Equal(HttpStatusCode.OK, (await fixture.CreateClient().GetAsync("/styles.css")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await fixture.CreateClient().GetAsync("/app.js")).StatusCode);
     }
@@ -161,8 +152,6 @@ public class SecurityTests(ApiFixture fixture)
     [Fact]
     public async Task theOpenApiDocumentNeedsNoToken()
     {
-        // It is schema, not shooter data, and the docs page has to load it. The network
-        // gate still guards it.
         var response = await fixture.CreateClient().GetAsync("/openapi/v2.json");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -170,10 +159,7 @@ public class SecurityTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task theOpenApiDocumentExposesNoShooterData()
     {
-        // The spec is served without a token, so a real name or licence slipped into an
-        // endpoint description would be published to anyone who can reach the web surface.
-        // Checked against the loaded export rather than a hard-coded name, so it keeps
-        // working — and keeps protecting — whatever data a contributor has.
+        // Checked against the loaded export rather than a hard-coded name, so it protects whatever data a contributor has.
         var spec = await fixture.CreateClient().GetStringAsync("/openapi/v2.json");
         Assert.Contains("/api/v2/programs", spec);
 
@@ -191,7 +177,6 @@ public class SecurityTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task theLiveEndpointServesLaneStateOverPlainHttp()
     {
-        // Same URL: plain GET returns the current snapshot, an upgrade gets the push feed.
         var response = await fixture.CreateAuthorizedClient().GetAsync("/api/v2/live");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -199,10 +184,7 @@ public class SecurityTests(ApiFixture fixture)
 
 public class StartupCheckTests
 {
-    /// <summary>
-    /// Runs the startup checks with a workable allowlist unless the test set one, so a test
-    /// about tokens fails for token reasons.
-    /// </summary>
+    /// <summary>Runs the checks with a workable allowlist unless the test set one, so a token test fails for token reasons.</summary>
     private static void Check(SintroOptions options)
     {
         options.Network.Api ??= NetworkOptions.PrivateSpace;
@@ -219,8 +201,6 @@ public class StartupCheckTests
     [InlineData("Web")]
     public void anEmptyAllowlist_refusesToStart(string surface)
     {
-        // Denying everything silently is as unhelpful as allowing everything silently: nobody,
-        // including the machine it runs on, could reach it, and nothing would say why.
         var options = new SintroOptions
         {
             Network = surface == "Api"
@@ -242,18 +222,14 @@ public class StartupCheckTests
     [Fact]
     public void noTokenAtAll_isAValidViewerOnlyInstall()
     {
-        // A range running only the bundled displays has nothing external to authenticate. The
-        // viewer still uses the per-process session token, so this is not an open API.
         Check(new SintroOptions());
     }
 
     [Theory]
     [InlineData("too-short")]
-    [InlineData("123456789012345")]   // 15 chars — one below the minimum
+    [InlineData("123456789012345")]   // 15 chars, one below the minimum
     public void aTokenBelowTheMinimum_refusesToStart(string token)
     {
-        // A token that is configured must still be a real one; a short one is a mistake, not
-        // a choice to run without.
         var error = Assert.Throws<InvalidOperationException>(() =>
             Check(new SintroOptions { ApiReadTokens = [token] }));
 
@@ -278,7 +254,6 @@ public class StartupCheckTests
     [Fact]
     public void theSameTokenInBothScopes_refusesToStart()
     {
-        // Listing it twice only makes the intended scope ambiguous.
         var token = new string('c', SintroOptions.MinimumTokenLength);
 
         var error = Assert.Throws<InvalidOperationException>(() =>
@@ -293,8 +268,7 @@ public class StartupCheckTests
     [InlineData("192.168.1/24")]
     public void anUnparseableNetworkRange_refusesToStart(string range)
     {
-        // The gate skips entries it cannot parse, so a typo would silently lock a network
-        // out rather than widen access — still wrong, and miserable to debug.
+        // The gate skips what it cannot parse, so a typo would silently lock a network out.
         var options = new SintroOptions
         {
             ApiReadTokens = [new string('a', SintroOptions.MinimumTokenLength)],
@@ -335,8 +309,7 @@ public class StartupCheckTests
     [InlineData(2000, 0)]
     public void impossiblePageSizes_refuseToStart(int maxPageSize, int defaultPageSize)
     {
-        // Math.Clamp throws when the bounds cross, so this used to turn every list request into
-        // a 500 while /health stayed green.
+        // Math.Clamp throws when the bounds cross, which would turn every list request into a 500.
         var error = Assert.Throws<InvalidOperationException>(() =>
             Check(new SintroOptions { MaxPageSize = maxPageSize, DefaultPageSize = defaultPageSize }));
 
@@ -346,9 +319,7 @@ public class StartupCheckTests
     [Fact]
     public void anUnknownTimeZone_startsButIsNotSilent()
     {
-        // Refusing to start would leave an event without results over a typo; the clock falls
-        // back to the host zone. The log must say so, which the NullLogger cannot assert, so
-        // this only pins that startup succeeds. See SintroClock for the fallback itself.
+        // NullLogger cannot assert the warning; this pins only that startup succeeds.
         Check(new SintroOptions { TimeZone = "Mars/Olympus_Mons" });
     }
 

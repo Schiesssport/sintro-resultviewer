@@ -40,8 +40,7 @@ public class IpRangeTests
     [Fact]
     public void ipv4MappedIpv6_matchesAnIpv4Range()
     {
-        // Kestrel reports dual-stack clients as ::ffff:10.0.0.5, which must still
-        // match a plain IPv4 CIDR or every LAN client would be refused.
+        // Kestrel reports dual-stack clients as ::ffff:10.0.0.5.
         Assert.True(Parse("10.0.0.0/8").Contains(IPAddress.Parse("::ffff:10.0.0.5")));
     }
 
@@ -59,8 +58,7 @@ public class IpRangeTests
     [InlineData("192.168.1.10", "192.168.1.10/32")]
     public void hostBitsAreClearedOnParse(string text, string expected)
     {
-        // Otherwise "10.5.5.5/8" would print as itself in the exposure warning and IsPrivate
-        // would judge the host address rather than the block.
+        // Otherwise IsPrivate would judge the host address rather than the block.
         Assert.Equal(expected, Parse(text).ToString());
         Assert.True(Parse(text).IsPrivate());
     }
@@ -84,9 +82,7 @@ public class IpRangeTests
     [InlineData("::1/129")]
     [InlineData("")]
     [InlineData(null)]
-    // Legacy shorthand: IPAddress.TryParse reads "192.168.1" as 192.168.0.1, so accepting
-    // it would turn a typo'd CIDR into a silently different subnet.
-    [InlineData("192.168.1/24")]
+    [InlineData("192.168.1/24")]   // IPAddress.TryParse would read this as 192.168.0.1
     [InlineData("10/8")]
     public void invalidInput_doesNotParse(string? text) =>
         Assert.False(IpRange.TryParse(text, out _));

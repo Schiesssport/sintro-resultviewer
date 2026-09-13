@@ -2,11 +2,14 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-    SECTOR_COUNT, sectorCentreAngle, pointOnCircle, wedgePath, ringWedgePath, wedgeMidpoint,
-    shotDial, DEFAULT_DIAL_GEOMETRY,
+    SECTOR_COUNT, sectorCentreAngle, pointOnCircle, ringWedgePath, shotDial, DEFAULT_DIAL_GEOMETRY,
 } from '../core/sectors.js';
 
-const geometry = { cx: 10, cy: 10, r: 9 };
+const geometry = { cx: 10, cy: 10, r: 9, innerR: 6 };
+
+// The visual centre of gravity of a sector's wedge.
+const midpoint = (sector) => pointOnCircle(sectorCentreAngle(sector), { ...geometry, r: geometry.r / 2 });
+const filledSectors = (dial) => dial.wedges.filter((wedge) => wedge.filled).map((wedge) => wedge.sector);
 
 describe('sector orientation', () => {
     // These are the directions measured from the device's own X/Y data.
@@ -17,18 +20,17 @@ describe('sector orientation', () => {
     test('sector 7 is nine o\'clock', () => assert.equal(Math.abs(sectorCentreAngle(7)), 180));
 
     test('the numbers run clockwise, not counter-clockwise', () => {
-        // Sector 2 must sit upper-RIGHT. Counter-clockwise numbering would put it upper-left
-        // and every hit direction shown on screen would be mirrored.
-        const two = wedgeMidpoint(2, geometry);
+        // Counter-clockwise numbering would put sector 2 upper-left and mirror every direction shown.
+        const two = midpoint(2);
         assert.ok(two.x > geometry.cx, 'sector 2 is right of centre');
         assert.ok(two.y < geometry.cy, 'sector 2 is above centre');
     });
 
     test('every sector lands in the expected quadrant', () => {
-        const above = (sector) => wedgeMidpoint(sector, geometry).y < geometry.cy - 0.01;
-        const below = (sector) => wedgeMidpoint(sector, geometry).y > geometry.cy + 0.01;
-        const right = (sector) => wedgeMidpoint(sector, geometry).x > geometry.cx + 0.01;
-        const left = (sector) => wedgeMidpoint(sector, geometry).x < geometry.cx - 0.01;
+        const above = (sector) => midpoint(sector).y < geometry.cy - 0.01;
+        const below = (sector) => midpoint(sector).y > geometry.cy + 0.01;
+        const right = (sector) => midpoint(sector).x > geometry.cx + 0.01;
+        const left = (sector) => midpoint(sector).x < geometry.cx - 0.01;
 
         assert.ok(above(1) && !right(1) && !left(1), 'sector 1: top');
         assert.ok(above(2) && right(2), 'sector 2: top-right');
@@ -62,27 +64,9 @@ describe('pointOnCircle', () => {
     });
 });
 
-describe('wedgePath', () => {
-    test('starts at the centre, draws an arc and closes', () => {
-        const path = wedgePath(1, geometry);
-        assert.match(path, /^M 10 10 L /);
-        assert.match(path, /A 9 9 0 0 1 /);   // sweep-flag 1 = clockwise on screen
-        assert.match(path, /Z$/);
-    });
-
-    test('every sector produces a distinct path', () => {
-        const paths = Array.from({ length: SECTOR_COUNT }, (_, i) => wedgePath(i + 1, geometry));
-        assert.equal(new Set(paths).size, SECTOR_COUNT);
-    });
-});
-
 describe('shotDial', () => {
     test('fills exactly the reported sector', () => {
-        const dial = shotDial({ hitSector: 4 });
-
-        assert.equal(dial.filledSector, 4);
-        assert.equal(dial.wedges.filter((wedge) => wedge.filled).length, 1);
-        assert.equal(dial.wedges.find((wedge) => wedge.filled).sector, 4);
+        assert.deepEqual(filledSectors(shotDial({ hitSector: 4 })), [4]);
     });
 
     test('a centre hit fills no wedge but is flagged', () => {
@@ -90,22 +74,19 @@ describe('shotDial', () => {
         const dial = shotDial({ hitSector: 0 });
 
         assert.equal(dial.isCentre, true);
-        assert.equal(dial.filledSector, null);
-        assert.equal(dial.wedges.filter((wedge) => wedge.filled).length, 0);
+        assert.deepEqual(filledSectors(dial), []);
     });
 
     test('no reported sector leaves the dial blank', () => {
         for (const shot of [{ hitSector: null }, {}, null]) {
             const dial = shotDial(shot);
             assert.equal(dial.isCentre, false);
-            assert.equal(dial.filledSector, null);
-            assert.equal(dial.wedges.filter((wedge) => wedge.filled).length, 0);
+            assert.deepEqual(filledSectors(dial), []);
         }
     });
 
     test('a miss still gets a dial, because the direction is the point', () => {
-        const dial = shotDial({ value: 0, hitSector: 6 });
-        assert.equal(dial.filledSector, 6);
+        assert.deepEqual(filledSectors(shotDial({ value: 0, hitSector: 6 })), [6]);
     });
 
     test('always describes all eight wedges', () => {
@@ -123,7 +104,7 @@ describe('ringWedgePath', () => {
         assert.match(path, /Z$/);
     });
 
-    test('honours an explicit inner radius', () => {
+    test('honours the inner radius', () => {
         const thin = ringWedgePath(1, { ...geometry, innerR: 8 });
         const thick = ringWedgePath(1, { ...geometry, innerR: 2 });
         assert.notEqual(thin, thick);
@@ -145,15 +126,13 @@ describe('shotDial ring paths', () => {
 
 describe('default ring geometry', () => {
     test('the dial is a circle, not an ellipse', () => {
-        // It depicts a target face. Stretching it to fit wider numbers reads as a mistake,
-        // so the geometry stays square and the size is chosen for the widest value instead.
+        // It depicts a target face; the size is chosen for the widest value instead of stretching.
         const { cx, cy } = DEFAULT_DIAL_GEOMETRY;
         assert.equal(cx, cy, 'the viewBox must be square so the SVG renders a circle');
     });
 
     test('the hole is wide enough for a three-digit score', () => {
-        // The 100er valuation scores 0-100, so "100" has to fit inside the ring or the
-        // value gets clipped on exactly the targets that need the most room.
+        // The 100er valuation scores 0-100, so "100" has to fit inside the ring.
         const { r, innerR } = DEFAULT_DIAL_GEOMETRY;
         const holeFraction = innerR / r;
 

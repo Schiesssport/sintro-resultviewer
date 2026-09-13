@@ -7,26 +7,15 @@ using System.Threading.Channels;
 namespace Sintro.ResultViewer.Live;
 
 /// <summary>
-/// Tracks connected viewers and pushes state to them.
-///
-/// Every client owns a **single slot** — not a queue — and its own pump. Broadcasting only fills
-/// the slot, so one wall display on a half-dead TCP connection cannot hold up the others or stall
-/// the lane watcher while the OS works its way to a timeout.
-///
-/// A slot rather than a queue because these payloads are complete snapshots of current state: a
-/// backlog would only show a display the past more slowly, and after a stall it would have to
-/// replay frames that were already obsolete when they were queued. Whatever arrives while a client
-/// is busy simply replaces what was waiting, so it always resumes on the newest state.
+/// Fans lane state out to connected viewers. Each client owns a single slot (newest payload wins) and its own pump;
+/// Broadcast only fills slots and never awaits a socket, so one stalled display cannot hold up the others.
 /// </summary>
 public sealed class LiveHub(ILogger<LiveHub> logger)
 {
-    /// <summary>
-    /// Floor between two sends to one client. Nothing here is worth more than two updates a
-    /// second on a wall display, and it keeps a burst from becoming a burst of syscalls.
-    /// </summary>
+    // Two updates a second is plenty for a wall display, and it keeps a burst from becoming a burst of syscalls.
     private static readonly TimeSpan MinimumSendInterval = TimeSpan.FromMilliseconds(500);
 
-    /// <summary>A send that takes longer than this means the far end is gone, whatever TCP thinks.</summary>
+    // A send that takes this long means the far end is gone, whatever TCP thinks.
     private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(10);
 
     private readonly ConcurrentDictionary<Guid, Client> _clients = new();
@@ -35,7 +24,6 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
 
     private sealed record Client(WebSocket Socket, Channel<ReadOnlyMemory<byte>> Pending);
 
-    /// <summary>Capacity one, newest wins: the slot described above.</summary>
     private static Channel<ReadOnlyMemory<byte>> NewSlot() =>
         Channel.CreateBounded<ReadOnlyMemory<byte>>(new BoundedChannelOptions(1)
         {
@@ -43,44 +31,29 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
             SingleReader = true,
         });
 
-    /// <summary>
-    /// Registers the socket, hands <paramref name="initialPayload"/> to it alone, and stays until
-    /// the client goes away or <paramref name="token"/> is cancelled.
-    /// </summary>
+    /// <summary>Registers the socket, sends it <paramref name="initialPayload"/>, and returns when the client goes away.</summary>
     public async Task AcceptAsync<T>(WebSocket socket, T initialPayload, CancellationToken token)
     {
         var id = Guid.NewGuid();
         var client = new Client(socket, NewSlot());
-
         _clients[id] = client;
         logger.LogInformation("Live client {Id} connected ({Count} total)", id, _clients.Count);
 
-        // The joining client needs the current state immediately; a broadcast would not reach it
-        // any sooner (it is not registered yet) and would disturb everyone else.
         client.Pending.Writer.TryWrite(Serialize(initialPayload));
-
         var pump = PumpAsync(id, client, token);
 
         try
         {
-            // Nothing is expected from the client; this just parks until it goes away.
-            var buffer = new byte[256];
-            while (socket.State == WebSocketState.Open && !token.IsCancellationRequested)
-            {
-                var result = await socket.ReceiveAsync(buffer, token);
-                if (result.MessageType == WebSocketMessageType.Close) break;
-            }
+            await WaitUntilClosedAsync(socket, token);
         }
         catch (OperationCanceledException)
         {
-            // Shutting down: drop the connection at once rather than negotiating a close with a
-            // display that may never answer. Kestrel would otherwise hold the process open until
-            // its shutdown timeout ran out.
+            // Shutting down: a display that never answers a close handshake would hold the process open until Kestrel's timeout.
             Abort(client);
         }
         catch (WebSocketException)
         {
-            // Client vanished; nothing to recover.
+            // Client vanished.
         }
         finally
         {
@@ -89,7 +62,17 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
         }
     }
 
-    /// <summary>Offers a payload to every client. Never waits on a socket, hence not async.</summary>
+    // Nothing is expected from the client; this parks until it goes away.
+    private static async Task WaitUntilClosedAsync(WebSocket socket, CancellationToken token)
+    {
+        var buffer = new byte[256];
+        while (socket.State == WebSocketState.Open && !token.IsCancellationRequested)
+        {
+            var result = await socket.ReceiveAsync(buffer, token);
+            if (result.MessageType == WebSocketMessageType.Close) return;
+        }
+    }
+
     public void Broadcast<T>(T payload)
     {
         var json = Serialize(payload);
@@ -102,12 +85,11 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
                 continue;
             }
 
-            // Replaces whatever was waiting; cannot block however far behind the client is.
             client.Pending.Writer.TryWrite(json);
         }
     }
 
-    /// <summary>One writer per socket, which is also what keeps SendAsync calls from overlapping.</summary>
+    // One writer per socket, which is also what keeps SendAsync calls from overlapping.
     private async Task PumpAsync(Guid id, Client client, CancellationToken token)
     {
         var sinceLastSend = Stopwatch.StartNew();
@@ -117,17 +99,10 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
         {
             await foreach (var frame in client.Pending.Reader.ReadAllAsync(token))
             {
-                // Hold the floor between sends. Anything newer that arrives while waiting
-                // replaces the slot, so the client resumes on the latest state, not a backlog.
                 if (hasSent && sinceLastSend.Elapsed < MinimumSendInterval)
                     await Task.Delay(MinimumSendInterval - sinceLastSend.Elapsed, token);
 
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
-                timeout.CancelAfter(SendTimeout);
-
-                await client.Socket.SendAsync(
-                    frame, WebSocketMessageType.Text, endOfMessage: true, timeout.Token);
-
+                await SendWithTimeoutAsync(client.Socket, frame, token);
                 sinceLastSend.Restart();
                 hasSent = true;
             }
@@ -151,6 +126,13 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
         }
     }
 
+    private static async Task SendWithTimeoutAsync(WebSocket socket, ReadOnlyMemory<byte> frame, CancellationToken token)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeout.CancelAfter(SendTimeout);
+        await socket.SendAsync(frame, WebSocketMessageType.Text, endOfMessage: true, timeout.Token);
+    }
+
     private void Remove(Guid id)
     {
         if (!_clients.TryRemove(id, out var client)) return;
@@ -159,10 +141,9 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
         logger.LogInformation("Live client {Id} disconnected ({Count} remaining)", id, _clients.Count);
     }
 
+    // Abort, not CloseAsync: a client that is not draining will not complete a close handshake either.
     private static void Abort(Client client)
     {
-        // Abort, not CloseAsync: a client that is not draining will not complete a handshake
-        // either, and waiting for one is the stall this whole design exists to avoid.
         try { client.Socket.Abort(); } catch (ObjectDisposedException) { }
     }
 

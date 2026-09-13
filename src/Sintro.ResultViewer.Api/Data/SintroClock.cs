@@ -33,18 +33,12 @@ public sealed class SintroClock : ISintroClock
 
     public DateTimeOffset ToOffset(DateTime naiveLocalTime)
     {
+        // The autumn DST overlap resolves to standard time; the device stores no zone, so no reading can do better.
         var unspecified = DateTime.SpecifyKind(naiveLocalTime, DateTimeKind.Unspecified);
-        // During the autumn DST overlap this resolves to standard time. The device stores no
-        // zone information at all, so no reading can do better than pick one.
         return new DateTimeOffset(unspecified, _zone.GetUtcOffset(unspecified));
     }
 
-    /// <summary>
-    /// The host's own timezone is the range's timezone — the device, the database and this
-    /// service all run on the same machine — so no configuration is needed in practice. The
-    /// setting exists only for a host whose clock is set for somewhere else, and a bad value
-    /// falls back rather than taking the service down.
-    /// </summary>
+    // The host zone is the range's zone (device, database and service share one machine); a bad id falls back rather than failing startup.
     private static TimeZoneInfo ResolveZone(string? id)
     {
         if (string.IsNullOrWhiteSpace(id)) return TimeZoneInfo.Local;

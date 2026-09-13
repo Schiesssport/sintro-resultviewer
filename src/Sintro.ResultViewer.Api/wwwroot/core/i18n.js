@@ -1,12 +1,4 @@
-// =============================================================================
-// Translation dictionaries and substitution helper.
-// Same shape as OpenRangeOffice's src/core/translations.js: code and keys are
-// English, the user-facing strings are German (default) and French.
-//
-// Vocabulary note: a Sintro "program" is one shooter's pass at the target and is
-// called a "Passe" here. That is NOT OpenRangeOffice's `match` (Stich / passe),
-// which is the competition a participant registers for.
-// =============================================================================
+// UI strings: German (default) and French. Code and keys are English.
 
 export const TRANSLATIONS = {
     de: {

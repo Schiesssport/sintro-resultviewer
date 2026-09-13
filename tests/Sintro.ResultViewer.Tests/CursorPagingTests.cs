@@ -6,32 +6,31 @@ using Sintro.ResultViewer.Domain;
 
 namespace Sintro.ResultViewer.Tests;
 
-/// <summary>
-/// Keyset paging has to hold two promises: walking every page visits each record exactly once,
-/// and ascending order plus a stored cursor is a correct incremental sync.
-/// </summary>
+/// <summary>Walking every page visits each record exactly once, and ascending order plus a stored cursor is a correct incremental sync.</summary>
 [Collection(ApiCollection.Name)]
 public class CursorPagingTests(ApiFixture fixture)
 {
     private HttpClient Client() => fixture.CreateAuthorizedClient();
 
-    private async Task<CursorPage<ShootingProgram>> ProgramsAsync(string query) =>
-        (await Client().GetFromJsonAsync<CursorPage<ShootingProgram>>(
-            $"/api/v2/programs?{query}", SintroJson.Options))!;
+    private async Task<CursorPage<T>> PageAsync<T>(string pathWithQuery) =>
+        (await Client().GetFromJsonAsync<CursorPage<T>>(pathWithQuery, SintroJson.Options))!;
 
-    private async Task<List<ShootingProgram>> WalkProgramsAsync(string query, int pageSize)
+    private Task<CursorPage<ShootingProgram>> ProgramsAsync(string query) =>
+        PageAsync<ShootingProgram>($"/api/v2/programs?{query}");
+
+    private async Task<List<T>> WalkAsync<T>(string pathWithQuery, int stopAfter)
     {
-        var all = new List<ShootingProgram>();
+        var all = new List<T>();
         string? cursor = null;
 
         do
         {
             var suffix = cursor is null ? "" : $"&cursor={Uri.EscapeDataString(cursor)}";
-            var page = await ProgramsAsync($"{query}&limit={pageSize}{suffix}");
+            var page = await PageAsync<T>($"{pathWithQuery}{suffix}");
             all.AddRange(page.Items);
             cursor = page.NextCursor;
         }
-        while (cursor is not null && all.Count < 5000);
+        while (cursor is not null && all.Count < stopAfter);
 
         return all;
     }
@@ -40,14 +39,13 @@ public class CursorPagingTests(ApiFixture fixture)
     public async Task walkingEveryPage_visitsEachProgramExactlyOnce()
     {
         var single = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&limit=2000");
-        var walked = await WalkProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true", pageSize: 37);
+        var walked = await WalkAsync<ShootingProgram>(
+            $"/api/v2/programs?{ApiFixture.WholeRange}&withoutResult=true&limit=37", stopAfter: 5000);
 
         Assert.Equal(single.Items.Count, walked.Count);
         Assert.Equal(
             single.Items.Select(program => program.Id),
             walked.Select(program => program.Id));
-
-        // No duplicates and no gaps — the failure mode offset paging is prone to.
         Assert.Equal(walked.Count, walked.Select(program => program.Id).Distinct().Count());
     }
 
@@ -63,8 +61,7 @@ public class CursorPagingTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task afullPageThatExactlyEmptiesTheSetStillTerminates()
     {
-        // A limit equal to the number of remaining rows must not hand back a cursor to an
-        // empty page — the classic off-by-one in keyset paging.
+        // A limit equal to the remaining rows must not hand back a cursor to an empty page.
         var all = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&limit=5000");
 
         var exact = await ProgramsAsync(
@@ -95,8 +92,6 @@ public class CursorPagingTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task ascendingCursorIsAnIncrementalSync()
     {
-        // Fetch a first batch, keep the cursor, then ask again: the second call must return
-        // only records after the first batch, which is exactly what a sync needs.
         var first = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&order=asc&limit=20");
         Assert.NotNull(first.NextCursor);
 
@@ -111,8 +106,6 @@ public class CursorPagingTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task aGarbageCursorIs400RatherThanARestartFromPageOne()
     {
-        // Silently paging from the start would hand a syncing client every historic record
-        // again with nothing in the response to say why. Same rule as an unknown filter value.
         var response = await Client().GetAsync(
             $"/api/v2/programs?{ApiFixture.WholeRange}&withoutResult=true&limit=5&cursor=not-a-cursor");
 
@@ -124,8 +117,7 @@ public class CursorPagingTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task aCursorIssuedForOneOrderIsRefusedForTheOther()
     {
-        // Walking ascending, then continuing with the default descending order, would return
-        // everything *older* than the cursor: the opposite of the sync the client built.
+        // Continuing an ascending walk with the default descending order would return everything older.
         var first = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&order=asc&limit=5");
         Assert.NotNull(first.NextCursor);
 
@@ -150,27 +142,13 @@ public class CursorPagingTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task shootersPageAlphabeticallyWithoutRepeats()
     {
-        var all = new List<Shooter>();
-        string? cursor = null;
-
-        do
-        {
-            var suffix = cursor is null ? "" : $"&cursor={Uri.EscapeDataString(cursor)}";
-            var page = (await Client().GetFromJsonAsync<CursorPage<Shooter>>(
-                $"/api/v2/shooters?limit=25{suffix}", SintroJson.Options))!;
-            all.AddRange(page.Items);
-            cursor = page.NextCursor;
-        }
-        while (cursor is not null && all.Count < 1000);
+        var all = await WalkAsync<Shooter>("/api/v2/shooters?limit=25", stopAfter: 1000);
 
         Assert.NotEmpty(all);
         Assert.Equal(all.Count, all.Select(shooter => shooter.ShooterId).Distinct().Count());
 
-        // Compare against the unpaged order rather than a .NET comparer: the sort is SQL
-        // Server's accent-aware collation ("Brügger" before "Brunner"), which no
-        // StringComparer reproduces exactly. What matters is that paging does not disturb it.
-        var unpaged = (await Client().GetFromJsonAsync<CursorPage<Shooter>>(
-            "/api/v2/shooters?limit=500", SintroJson.Options))!;
+        // Compared against the unpaged order, not a .NET comparer: none reproduces SQL Server's accent-aware collation.
+        var unpaged = await PageAsync<Shooter>("/api/v2/shooters?limit=500");
 
         Assert.Equal(
             unpaged.Items.Select(shooter => shooter.ShooterId),
@@ -180,25 +158,12 @@ public class CursorPagingTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task clubsPageThroughTheWholeRegister()
     {
-        var all = new List<Club>();
-        string? cursor = null;
-
-        do
-        {
-            var suffix = cursor is null ? "" : $"&cursor={Uri.EscapeDataString(cursor)}";
-            var page = (await Client().GetFromJsonAsync<CursorPage<Club>>(
-                $"/api/v2/clubs?limit=500{suffix}", SintroJson.Options))!;
-            all.AddRange(page.Items);
-            cursor = page.NextCursor;
-        }
-        while (cursor is not null && all.Count < 5000);
+        var all = await WalkAsync<Club>("/api/v2/clubs?limit=500", stopAfter: 5000);
 
         Assert.NotEmpty(all);
         Assert.Equal(all.Count, all.Select(club => club.Id).Distinct().Count());
 
-        // Paging must not lose or duplicate anything against a single large request.
-        var unpaged = (await Client().GetFromJsonAsync<CursorPage<Club>>(
-            "/api/v2/clubs?limit=5000", SintroJson.Options))!;
+        var unpaged = await PageAsync<Club>("/api/v2/clubs?limit=5000");
         Assert.Equal(unpaged.Items.Select(club => club.Id), all.Select(club => club.Id));
     }
 }
