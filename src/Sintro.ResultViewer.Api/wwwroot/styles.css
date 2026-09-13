@@ -726,15 +726,6 @@ body.is-fullscreen table.results tbody td { padding: 11px 12px; }
 
 body.is-fullscreen .ticker-entry { font-size: 19px; }
 
-/* -- Leaderboard placeholder ------------------------------------------------ */
-
-.placeholder {
-    color: var(--muted);
-    font-size: 15px;
-    text-align: center;
-    padding: 60px 20px;
-}
-
 /* No section titles on a wall display: the tables are obvious from their own content. */
 body.is-fullscreen .section-title { display: none; }
 body.is-fullscreen .section { margin-bottom: 0; }

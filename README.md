@@ -23,8 +23,7 @@ Für Fernseher und Beamer gibt es eigene Adressen ohne Bedienelemente, als Lesez
 |---|---|
 | `/fullscreen/live` | nur die Linien |
 | `/fullscreen/results` | nur die letzten Resultate |
-| `/fullscreen/live+results` | beides (auch `/fullscreen`) |
-| `/fullscreen/leaderboard` | Rangliste (noch nicht umgesetzt) |
+| `/fullscreen/live+results` | beides |
 
 Weil auf einem Fernseher nicht gescrollt werden kann, laufen die Resultate, die nicht mehr auf den
 Bildschirm passen, als Laufschrift durch. Beides – Lesezeit pro Eintrag und Anzahl – lässt sich im
