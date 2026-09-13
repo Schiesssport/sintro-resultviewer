@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Blueprint for coding agents. Keep in sync; ≤10 000 chars.
+Blueprint for coding agents. Keep in sync; max 10 000 chars.
 
 ## Rules
 
@@ -103,15 +103,15 @@ The integration tests assert the resulting counts.
 | `Total` null on mixed valuations, `TotalUnavailable` says why | 5er + 10er is meaningless |
 | Never join on `Shots.StartNr` — use `ProgramID → Programs.ShooterID` | Almost always zero |
 | `Shooters.StartNr` **is the licence number**, no length cap | Six digits, zero-padded; 7-9 digits planned |
-| `shooter: null` is normal | Most passes are anonymous; never lose a result over it |
+| `shooter: null` is normal | Most passes are anonymous |
 | Parse `StartTime` as `dd.MM.yyyy-HH:mm:ss`, emit ISO 8601 | Day-first text; its order is meaningless |
 | `(number, name)` is free text, not a key | Operators rename programs |
 | `TargetType` is the Scheibe: `0`=A, `1`=B, `3`=S (Sau) | Matches the A/B prefixes in program names |
 | `hitSector` 1 is twelve o'clock, **clockwise** in 45° steps | Derived from the mean `atan2(y,x)` per sector |
 | Nulls are serialized, never omitted | `shooter`/`currentProgram` null are documented states |
-| Cursor paging on `ProgramID`, never offset, no `total` | The device inserts and prunes while a client reads; a count is a second scan |
+| Cursor paging, never offset, no `total`; `state=finished` keyed by finishing order | The device inserts and prunes while a client reads; a late-ending pass must arrive after a sync cursor |
 | A pass is `Active`, `Finished` **or `Abandoned`** | Off the line with no end total is neither; `state` must agree with `?state=` |
-| Reject an unknown filter value or cursor (`400`), never ignore it | `?state=finishd` returning everything is the opposite of the request; so is a wrong-order cursor restarting a sync |
+| Reject an unknown filter value or cursor (`400`), never ignore it | `?state=finishd` returning everything is the opposite of the request |
 | Every non-2xx body is `ApiError {error, detail}` | The viewer has one error parser; middlewares included |
 | Broadcast by enqueueing, never awaiting a socket | One stalled display would block every other client and the watcher |
 

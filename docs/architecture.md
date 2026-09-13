@@ -73,8 +73,10 @@ The consumer-facing guide is [`api.md`](api.md); this section is the reasoning b
   from the other end, so an offset would skip or repeat records. Read `nextCursor`, pass it back as
   `cursor`. There is deliberately no `total`: it costs a second scan on every request and grows with
   the table.
-- **`order=asc` plus a stored cursor is an incremental sync.** That is the supported way for event
-  software to mirror results.
+- **`state=finished&order=asc` plus a stored cursor is an incremental sync.** Finished passes are
+  keyed by finishing order (the end marker's `ShotID`), so a pass that ends late still arrives after
+  the cursor; a request with a cursor drops the today-only default; `nextCursor` is always present so
+  the last page leaves a position to resume from.
 - **Today only by default.** Shooting across midnight is unrealistic, and one consistent rule beats
   special-casing the viewer. `from`/`to` widen the window.
 - **A bad filter value is a 400, never an ignored parameter.** Dropping `?state=finishd` silently

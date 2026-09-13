@@ -11,7 +11,7 @@ public sealed record ProgramRow(
     string? ContestShooterName,
     int? ShooterID,
     DateTime? StartedAt,
-    int HasEndMarker,
+    int? EndShotId,
     int CountingShots,
     int IsActive);
 

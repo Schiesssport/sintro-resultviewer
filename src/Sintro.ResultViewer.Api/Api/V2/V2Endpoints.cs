@@ -24,15 +24,17 @@ public static class V2Endpoints
         Collection endpoints are cursor-paged, never offset-paged: the device inserts while you
         read and prunes old rows from the other end, so an offset would skip or repeat records.
 
-        Paging — read `nextCursor` from the response and pass it back as `cursor`; null means you
-        reached the end. There is deliberately no total: counting the whole set costs a second
-        scan per request and grows with the table, and paging never needs it. A cursor this API
-        did not issue, or one issued for the other sort order, is answered with 400
+        Paging — pass `nextCursor` back as `cursor`; `hasMore` says whether a further page exists
+        right now. There is deliberately no total: counting the whole set costs a second scan per
+        request and grows with the table, and paging never needs it. A cursor this API did not
+        issue, or one issued under another order or state filter, is answered with 400
         `invalid_cursor` rather than silently restarting from page one.
 
-        Syncing — request `order=asc` and keep the last `nextCursor` you received. Passing it
-        again later returns exactly the records added since, and nothing else. This is the
-        supported way to mirror results into event software.
+        Syncing results — request `state=finished&order=asc` with `from` and `to` set to the
+        event's shooting days (the range is also used for training), page until `hasMore` is
+        false and store the last `nextCursor`. Passing it again later with the same window
+        returns exactly the passes that finished since, whenever they started. Without a window a
+        cursor request covers every day, not just today.
 
         Errors — every non-2xx answer carries `{"error": "<stable code>", "detail": "<text>"}`.
         """;
@@ -77,7 +79,8 @@ public static class V2Endpoints
 
                 state is one of: active (on a line, still being shot), finished (the device wrote
                 an end total), abandoned (neither — started and dropped, or displaced when the
-                line was reassigned; these almost always carry no shots). order is asc or desc.
+                line was reassigned; these almost always carry no shots). With state=finished the
+                list is in finishing order; otherwise in starting order. order is asc or desc.
                 An unrecognised value for either is answered with 400 rather than ignored, so a
                 typo cannot quietly widen what you receive.
 
@@ -202,8 +205,8 @@ public static class V2Endpoints
         if (ParseState(state, out var parsedState) is { } stateError) return TypedResults.BadRequest(stateError);
         if (ParseOrder(order, out var ascending) is { } orderError) return TypedResults.BadRequest(orderError);
 
-        // Today only unless a window is given; a pass that runs past midnight is filed under the day it started.
-        var explicitWindow = from is not null || to is not null;
+        // Today only unless a window or a cursor is given: the cursor is the position, and a stored one must not lose yesterday's late passes.
+        var explicitWindow = from is not null || to is not null || !string.IsNullOrWhiteSpace(cursor);
 
         var filter = new ProgramFilter
         {

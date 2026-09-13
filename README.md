@@ -122,12 +122,13 @@ with [`docs/api.md`](docs/api.md): access setup, the results list field by field
 document itself and needs no token.
 
 **Collections are cursor-paged, never offset-paged** — the device inserts while you read and prunes
-from the other end, so an offset would skip or repeat rows. Read `nextCursor`, pass it back as
-`cursor`; `null` means the end. A cursor the API did not issue is a `400 invalid_cursor`, and every
-error carries the same `{"error", "detail"}` body.
+from the other end, so an offset would skip or repeat rows. Pass `nextCursor` back as `cursor` while
+`hasMore` is true. A cursor the API did not issue is a `400 invalid_cursor`, and every error carries
+the same `{"error", "detail"}` body.
 
-**To sync**, request `order=asc` and keep the last `nextCursor`. Passing it again later returns
-exactly what has been added since — nothing to diff.
+**To sync results**, request `state=finished&order=asc` with `from`/`to` set to the event's
+shooting days and keep the last `nextCursor`. Passing it again later returns exactly the passes that
+finished since — nothing to diff. See [`docs/api.md`](docs/api.md).
 
 A few things worth knowing before building against it:
 

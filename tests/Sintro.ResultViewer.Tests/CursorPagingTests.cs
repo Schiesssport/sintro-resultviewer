@@ -22,15 +22,16 @@ public class CursorPagingTests(ApiFixture fixture)
     {
         var all = new List<T>();
         string? cursor = null;
+        CursorPage<T> page;
 
         do
         {
             var suffix = cursor is null ? "" : $"&cursor={Uri.EscapeDataString(cursor)}";
-            var page = await PageAsync<T>($"{pathWithQuery}{suffix}");
+            page = await PageAsync<T>($"{pathWithQuery}{suffix}");
             all.AddRange(page.Items);
             cursor = page.NextCursor;
         }
-        while (cursor is not null && all.Count < stopAfter);
+        while (page.HasMore && all.Count < stopAfter);
 
         return all;
     }
@@ -50,12 +51,14 @@ public class CursorPagingTests(ApiFixture fixture)
     }
 
     [RequiresDatabaseFact]
-    public async Task theLastPageReportsNoNextCursor()
+    public async Task theLastPageStillHandsBackACursorToResumeFrom()
     {
+        // A sync client ends on this page and must have a position to store.
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&limit=5000");
 
-        Assert.Null(page.NextCursor);
         Assert.NotEmpty(page.Items);
+        Assert.False(page.HasMore);
+        Assert.NotNull(page.NextCursor);
     }
 
     [RequiresDatabaseFact]
@@ -68,7 +71,7 @@ public class CursorPagingTests(ApiFixture fixture)
             $"{ApiFixture.WholeRange}&withoutResult=true&limit={all.Items.Count}");
 
         Assert.Equal(all.Items.Count, exact.Items.Count);
-        Assert.Null(exact.NextCursor);
+        Assert.False(exact.HasMore);
     }
 
     [RequiresDatabaseFact]
@@ -101,6 +104,63 @@ public class CursorPagingTests(ApiFixture fixture)
         var firstIds = first.Items.Select(program => program.Id).ToHashSet();
         Assert.All(second.Items, program => Assert.DoesNotContain(program.Id, firstIds));
         Assert.All(second.Items, program => Assert.True(program.Id > first.Items[^1].Id));
+    }
+
+    [RequiresDatabaseFact]
+    public async Task aCursorLiftsTheTodayOnlyDefault()
+    {
+        // A client syncing the morning after must not lose yesterday's late passes to the today window.
+        var first = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&order=asc&limit=1");
+        var cursor = Uri.EscapeDataString(first.NextCursor!);
+
+        var windowed = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&order=asc&limit=5000&cursor={cursor}");
+        var bare = await ProgramsAsync($"withoutResult=true&order=asc&limit=5000&cursor={cursor}");
+
+        Assert.NotEmpty(bare.Items);
+        Assert.Equal(windowed.Items.Select(program => program.Id), bare.Items.Select(program => program.Id));
+    }
+
+    [RequiresDatabaseFact]
+    public async Task finishedPassesAreListedInFinishingOrder()
+    {
+        // A pass that ends late must arrive after a syncing client's cursor, whenever it started.
+        var page = await ProgramsAsync($"{ApiFixture.WholeRange}&state=finished&order=asc&limit=5000");
+        var finished = page.Items.Select(program => program.FinishedAt!.Value).ToList();
+
+        Assert.NotEmpty(finished);
+        Assert.Equal(finished.OrderBy(at => at), finished);
+    }
+
+    [RequiresDatabaseFact]
+    public async Task theSyncRecipeKeepsToTheEventDays()
+    {
+        // The documented recipe: state=finished, order=asc, a date window, and a stored cursor, all at once.
+        var day = ApiFixture.BackupDate;
+        var first = await ProgramsAsync($"state=finished&order=asc&from={day}&to={day}&limit=1");
+        Assert.NotEmpty(first.Items);
+
+        var rest = await WalkAsync<ShootingProgram>(
+            $"/api/v2/programs?state=finished&order=asc&from={day}&to={day}&limit=50&cursor={Uri.EscapeDataString(first.NextCursor!)}",
+            stopAfter: 5000);
+
+        Assert.All(rest, program => Assert.Equal(DateOnly.Parse(day), DateOnly.FromDateTime(program.StartedAt.Date)));
+        Assert.All(rest, program => Assert.True(program.FinishedAt >= first.Items[0].FinishedAt));
+        Assert.DoesNotContain(first.Items[0].Id, rest.Select(program => program.Id));
+    }
+
+    [RequiresDatabaseFact]
+    public async Task aFinishedCursorIsRefusedWithoutTheStateFilter()
+    {
+        // The two listings are keyed differently; replaying one cursor under the other would return the wrong half.
+        var first = await ProgramsAsync($"{ApiFixture.WholeRange}&state=finished&order=asc&limit=5");
+
+        var response = await Client().GetAsync(
+            $"/api/v2/programs?{ApiFixture.WholeRange}&order=asc&limit=5&cursor={Uri.EscapeDataString(first.NextCursor!)}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ApiError>(SintroJson.Options);
+        Assert.Equal("invalid_cursor", body!.Error);
+        Assert.Contains("state=finished", body.Detail);
     }
 
     [RequiresDatabaseFact]

@@ -112,16 +112,17 @@ public class CatalogEndpointTests(ApiFixture fixture)
 
         var walked = new List<int>();
         string? cursor = null;
+        ShooterDetail page;
         do
         {
             var suffix = cursor is null ? "" : $"&cursor={Uri.EscapeDataString(cursor)}";
-            var page = (await Client().GetFromJsonAsync<ShooterDetail>(
+            page = (await Client().GetFromJsonAsync<ShooterDetail>(
                 $"/api/v2/shooters/{licence}?limit=1{suffix}", SintroJson.Options))!;
 
             walked.AddRange(page.Programs.Items.Select(program => program.Id));
             cursor = page.Programs.NextCursor;
         }
-        while (cursor is not null && walked.Count < 500);
+        while (page.Programs.HasMore && walked.Count < 500);
 
         Assert.Equal(everything.Programs.Items.Select(program => program.Id), walked);
     }

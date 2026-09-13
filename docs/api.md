@@ -32,7 +32,7 @@ One item is one *program*: one shooter's pass at the target, a "Passe". Newest f
 | `license` | Shooter's licence number, leading zeros optional |
 | `lane` | Line number |
 | `withoutResult` | `true` also returns passes with no counting shots. Default `false` |
-| `order` | `desc` (default) or `asc`; see syncing |
+| `order` | `desc` (default) or `asc`. With `state=finished` the list is in finishing order, otherwise in starting order |
 | `cursor`, `limit` | Paging; `limit` defaults to 200, max 2000 |
 
 ```
@@ -81,7 +81,8 @@ curl -H "Authorization: Bearer $TOKEN" \
       "sighting": []
     }
   ],
-  "nextCursor": "WyIxOTQ1IiwiREVTQyJd"
+  "nextCursor": "WyIxOTQ1IiwiREVTQyIsIlByb2dyYW1JRCJd",
+  "hasMore": true
 }
 ```
 
@@ -101,12 +102,37 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ## Paging and syncing
 
-Pass `nextCursor` back as `cursor` until it is `null`. Never use offsets: the device inserts while
-you read and prunes old rows from the other end.
+Pass `nextCursor` back as `cursor` while `hasMore` is `true`. Never use offsets: the device inserts
+while you read and prunes old rows from the other end. `nextCursor` is always present on a non-empty
+page, so the last page still gives you a position to resume from.
 
-To mirror results into your own database, request `order=asc`, page to the end, and store the last
-`nextCursor`. Passing it again later returns exactly the passes added since. A cursor that was not
-issued by this API, or was issued for the other `order`, is `400 invalid_cursor`.
+To keep your own database up to date with the results of an event:
+
+1. Let the operator enter the event's shooting days, and always send them as `from` and `to`.
+   The range is also used for training and tests; without the window those passes would be
+   imported as results.
+2. `GET /programs?state=finished&order=asc&from=<first day>&to=<last day>` and page until
+   `hasMore` is `false`.
+3. Store the last `nextCursor`.
+4. Later, call again with the same `from`, `to` and `cursor=<stored>`. You receive exactly the
+   passes inside the window that finished since, whenever they were started, and no others. Store
+   the new `nextCursor` and repeat. An empty page has `nextCursor: null`; keep the cursor you have.
+
+Two details make this safe: with `state=finished` the list is in **finishing** order, so a pass that
+ran long and ended after your last sync still comes after your cursor; and the window is on the
+**start** date, so a pass that starts on an event day and runs past midnight is still included. A
+cursor that was not issued by this API, or was issued under another `order` or `state`, is
+`400 invalid_cursor`. A request with a cursor but no window returns every day; use that only when
+you really want everything.
+
+### Changing the window, refetching
+
+`from` and `to` are independent: either may be left out for an open end, and both may be changed
+between calls when the operator corrects them. A cursor is only a position in finishing order, so
+after changing the window drop the cursor and walk the new window from the start. Walking the same
+window twice returns the same passes in the same order, and a pass's `id` never changes, so an
+import that upserts by `id` can refetch any time. Only very old days may come back shorter: the
+device prunes its oldest passes.
 
 ## Other endpoints
 

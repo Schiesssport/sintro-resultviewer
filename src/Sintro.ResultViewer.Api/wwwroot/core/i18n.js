@@ -73,7 +73,7 @@ export const TRANSLATIONS = {
         'docs.replacePlaceholder':  'Platzhalter in geschweiften Klammern vor dem Senden durch einen echten Wert ersetzen, z.B. /api/v2/programs/2000 oder /api/v2/shooters/123456.',
         'docs.openInBrowser':       'Im Browser öffnen',
         'docs.pagingTitle':         'Sammlungen, Paginierung und Sync',
-        'docs.pagingBody':          'Listen werden per Cursor geblättert, nicht per Offset: die Anlage schreibt laufend neue Datensätze und löscht alte, ein Offset würde deshalb Einträge überspringen oder doppelt liefern. Lies nextCursor aus der Antwort und sende ihn als cursor wieder mit; ist nextCursor null, ist das Ende erreicht. Für den Abgleich mit einer Wettkampf-Software: order=asc verwenden, den letzten nextCursor speichern und beim nächsten Mal wieder mitgeben – so kommen genau die neu hinzugekommenen Datensätze.',
+        'docs.pagingBody':          'Listen werden per Cursor geblättert, nicht per Offset: die Anlage schreibt laufend neue Datensätze und löscht alte, ein Offset würde deshalb Einträge überspringen oder doppelt liefern. Sende nextCursor als cursor wieder mit; hasMore sagt, ob es weitergeht. Für den Abgleich mit einer Wettkampf-Software: state=finished&order=asc mit from/to auf die Schiesstage setzen, den letzten nextCursor speichern und beim nächsten Mal wieder mitgeben – so kommen genau die seither beendeten Passen dieser Tage.',
         'docs.loadFailed':          'Spezifikation konnte nicht geladen werden: {detail}',
     },
 
@@ -149,7 +149,7 @@ export const TRANSLATIONS = {
         'docs.replacePlaceholder':  'Remplacez le paramètre entre accolades par une valeur réelle avant d’envoyer, p. ex. /api/v2/programs/2000 ou /api/v2/shooters/123456.',
         'docs.openInBrowser':       'Ouvrir dans le navigateur',
         'docs.pagingTitle':         'Collections, pagination et synchronisation',
-        'docs.pagingBody':          'Les listes se parcourent par curseur et non par décalage : l’installation ajoute des enregistrements en continu et supprime les anciens, un décalage sauterait donc des entrées ou les livrerait en double. Lisez nextCursor dans la réponse et renvoyez-le comme cursor ; si nextCursor est null, vous êtes à la fin. Pour synchroniser avec un logiciel de concours : utilisez order=asc, conservez le dernier nextCursor et renvoyez-le plus tard – vous recevrez exactement les nouveaux enregistrements.',
+        'docs.pagingBody':          'Les listes se parcourent par curseur et non par décalage : l’installation ajoute des enregistrements en continu et supprime les anciens, un décalage sauterait donc des entrées ou les livrerait en double. Renvoyez nextCursor comme cursor ; hasMore indique s’il reste des pages. Pour synchroniser avec un logiciel de concours : utilisez state=finished&order=asc avec from/to sur les jours de tir, conservez le dernier nextCursor et renvoyez-le plus tard – vous recevrez exactement les passes de ces jours terminées depuis.',
         'docs.loadFailed':          'Impossible de charger la spécification : {detail}',
     },
 };

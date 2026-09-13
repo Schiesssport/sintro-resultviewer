@@ -18,7 +18,7 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         ),
         flags AS (
             SELECT  s.ProgramID,
-                    MAX(CASE WHEN s.TotalType = 7 THEN 1 ELSE 0 END) AS HasEndMarker,
+                    MAX(CASE WHEN s.TotalType = 7 THEN s.ShotID END) AS EndShotId,
                     SUM(CASE WHEN s.ShotNr <> 9999 AND s.ShotType <> 0 THEN 1 ELSE 0 END) AS CountingShots
             FROM    dbo.Shots s
             WHERE   s.ProgramID IS NOT NULL
@@ -30,9 +30,9 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         enriched AS (
             SELECT  p.ProgramID, p.Number, p.Name, p.StartTime, p.LaneNr,
                     p.ContestShooterName, p.ShooterID, p.StartedAt,
-                    ISNULL(f.HasEndMarker, 0)   AS HasEndMarker,
+                    f.EndShotId,
                     ISNULL(f.CountingShots, 0)  AS CountingShots,
-                    CASE WHEN o.ProgramID IS NOT NULL AND ISNULL(f.HasEndMarker, 0) = 0
+                    CASE WHEN o.ProgramID IS NOT NULL AND f.EndShotId IS NULL
                          THEN 1 ELSE 0 END      AS IsActive
             FROM    prog p
             LEFT JOIN flags  f ON f.ProgramID = p.ProgramID
@@ -49,8 +49,8 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
           AND   (@lane        IS NULL OR e.LaneNr = @lane)
           AND   (@name        IS NULL OR e.Name LIKE @name ESCAPE '\')
           AND   (@activeOnly  = 0 OR e.IsActive = 1)
-          AND   (@finishedOnly = 0 OR e.HasEndMarker = 1)
-          AND   (@abandonedOnly = 0 OR (e.HasEndMarker = 0 AND e.IsActive = 0))
+          AND   (@finishedOnly = 0 OR e.EndShotId IS NOT NULL)
+          AND   (@abandonedOnly = 0 OR (e.EndShotId IS NULL AND e.IsActive = 0))
           AND   (@withoutResult = 1 OR e.CountingShots > 0)
           AND   (@anyShooter   = 0 OR e.ShooterID IN @shooterIds)
         """;
@@ -75,23 +75,29 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         var licenses = filter.License is { Length: > 0 } ? await LicenseIndex.LoadAsync(connection, token) : null;
         var shooterIds = licenses?.Resolve(filter.License) ?? [];
         // A licence matching nobody must return nothing; left to the SQL, @anyShooter = 0 would return everything.
-        if (licenses is not null && shooterIds.Count == 0) return new CursorPage<ShootingProgram>([], null);
+        if (licenses is not null && shooterIds.Count == 0) return new CursorPage<ShootingProgram>([], null, false);
 
         var parameters = ProgramFilterParameters(filter, shooterIds);
         var direction = filter.Ascending ? "ASC" : "DESC";
-        var cursorClause = ProgramCursorClause(filter, direction, parameters);
 
-        var (rows, nextCursor) = await QueryPageAsync<ProgramRow>(connection, $"""
+        // Finished passes are listed in finishing order: a pass that ends late must still arrive after a
+        // syncing client's cursor. Everything else is start order (ProgramID is an identity column).
+        var finishedOnly = filter.State == ProgramState.Finished;
+        var keyColumn = finishedOnly ? "EndShotId" : "ProgramID";
+        Func<ProgramRow, int?> keyOf = finishedOnly ? row => row.EndShotId : row => row.ProgramID;
+        var cursorClause = ProgramCursorClause(filter, keyColumn, direction, parameters);
+
+        var (rows, nextCursor, hasMore) = await QueryPageAsync<ProgramRow>(connection, $"""
             {ProgramProjection}
             SELECT  e.*
             FROM    enriched e
             {ProgramWhere}
             {cursorClause}
-            ORDER BY e.ProgramID {direction}
-            """, parameters, filter.Limit, row => Cursor.Encode(row.ProgramID, direction), token);
+            ORDER BY e.{keyColumn} {direction}
+            """, parameters, filter.Limit, row => Cursor.Encode(keyOf(row), direction, keyColumn), token);
 
         var programs = await HydrateAsync(connection, rows, licenses, token);
-        return new CursorPage<ShootingProgram>(programs, nextCursor);
+        return new CursorPage<ShootingProgram>(programs, nextCursor, hasMore);
     }
 
     private static DynamicParameters ProgramFilterParameters(ProgramFilter filter, List<int> shooterIds)
@@ -111,18 +117,19 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         return parameters;
     }
 
-    // ProgramID is an identity column and monotonic with StartTime, so it is the keyset key.
-    private static string ProgramCursorClause(ProgramFilter filter, string direction, DynamicParameters parameters)
+    // A cursor replayed under another order or key would return the wrong half of the list, so it is refused.
+    private static string ProgramCursorClause(ProgramFilter filter, string keyColumn, string direction, DynamicParameters parameters)
     {
-        if (Cursor.Decode(filter.Cursor, 2) is not { } parts) return string.Empty;
+        if (Cursor.Decode(filter.Cursor, 3) is not { } parts) return string.Empty;
 
-        // Continuing an ascending walk with the default descending order would return everything older, not what is new.
-        if (parts[1] != direction)
+        if (parts[1] != direction || parts[2] != keyColumn)
             throw new InvalidCursorException(
-                $"This cursor was issued for order={parts[1]?.ToLowerInvariant()}; pass the same order to continue from it.");
+                $"This cursor was issued for order={parts[1]?.ToLowerInvariant()}" +
+                (parts[2] == "EndShotId" ? " with state=finished" : " without state=finished") +
+                "; pass the same order and state to continue from it.");
 
-        parameters.Add("cursorProgramId", Cursor.DecodeInt(parts[0]));
-        return $"AND e.ProgramID {(filter.Ascending ? ">" : "<")} @cursorProgramId";
+        parameters.Add("cursorKey", Cursor.DecodeInt(parts[0]));
+        return $"AND e.{keyColumn} {(filter.Ascending ? ">" : "<")} @cursorKey";
     }
 
     public async Task<ShootingProgram?> GetProgramAsync(int id, CancellationToken token)
@@ -244,7 +251,7 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
 
     private static ProgramState StateOf(ProgramRow row) =>
         row.IsActive == 1 ? ProgramState.Active
-        : row.HasEndMarker == 1 ? ProgramState.Finished
+        : row.EndShotId is not null ? ProgramState.Finished
         : ProgramState.Abandoned;
 
     // -- Lanes --------------------------------------------------------------------
@@ -288,7 +295,7 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         parameters.Add("clubId", clubId);
         var cursorClause = ShooterCursorClause(cursor, parameters);
 
-        var (rows, nextCursor) = await QueryPageAsync<ShooterRow>(connection, $"""
+        var (rows, nextCursor, hasMore) = await QueryPageAsync<ShooterRow>(connection, $"""
             {ShooterProjection}
             WHERE   (@clubId IS NULL OR sh.ClubID = @clubId)
               AND   (@query  IS NULL
@@ -300,7 +307,7 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
             """, parameters, limit, row => Cursor.Encode(row.LastName, row.FirstName, row.ShooterID), token);
 
         var licenses = await LicenseIndex.LoadAsync(connection, token);
-        return new CursorPage<Shooter>(rows.Select(row => ToShooter(row, licenses)).ToList(), nextCursor);
+        return new CursorPage<Shooter>(rows.Select(row => ToShooter(row, licenses)).ToList(), nextCursor, hasMore);
     }
 
     // Names are not unique, so the keyset is the full sort tuple tie-broken by the primary key. ISNULL mirrors the
@@ -349,7 +356,7 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         parameters.Add("query", ContainsPattern(query));
         var cursorClause = ClubCursorClause(cursor, parameters);
 
-        var (rows, nextCursor) = await QueryPageAsync<ClubRow>(connection, $"""
+        var (rows, nextCursor, hasMore) = await QueryPageAsync<ClubRow>(connection, $"""
             SELECT c.ClubID, c.ClubNumber, c.ClubName
             FROM   dbo.Club c
             WHERE  (@query IS NULL
@@ -359,7 +366,7 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
             ORDER BY ISNULL(c.ClubName, ''), c.ClubID
             """, parameters, limit, row => Cursor.Encode(row.ClubName, row.ClubID), token);
 
-        return new CursorPage<Club>(rows.Select(row => ToClub(row.ClubID, row.ClubNumber, row.ClubName)).ToList(), nextCursor);
+        return new CursorPage<Club>(rows.Select(row => ToClub(row.ClubID, row.ClubNumber, row.ClubName)).ToList(), nextCursor, hasMore);
     }
 
     private static string ClubCursorClause(string? cursor, DynamicParameters parameters)
@@ -413,8 +420,8 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
 
     // -- Helpers ------------------------------------------------------------------
 
-    /// <summary>Runs an ordered query fetching one row beyond <paramref name="limit"/>: that look-ahead row says whether a next page exists and is then dropped.</summary>
-    private static async Task<(List<TRow> Rows, string? NextCursor)> QueryPageAsync<TRow>(
+    /// <summary>Runs an ordered query fetching one row beyond <paramref name="limit"/>: the look-ahead row says whether a next page exists and is then dropped.</summary>
+    private static async Task<(List<TRow> Rows, string? NextCursor, bool HasMore)> QueryPageAsync<TRow>(
         SqlConnection connection, string orderedSql, DynamicParameters parameters, int limit,
         Func<TRow, string> encodeCursor, CancellationToken token)
     {
@@ -425,7 +432,7 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         var hasMore = rows.Count > limit;
         if (hasMore) rows.RemoveAt(rows.Count - 1);
 
-        return (rows, hasMore && rows.Count > 0 ? encodeCursor(rows[^1]) : null);
+        return (rows, rows.Count > 0 ? encodeCursor(rows[^1]) : null, hasMore);
     }
 
     // LIKE treats %, _ and [ as wildcards; escaping them makes the caller's text match literally.
