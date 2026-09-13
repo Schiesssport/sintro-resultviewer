@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Sintro.ResultViewer.Api/Sintro.ResultViewer.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Sintro.ResultViewer.Tests/Sintro.ResultViewer.Tests.csproj" />
+  </Folder>
+</Solution>

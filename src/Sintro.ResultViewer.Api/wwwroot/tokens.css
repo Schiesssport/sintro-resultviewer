@@ -1,0 +1,49 @@
+/* =============================================================================
+   Schiesssport Design System — design tokens
+   Shared visual language for Swiss shooting-range tools.
+
+   Drop into your :root and reference everything through the variables —
+   never hard-code a hex again. The system is a light, paper-ground identity.
+
+   Live guide: https://schiesssport.github.io/design-system/
+   ============================================================================= */
+
+:root {
+    /* Ground & ink */
+    --paper:        #ECE9E0;  /* app background — warm oatmeal ground */
+    --ink:          #222222;  /* primary body text */
+
+    /* Chrome & accent */
+    --forest:       #213F37;  /* headers, table heads, dialog bars, active tab */
+    --forest-2:     #2d5548;  /* secondary header rows */
+    --emerald:      #2f7d64;  /* primary action & focus accent */
+    --emerald-ink:  #25604e;  /* accent hover / pressed */
+
+    /* Surfaces & tints */
+    --surface:      #ffffff;  /* cards, panels & table body */
+    --row-hover:    #e9f1ed;  /* table row hover — faint emerald */
+    --warn-tint:    #fdefe0;  /* changed-cell background */
+    --danger-tint:  #fff5f5;  /* invalid-input background */
+
+    /* Semantic state (kept separate from the emerald accent) */
+    --warn:         #e67e22;  /* changed / caution */
+    --ok:           #27ae60;  /* new / success */
+    --danger:       #e74c3c;  /* destructive / invalid */
+    --danger-ink:   #c0392b;  /* error text */
+    --muted:        #7f8c8d;  /* disabled / low-emphasis */
+
+    /* Text & lines */
+    --label:        #888888;  /* field labels, captions */
+    --ink-soft:     #666666;  /* secondary body text */
+    --line:         #e0e0e0;  /* borders & dividers */
+    --disabled:     #cccccc;  /* inactive text */
+
+    /* Type — system font for UI, monospace for tabular data */
+    --font:         system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --font-mono:    ui-monospace, Menlo, Consolas, monospace;
+
+    /* Shape & elevation */
+    --radius:       3px;      /* buttons, inputs */
+    --radius-lg:    6px;      /* cards, dialogs */
+    --shadow:       0 10px 40px rgba(0,0,0,.22);  /* modal overlays only */
+}

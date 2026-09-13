@@ -1,0 +1,10 @@
+.git
+.db
+docs
+# Must be globbed: a bare "obj" matches only the repo root, and a host-restored
+# src/*/obj leaking in breaks the in-image restore.
+**/bin
+**/obj
+**/publish
+.container-home
+node_modules

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Sintro.ResultViewer</RootNamespace>
+    <AssemblyName>Sintro.ResultViewer.Api</AssemblyName>
+    <!-- German and French formatting must work in the published single file. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The viewer's own tests run via node's test runner (scripts/test-web.sh); they must
+         not be published to the range PC. -->
+    <Content Remove="wwwroot\tests\**" />
+
+    <!-- The SDK globs appsettings*.json; the operator-facing file is .jsonc, so say so. -->
+    <Content Include="appsettings.jsonc" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.*" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.*" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.*" />
+    <!-- Overrides the 2.0.0 pulled in transitively, which carries GHSA-v5pm-xwqc-g5wc. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
+  </ItemGroup>
+
+</Project>

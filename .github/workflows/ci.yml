@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  dotnet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - run: dotnet build Sintro.ResultViewer.slnx -c Release
+
+      # The integration suite needs a restored device export, which contains real shooters'
+      # names and so can never live in the repository. Contributors run it locally with
+      # scripts/test.sh; CI covers the pure logic, which is where the scoring rules live.
+      - name: Unit tests
+        env:
+          SINTRO_SKIP_DB_TESTS: '1'
+        run: dotnet test Sintro.ResultViewer.slnx -c Release --no-build
+
+      - name: Cross-publish the Windows deployment
+        run: |
+          dotnet publish src/Sintro.ResultViewer.Api/Sintro.ResultViewer.Api.csproj \
+            -c Release -r win-x64 --self-contained true \
+            -p:PublishSingleFile=true -p:DebugType=none -o bin/win-x64
+
+  viewer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # No build step and no dependencies — the browser loads these files as they are.
+      - name: Viewer tests
+        working-directory: src/Sintro.ResultViewer.Api/wwwroot
+        run: node --test "tests/*.test.js"

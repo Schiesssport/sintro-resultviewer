@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sintro Resultate</title>
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <meta name="theme-color" content="#213F37">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<div id="ui-wrapper">
+    <header class="app-header" data-chrome>
+        <img src="/icon.svg" alt="">
+        <h1 data-i18n="app.title">Sintro Resultate</h1>
+        <div class="header-right">
+            <span id="live-indicator" class="live-dot" data-i18n="live.connecting">Verbinde…</span>
+            <button id="fullscreen-button" class="header-button"
+                    data-i18n="toolbar.fullscreen">Vollbild</button>
+            <select id="language-select" aria-label="Sprache">
+                <option value="de" selected>DE</option>
+                <option value="fr">FR</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="card">
+        <div id="exposure-warning" class="exposure-warning hidden"></div>
+
+        <!-- Lines: the firing line as it stands right now, always every line. -->
+        <section class="section section-lanes" id="section-lanes">
+            <h2 class="section-title" data-i18n="section.lanes">Linien</h2>
+            <table class="lanes">
+                <colgroup>
+                    <col class="cg-line">
+                    <col class="cg-lane-shooter">
+                    <col class="cg-lane-total">
+                    <col class="cg-lane-shots">
+                </colgroup>
+                <tbody id="lanes-body"></tbody>
+            </table>
+        </section>
+
+        <!-- Leaderboard: not built yet, but it has its own fullscreen route already. -->
+        <section class="section section-leaderboard hidden" id="section-leaderboard">
+            <h2 class="section-title" data-i18n="section.leaderboard">Rangliste</h2>
+            <p class="placeholder" data-i18n="leaderboard.placeholder"></p>
+        </section>
+
+        <!-- Results: the most recent finished passes. -->
+        <section class="section section-results" id="section-results">
+            <div class="section-head">
+                <h2 class="section-title" data-i18n="section.results">Letzte Resultate</h2>
+                <div class="toolbar" data-chrome>
+                    <label for="date-input" data-i18n="toolbar.date">Datum</label>
+                    <input type="date" id="date-input">
+                    <button id="reload-button" class="btn-secondary" data-i18n="toolbar.reload">Aktualisieren</button>
+                    <span id="result-count" class="result-count"></span>
+                    <input type="search" id="filter-input" class="filter-input"
+                           data-i18n-placeholder="toolbar.filterPlaceholder">
+                </div>
+            </div>
+
+            <div class="table-scroll" id="results-scroll">
+                <table class="results">
+                    <colgroup>
+                        <col class="cg-club">
+                        <col class="cg-shooter">
+                        <col class="cg-total">
+                        <col class="cg-shots">
+                        <col class="cg-program">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th class="col-club"    data-i18n="col.club">Verein</th>
+                            <th class="col-shooter" data-i18n="col.shooter">Schütze</th>
+                            <th class="col-total"   data-i18n="col.total">Resultat</th>
+                            <th class="col-shots"   data-i18n="col.shots">Schüsse</th>
+                            <th class="col-program" data-i18n="col.program">Programm</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body"></tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <footer class="app-footer" data-chrome>
+        <span data-i18n="footer.note"></span>
+        <a class="btn-secondary footer-api-link" href="/docs" data-i18n="nav.api">API</a>
+    </footer>
+</div>
+
+<!-- The ticker is pinned to the bottom edge of the screen, so it lives outside the table it
+     reports on rather than inside it as a footer row. See styles.css. -->
+<div id="results-ticker" class="hidden"></div>
+
+<button id="fullscreen-exit" class="fullscreen-exit hidden" title="Vollbild beenden"
+        aria-label="Vollbild beenden">✕</button>
+
+<dialog id="fullscreen-dialog" class="picker-dialog">
+    <div class="dialog-header">
+        <h3 data-i18n="fullscreen.title">Vollbild-Ansicht</h3>
+        <button class="dialog-close" id="fullscreen-dialog-close" aria-label="Schliessen">✕</button>
+    </div>
+    <div class="dialog-body">
+        <p class="dialog-intro" data-i18n="fullscreen.intro"></p>
+        <div id="fullscreen-modes" class="picker-list"></div>
+
+        <div class="picker-settings">
+            <label for="ticker-seconds-input" data-i18n="fullscreen.tickerSeconds">Lesezeit pro Eintrag (s)</label>
+            <input type="number" id="ticker-seconds-input" min="1" max="120" step="1">
+            <label for="ticker-count-input" data-i18n="fullscreen.tickerCount">Resultate in der Laufschrift</label>
+            <input type="number" id="ticker-count-input" min="0" max="500" step="5">
+        </div>
+
+        <p class="dialog-hint" data-i18n="fullscreen.hint"></p>
+    </div>
+</dialog>
+
+<script>window.SINTRO_TOKEN = "{{SESSION_TOKEN}}";</script>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

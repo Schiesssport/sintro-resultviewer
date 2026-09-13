@@ -1,0 +1,66 @@
+name: sintro-resultviewer
+
+# Everything needed to develop this repo runs in containers — no .NET SDK and no
+# SQL Server on the host. See scripts/ for the thin wrappers around these services.
+
+services:
+  # SQL Server standing in for the range PC's MSSQL Express.
+  # Seed it with scripts/db-restore.sh (needs the .bak files in .db/).
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sintro-db
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Sintro_Dev_2026!}
+      MSSQL_PID: Developer
+    ports:
+      - "11433:1433"
+    volumes:
+      - db-data:/var/opt/mssql
+      - ./.db:/backups:ro
+    healthcheck:
+      test: ["CMD-SHELL", '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1 || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+
+  # The toolchain. `docker compose run --rm sdk build|test|...` == `dotnet ...`
+  sdk:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    working_dir: /src
+    entrypoint: ["dotnet"]
+    # Run as the host user so generated files (bin/, obj/, new projects) stay editable.
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    volumes:
+      - .:/src
+      # Bind (not a named volume) so HOME and the NuGet cache are writable by the
+      # mapped host user, and the cache survives between runs.
+      - ./.container-home:/home/sdk
+    environment:
+      HOME: /home/sdk
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      ConnectionStrings__Sintro: "Server=db,1433;Database=DBSINTRO300;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Sintro_Dev_2026!};TrustServerCertificate=true;Encrypt=false"
+      Sintro__ReferenceDate: "2026-07-08"
+
+  # The API as it will actually be deployed. scripts/run.sh brings this up.
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # No address here: 8080 is what appsettings.jsonc binds, so the container and the
+      # Windows deployment listen on the same port and are the same thing to debug.
+      ConnectionStrings__Sintro: "Server=db,1433;Database=DBSINTRO300;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Sintro_Dev_2026!};TrustServerCertificate=true;Encrypt=false"
+      # Dev-only token. A range configures this in appsettings.jsonc instead.
+      Sintro__ApiReadTokens__0: ${SINTRO_API_TOKEN:-dev-token-please-change-0123456789abcdef}
+      Sintro__ReferenceDate: ${SINTRO_REFERENCE_DATE:-2026-07-08}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

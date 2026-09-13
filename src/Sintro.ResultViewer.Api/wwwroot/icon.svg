@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <clipPath id="half"><path d="M256,16 A240,240 0 0 0 256,496 Z"/></clipPath>
+  <circle cx="256" cy="256" r="240" fill="#213F37"/>
+  <g fill="none" stroke="#ECE9E0" stroke-width="4">
+    <circle cx="256" cy="256" r="210"/><circle cx="256" cy="256" r="168"/>
+  </g>
+  <g clip-path="url(#half)"><g transform="translate(256,256)">
+    <circle r="126" fill="#ECE9E0"/>
+  </g></g>
+  <g transform="translate(304.8,245.5) scale(0.722)" fill="#ECE9E0">
+    <path d="M-67.6,-160 L-8.8,-160 L-8.8,-101.6 C-8.8,-101.6 30.1,-101.9 67.6,-82.4 L67.6,160 L-67.6,160 Z"/>
+  </g>
+  <g fill="none" stroke="#213F37" stroke-width="4">
+    <circle cx="256" cy="256" r="84"/><circle cx="256" cy="256" r="42"/>
+  </g>
+  <circle cx="256" cy="256" r="8" fill="#213F37"/>
+</svg>
