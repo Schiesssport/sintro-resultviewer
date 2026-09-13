@@ -58,6 +58,8 @@ services:
       # Dev-only token. A range configures this in appsettings.jsonc instead.
       Sintro__ApiReadTokens__0: ${SINTRO_API_TOKEN:-dev-token-please-change-0123456789abcdef}
       Sintro__ReferenceDate: ${SINTRO_REFERENCE_DATE:-2026-07-08}
+      # The container's own clock is UTC; the device wrote Swiss wall-clock time.
+      Sintro__TimeZone: Europe/Zurich
     depends_on:
       db:
         condition: service_healthy

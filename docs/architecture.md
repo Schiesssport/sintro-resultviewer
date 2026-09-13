@@ -67,6 +67,8 @@ adding `Api/V3/` and one `app.MapV3()` line — nothing else moves. The implemen
 
 ## API conventions
 
+The consumer-facing guide is [`api.md`](api.md); this section is the reasoning behind it.
+
 - **Cursor paging, never offset.** The device inserts rows while a client reads and prunes old ones
   from the other end, so an offset would skip or repeat records. Read `nextCursor`, pass it back as
   `cursor`. There is deliberately no `total`: it costs a second scan on every request and grows with

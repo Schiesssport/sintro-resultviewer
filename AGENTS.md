@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Operational blueprint for coding agents. Keep in sync; ≤10 000 chars.
+Blueprint for coding agents. Keep in sync; ≤10 000 chars.
 
 ## Rules
 
@@ -19,6 +19,7 @@ A read-only HTTP API plus a plain-HTML viewer over the **Sintro 300 Hit Target D
 electronic 300m target system whose MSSQL Express schema the API hides from event software.
 
 **Read `docs/device-database.md` before touching a query**; `docs/architecture.md` orients you.
+`docs/api.md` is the consumer guide; a change to `Api/V2/` or `Domain/` updates it in the same commit.
 
 ## Toolchain — all in Docker
 
@@ -102,7 +103,6 @@ The integration tests assert the resulting counts.
 | `Total` null on mixed valuations, `TotalUnavailable` says why | 5er + 10er is meaningless |
 | Never join on `Shots.StartNr` — use `ProgramID → Programs.ShooterID` | Almost always zero |
 | `Shooters.StartNr` **is the licence number**, no length cap | Six digits, zero-padded; 7-9 digits planned |
-| `RFID` is deprecated, never a key | Installations share one all-zero placeholder |
 | `shooter: null` is normal | Most passes are anonymous; never lose a result over it |
 | Parse `StartTime` as `dd.MM.yyyy-HH:mm:ss`, emit ISO 8601 | Day-first text; its order is meaningless |
 | `(number, name)` is free text, not a key | Operators rename programs |

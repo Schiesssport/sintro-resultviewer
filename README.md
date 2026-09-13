@@ -105,7 +105,8 @@ still runs. That is what CI does too, since an export can never be committed.
 ### API
 
 Read-only, under `/api/v2`, `Authorization: Bearer <token>` on every request.
-*(v1 is a legacy Grapevine service that predates this repository.)*
+*(v1 is a legacy Grapevine service that predates this repository.)* Building a consumer? Start
+with [`docs/api.md`](docs/api.md): access setup, the results list field by field, paging and sync.
 
 | Endpoint | Returns |
 |---|---|
