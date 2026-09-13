@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Configuration.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using Sintro.ResultViewer;
 using Sintro.ResultViewer.Data;
@@ -28,17 +26,7 @@ if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") is { Length: > 0 } url
 builder.Logging.AddOperatorConsole();
 
 builder.Services.Configure<SintroOptions>(builder.Configuration.GetSection(SintroOptions.SectionName));
-builder.Services.ConfigureHttpJsonOptions(json =>
-{
-    // States and reasons read better as names than as integers in a documented API.
-    // camelCase to match the documented values ("active", "mixedValuation") and the
-    // casing of every other JSON field.
-    json.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
-
-    // Nulls are written, not omitted. "shooter": null and "currentProgram": null are
-    // meaningful states that the documentation promises; dropping the keys would force
-    // every client to distinguish absent from empty, and would contradict the schema.
-});
+builder.Services.ConfigureHttpJsonOptions(json => SintroJson.Configure(json.SerializerOptions));
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ISintroClock, SintroClock>();
@@ -61,8 +49,8 @@ StartupChecks.Run(app.Logger, settings, sessionToken);
 
 // Order matters. The network gate refuses a source before the token is even inspected.
 // UseWebSockets must precede UseTokenAuth: it installs the feature that makes
-// HttpContext.WebSockets.IsWebSocketRequest meaningful, which the token check needs to
-// know that it should look for the token in the query string.
+// HttpContext.WebSockets.IsWebSocketRequest meaningful, and the token check accepts ?token=
+// only on a genuine upgrade request — so with the order reversed every handshake is 401.
 app.UseNetworkGate();
 app.UseWebSockets();
 app.UseTokenAuth();
@@ -72,8 +60,13 @@ app.MapOpenApi();
 
 // The viewer's own token is injected at serve time, so it never touches disk. The .html
 // aliases are mapped too, so the raw templates are never served by the static file handler.
-IResult RenderPage(ViewerPage page, string fileName) =>
-    Results.Content(page.Render(fileName, sessionToken.Value), "text/html; charset=utf-8");
+// no-store because the page carries that token: a TV browser or a shared range PC must not keep
+// a copy on disk that outlives the process it was minted for.
+IResult RenderPage(HttpContext context, ViewerPage page, string fileName)
+{
+    context.Response.Headers.CacheControl = "no-store";
+    return Results.Content(page.Render(fileName, sessionToken.Value), "text/html; charset=utf-8");
+}
 
 // The fullscreen variants (/fullscreen/live, /results, /leaderboard, /live+results) are
 // client-side routes: the server hands out the same page and the viewer reads location.pathname.
@@ -81,10 +74,10 @@ IResult RenderPage(ViewerPage page, string fileName) =>
 // browser can be pointed straight at the view it should show. A catch-all keeps new variants a
 // front-end-only change.
 foreach (var route in new[] { "/", "/index.html", "/fullscreen", "/fullscreen/{**variant}" })
-    app.MapGet(route, (ViewerPage page) => RenderPage(page, "index.html")).ExcludeFromDescription();
+    app.MapGet(route, (HttpContext context, ViewerPage page) => RenderPage(context, page, "index.html")).ExcludeFromDescription();
 
 foreach (var route in new[] { "/docs", "/docs.html" })
-    app.MapGet(route, (ViewerPage page) => RenderPage(page, "docs.html")).ExcludeFromDescription();
+    app.MapGet(route, (HttpContext context, ViewerPage page) => RenderPage(context, page, "docs.html")).ExcludeFromDescription();
 
 app.UseStaticFiles();
 

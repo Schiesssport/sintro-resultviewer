@@ -28,7 +28,7 @@ export const pointOnCircle = (angleDegrees, { cx, cy, r }) => {
 
 const round = (value) => Math.round(value * 1000) / 1000;
 
-/** SVG path for one wedge of the dial. */
+/** A full pie wedge. Not drawn by the viewer; kept as the reference shape the ring is cut from. */
 export const wedgePath = (sector, geometry) => {
     const centre = sectorCentreAngle(sector);
     const from = pointOnCircle(centre + SECTOR_SPAN_DEGREES / 2, geometry);
@@ -65,16 +65,16 @@ export const ringWedgePath = (sector, geometry) => {
 export const wedgeMidpoint = (sector, geometry) =>
     pointOnCircle(sectorCentreAngle(sector), { ...geometry, r: geometry.r / 2 });
 
+// A thin ring: the hole has to hold a three-digit value, because the 100er valuation scores
+// 0-100. Anything fatter and "100" no longer fits inside it.
+export const DEFAULT_DIAL_GEOMETRY = { cx: 10, cy: 10, r: 9.5, innerR: 6.8 };
+
 /**
  * Describes the dial for one shot: which wedge is filled, and whether the centre is hit.
  *
  * A miss still gets a dial — the sector says where it went, which is the whole point of
  * showing direction rather than only the ring value.
  */
-// A thin ring: the hole has to hold a three-digit value, because the 100er valuation scores
-// 0-100. Anything fatter and "100" no longer fits inside it.
-export const DEFAULT_DIAL_GEOMETRY = { cx: 10, cy: 10, r: 9.5, innerR: 6.8 };
-
 export const shotDial = (shot, geometry = DEFAULT_DIAL_GEOMETRY) => {
     const sector = shot?.hitSector ?? null;
     const isCentre = sector === CENTRE_SECTOR;
@@ -87,7 +87,6 @@ export const shotDial = (shot, geometry = DEFAULT_DIAL_GEOMETRY) => {
             const number = index + 1;
             return {
                 sector: number,
-                path: wedgePath(number, geometry),
                 ringPath: ringWedgePath(number, geometry),
                 filled: number === sector,
             };

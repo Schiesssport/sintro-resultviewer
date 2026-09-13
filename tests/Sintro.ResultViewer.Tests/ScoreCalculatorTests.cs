@@ -119,9 +119,9 @@ public class ScoreCalculatorTests
 
         var score = Calculate(shots, targets);
 
-        Assert.NotNull(score.Sighting);
-        Assert.Equal(2, score.Sighting!.ShotCount);
-        Assert.Equal(5, score.Sighting.Subtotal);
+        var sighting = Assert.Single(score.Sighting);
+        Assert.Equal(2, sighting.ShotCount);
+        Assert.Equal(5, sighting.Subtotal);
 
         // The sighting series must not drag its 5er valuation into the total.
         Assert.Equal(19, score.Total!.Value);
@@ -136,7 +136,7 @@ public class ScoreCalculatorTests
         // sighting shot — grouping on ShotGroup 0 would silently discard them.
         var score = Calculate([Shot(1, 1, 9, 0, shotType: 1)], [Target(0, 10)]);
 
-        Assert.Null(score.Sighting);
+        Assert.Empty(score.Sighting);
         Assert.Single(score.Series);
         Assert.Equal(9, score.Total!.Value);
     }
@@ -149,10 +149,63 @@ public class ScoreCalculatorTests
             [Shot(1, 1, 3, 4, shotType: 0), Shot(2, 1, 9, 5, shotType: 1)],
             [Target(4, 5), Target(5, 10)]);
 
-        Assert.NotNull(score.Sighting);
-        Assert.Equal(4, score.Sighting!.Index);
+        Assert.Equal(4, Assert.Single(score.Sighting).Index);
         Assert.Single(score.Series);
         Assert.Equal(10, score.Total!.Valuation);
+    }
+
+    [Fact]
+    public void sightingShotsInSeveralGroups_stayOneSeriesPerGroup()
+    {
+        // Merging them would add a 5er group to a 10er one — the very sum Total refuses to
+        // make — and would price every shot with the first group's scale.
+        var shots = new[]
+        {
+            Shot(1, 1, 4, 0, shotType: 0),
+            Shot(2, 1, 9, 2, shotType: 0),
+            Shot(3, 1, 8, 1),
+        };
+        var targets = new[] { Target(0, 5), Target(1, 10), Target(2, 10) };
+
+        var score = Calculate(shots, targets);
+
+        Assert.Equal([0, 2], score.Sighting.Select(series => series.Index));
+        Assert.Equal([5, 10], score.Sighting.Select(series => series.Valuation));
+        Assert.Equal([4, 9], score.Sighting.Select(series => series.Subtotal));
+        Assert.Equal(8, score.Total!.Value);
+    }
+
+    [Fact]
+    public void theLastRealShotCarriesTotalTypeSevenAndStillCounts()
+    {
+        // Measured: the final shot of a pass is flagged TotalType 7 just like the marker row
+        // that follows it. Only ShotNr 9999 identifies the synthetic row; filtering on the
+        // flag would drop every last shot.
+        var score = Calculate(
+            [Shot(1, 1, 9, 1), Shot(2, 2, 8, 1, totalType: 7), Shot(3, 9999, 0, 1, totalType: 7)],
+            [Target(1, 10)]);
+
+        Assert.Equal(2, score.ShotCount);
+        Assert.Equal([9, 8], score.ShotValues);
+    }
+
+    [Fact]
+    public void unknownValuationWinsOverMixedWhenBothApply()
+    {
+        // A series with no scale at all is the more fundamental problem; a client that sees
+        // mixedValuation would look for the second scale and not find it.
+        var score = Calculate(
+            [Shot(1, 1, 5, 1), Shot(2, 1, 9, 2), Shot(3, 1, 7, 3)],
+            [Target(1, 5), Target(2, 10)]);
+
+        Assert.Equal(TotalUnavailableReason.UnknownValuation, score.TotalUnavailable);
+    }
+
+    [Fact]
+    public void aShotWithoutATimeHasNoTimestamp()
+    {
+        var score = Calculate([Shot(1, 1, 9, 1, shotTime: null)], [Target(1, 10)]);
+        Assert.Null(score.Series[0].Shots[0].At);
     }
 
     [Fact]

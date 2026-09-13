@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using Sintro.ResultViewer.Data;
 using Sintro.ResultViewer.Api.V2;
@@ -16,7 +17,7 @@ public class CursorPagingTests(ApiFixture fixture)
 
     private async Task<CursorPage<ShootingProgram>> ProgramsAsync(string query) =>
         (await Client().GetFromJsonAsync<CursorPage<ShootingProgram>>(
-            $"/api/v2/programs?{query}", TestJson.Options))!;
+            $"/api/v2/programs?{query}", SintroJson.Options))!;
 
     private async Task<List<ShootingProgram>> WalkProgramsAsync(string query, int pageSize)
     {
@@ -108,11 +109,42 @@ public class CursorPagingTests(ApiFixture fixture)
     }
 
     [RequiresDatabaseFact]
-    public async Task aGarbageCursorPagesFromTheStartRatherThanFailing()
+    public async Task aGarbageCursorIs400RatherThanARestartFromPageOne()
     {
-        // A malformed cursor is client error; answering 500 would be worse than restarting.
-        var page = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&limit=5&cursor=not-a-cursor");
-        Assert.Equal(5, page.Items.Count);
+        // Silently paging from the start would hand a syncing client every historic record
+        // again with nothing in the response to say why. Same rule as an unknown filter value.
+        var response = await Client().GetAsync(
+            $"/api/v2/programs?{ApiFixture.WholeRange}&withoutResult=true&limit=5&cursor=not-a-cursor");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ApiError>(SintroJson.Options);
+        Assert.Equal("invalid_cursor", body!.Error);
+    }
+
+    [RequiresDatabaseFact]
+    public async Task aCursorIssuedForOneOrderIsRefusedForTheOther()
+    {
+        // Walking ascending, then continuing with the default descending order, would return
+        // everything *older* than the cursor: the opposite of the sync the client built.
+        var first = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&order=asc&limit=5");
+        Assert.NotNull(first.NextCursor);
+
+        var response = await Client().GetAsync(
+            $"/api/v2/programs?{ApiFixture.WholeRange}&withoutResult=true&limit=5&cursor={Uri.EscapeDataString(first.NextCursor!)}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ApiError>(SintroJson.Options);
+        Assert.Equal("invalid_cursor", body!.Error);
+        Assert.Contains("order=asc", body.Detail);
+    }
+
+    [Theory]
+    [InlineData("/api/v2/shooters?cursor=not-a-cursor")]
+    [InlineData("/api/v2/clubs?cursor=not-a-cursor")]
+    public async Task everyCollectionRejectsAGarbageCursor(string path)
+    {
+        var response = await Client().GetAsync(path);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [RequiresDatabaseFact]
@@ -125,7 +157,7 @@ public class CursorPagingTests(ApiFixture fixture)
         {
             var suffix = cursor is null ? "" : $"&cursor={Uri.EscapeDataString(cursor)}";
             var page = (await Client().GetFromJsonAsync<CursorPage<Shooter>>(
-                $"/api/v2/shooters?limit=25{suffix}", TestJson.Options))!;
+                $"/api/v2/shooters?limit=25{suffix}", SintroJson.Options))!;
             all.AddRange(page.Items);
             cursor = page.NextCursor;
         }
@@ -138,7 +170,7 @@ public class CursorPagingTests(ApiFixture fixture)
         // Server's accent-aware collation ("Brügger" before "Brunner"), which no
         // StringComparer reproduces exactly. What matters is that paging does not disturb it.
         var unpaged = (await Client().GetFromJsonAsync<CursorPage<Shooter>>(
-            "/api/v2/shooters?limit=500", TestJson.Options))!;
+            "/api/v2/shooters?limit=500", SintroJson.Options))!;
 
         Assert.Equal(
             unpaged.Items.Select(shooter => shooter.ShooterId),
@@ -155,7 +187,7 @@ public class CursorPagingTests(ApiFixture fixture)
         {
             var suffix = cursor is null ? "" : $"&cursor={Uri.EscapeDataString(cursor)}";
             var page = (await Client().GetFromJsonAsync<CursorPage<Club>>(
-                $"/api/v2/clubs?limit=500{suffix}", TestJson.Options))!;
+                $"/api/v2/clubs?limit=500{suffix}", SintroJson.Options))!;
             all.AddRange(page.Items);
             cursor = page.NextCursor;
         }
@@ -166,7 +198,7 @@ public class CursorPagingTests(ApiFixture fixture)
 
         // Paging must not lose or duplicate anything against a single large request.
         var unpaged = (await Client().GetFromJsonAsync<CursorPage<Club>>(
-            "/api/v2/clubs?limit=5000", TestJson.Options))!;
+            "/api/v2/clubs?limit=5000", SintroJson.Options))!;
         Assert.Equal(unpaged.Items.Select(club => club.Id), all.Select(club => club.Id));
     }
 }
@@ -176,22 +208,25 @@ public class CursorTests
     [Fact]
     public void aCursorRoundTrips()
     {
-        Assert.True(Cursor.TryDecodeInt(Cursor.Encode(2000), out var value));
-        Assert.Equal(2000, value);
+        var parts = Cursor.Decode(Cursor.Encode(2000, "ASC"), 2);
+
+        Assert.NotNull(parts);
+        Assert.Equal(2000, Cursor.DecodeInt(parts![0]));
+        Assert.Equal("ASC", parts[1]);
     }
 
     [Fact]
     public void aCompoundCursorRoundTrips()
     {
-        Assert.True(Cursor.TryDecode(Cursor.Encode("Muster", "Hans", 300), 3, out var parts));
-        Assert.Equal(["Muster", "Hans", "300"], parts.Select(part => part ?? "").ToArray());
+        var parts = Cursor.Decode(Cursor.Encode("Muster", "Hans", 300), 3);
+        Assert.Equal(["Muster", "Hans", "300"], parts!.Select(part => part ?? "").ToArray());
     }
 
     [Fact]
     public void nullPartsSurviveTheRoundTrip()
     {
-        Assert.True(Cursor.TryDecode(Cursor.Encode(null, 7), 2, out var parts));
-        Assert.Null(parts[0]);
+        var parts = Cursor.Decode(Cursor.Encode(null, 7), 2);
+        Assert.Null(parts![0]);
         Assert.Equal("7", parts[1]);
     }
 
@@ -199,14 +234,22 @@ public class CursorTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
+    public void noCursorDecodesToNull(string? cursor) =>
+        Assert.Null(Cursor.Decode(cursor, 1));
+
+    [Theory]
     [InlineData("not-base64!!")]
     [InlineData("YWJj")]  // valid base64, not the expected JSON
-    public void malformedInputIsRejectedRatherThanThrowing(string? cursor) =>
-        Assert.False(Cursor.TryDecodeInt(cursor, out _));
+    public void malformedInputIsRejectedWithAClientError(string cursor) =>
+        Assert.Throws<InvalidCursorException>(() => Cursor.Decode(cursor, 1));
 
     [Fact]
     public void aCursorWithTheWrongShapeIsRejected() =>
-        Assert.False(Cursor.TryDecode(Cursor.Encode(1, 2), 3, out _));
+        Assert.Throws<InvalidCursorException>(() => Cursor.Decode(Cursor.Encode(1, 2), 3));
+
+    [Fact]
+    public void aNonNumericIdPartIsRejected() =>
+        Assert.Throws<InvalidCursorException>(() => Cursor.DecodeInt("abc"));
 
     [Fact]
     public void theEncodingIsUrlSafe()

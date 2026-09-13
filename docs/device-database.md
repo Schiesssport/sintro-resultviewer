@@ -98,6 +98,9 @@ that look plausible and are wrong.
 The device writes synthetic marker rows to close a pass: `ShotNr = 9999`, `TotalType = 7`,
 `HitPosition = 255`, all values zero. **Filter them out before scoring.** A pass can consist of
 nothing but a marker — started and abandoned — and must then report no result rather than a zero.
+**`ShotNr = 9999` is the only test.** `TotalType = 7` is not: the last real shot of a pass carries
+it as well (measured in one export: 645 real shots with `TotalType 7` and ring values up to 10,
+against 438 markers). Filtering on the flag would drop every final shot.
 
 The marker is also the only place the finishing time is recorded, so read `ShotTime` from it
 *before* discarding it.
@@ -193,7 +196,7 @@ Irrelevant to results, and unused here.
 | `Mouche` | `1` = centre hit, always paired with `HitPosition = 0` |
 | `HitPosition` | Hit sector: `1`–`8` clockwise from twelve o'clock in 45° steps, `0` centre, `255` none reported. Derived from `X`/`Y`, whose mean angle per sector lands on 90°, 45°, 0°, −45°, −90°, −135°, 180°, 135° |
 | `X`, `Y` | Hit coordinates in 1/100 mm from the centre. `Y` positive is up |
-| `TotalType` | `0` ordinary shot, `1` last shot of a series, `7` end of pass |
+| `TotalType` | `0` ordinary shot, `1` last shot of a series, `7` end of pass — set on the last real shot **and** on the marker row that follows it |
 | `FireMethod` | The shooting stage. **Proposed, unverified:** `0` sighting stage, `1` precision stage (Einzelfeuer), `2` rapid-fire stage (Serienfeuer). This matters for display — program names encode it as `EF`/`SF` — so it is worth confirming. **TODO** |
 | `BreakMode` | `1` means open fire: free shooting outside any match, e.g. while sighting in. Irrelevant to results and not used by the viewer |
 | `ShotTime` | Time of day only, `HH:mm:ss.ff` |

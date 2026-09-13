@@ -136,11 +136,9 @@ describe('ringWedgePath', () => {
 });
 
 describe('shotDial ring paths', () => {
-    test('each wedge offers both a pie and a ring path', () => {
+    test('each wedge carries a ring path', () => {
         for (const wedge of shotDial({ hitSector: 2 }).wedges) {
-            assert.ok(wedge.path.length > 0);
             assert.ok(wedge.ringPath.length > 0);
-            assert.notEqual(wedge.path, wedge.ringPath);
         }
     });
 });

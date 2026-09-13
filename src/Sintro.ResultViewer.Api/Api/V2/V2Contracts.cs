@@ -11,19 +11,10 @@ namespace Sintro.ResultViewer.Api.V2;
 // gets its own contract records and maps to them — it does not reshape Domain/.
 
 /// <summary>
-/// A keyset-paged slice. <paramref name="NextCursor"/> is null on the last page; otherwise pass
-/// it back as <c>?cursor=</c>.
-///
-/// Deliberately carries no total: counting the whole filtered set costs a second full scan on
-/// every request, and that cost grows with the table while the count itself is never needed to
-/// page. Clients page until <c>nextCursor</c> is null.
+/// Every non-2xx answer this API gives, from the middlewares as well as the endpoints.
+/// <paramref name="Error"/> is a stable code a client can switch on; Detail is for humans.
+/// One shape throughout, so a client needs exactly one error parser.
 /// </summary>
-public sealed record CursorPage<T>(
-    IReadOnlyList<T> Items,
-    string? NextCursor,
-    int Limit);
-
-/// <summary>A rejected request. <paramref name="Error"/> is a stable code; Detail is for humans.</summary>
 public sealed record ApiError(string Error, string Detail);
 
 /// <summary>All shooters on one licence plus the programs attributed to it.</summary>

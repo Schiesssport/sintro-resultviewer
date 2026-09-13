@@ -47,3 +47,16 @@
     --radius-lg:    6px;      /* cards, dialogs */
     --shadow:       0 10px 40px rgba(0,0,0,.22);  /* modal overlays only */
 }
+
+/* -----------------------------------------------------------------------------
+   Project-local tokens. Not part of the upstream design system: candidates for
+   proposing there, kept here so styles.css still never names a hex directly.
+   ----------------------------------------------------------------------------- */
+:root {
+    --border:        #ddd6c8;  /* card and table edges, a shade below --line on paper */
+    --border-strong: #c9c3b4;  /* emphasised edges: table head, dialog frame */
+    --row-focus:     #e4ece8;  /* keyboard-focused table row */
+    --on-dark:       #ffffff;  /* text and icons on forest/emerald chrome */
+    --code-ink:      #e8f0ec;  /* response text on the forest code block */
+    --tab-idle:      #e3dfd3;  /* inactive tab face, a step deeper than paper */
+}

@@ -22,12 +22,6 @@
     --shot-dial-size: 32px;
     --shot-dial-font: 11px;
     --btn-height: 34px;
-    --border:        #ddd6c8;
-    --border-strong: #c9c3b4;
-    --row-focus:     #e4ece8;
-    --on-dark:       #ffffff;  /* text and icons on forest/emerald chrome */
-    --code-ink:      #e8f0ec;  /* response text on the forest code block */
-    --tab-idle:      #e3dfd3;  /* inactive tab face, a step deeper than paper */
 }
 
 * { box-sizing: border-box; }
@@ -70,7 +64,7 @@ body {
 
 .app-header .header-date {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.72);
+    color: color-mix(in srgb, var(--on-dark) 72%, transparent);
     font-variant-numeric: tabular-nums;
 }
 
@@ -82,7 +76,7 @@ body {
     align-items: center;
     gap: 7px;
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.72);
+    color: color-mix(in srgb, var(--on-dark) 72%, transparent);
 }
 .live-dot::before {
     content: "";
@@ -140,7 +134,7 @@ input, select {
 input:focus, select:focus {
     outline: none;
     border-color: var(--emerald);
-    box-shadow: 0 0 0 3px rgba(47, 125, 100, 0.18);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--emerald) 18%, transparent);
 }
 
 .filter-input { width: 260px; margin-left: auto; }
@@ -182,7 +176,7 @@ table.results thead th {
     top: 0;
     z-index: 1;
     background: var(--forest);
-    color: rgba(255, 255, 255, 0.88);
+    color: color-mix(in srgb, var(--on-dark) 88%, transparent);
     text-align: left;
     font-size: 11px;
     font-weight: 600;
@@ -256,8 +250,11 @@ table.results tbody tr.is-active:hover td { background: var(--row-hover); }
 
 /* -- Shot groups ---------------------------------------------------------- */
 
-/* One chip per series. The cell wraps between chips; a chip never breaks inside,
-   so a series always stays together on one line. */
+/* One chip per series. The cell wraps between chips first, so a series that no longer fits
+   beside its neighbours moves to a line of its own whole. Only a series wider than the whole
+   cell — 60-shot programs exist — wraps inside the chip, between shots; the chip's border keeps
+   it readable as one series. Nothing may overflow the cell: the table layout is fixed and an
+   overflowing chip ran under the next column. */
 .shot-groups {
     display: flex;
     flex-wrap: wrap;
@@ -267,9 +264,10 @@ table.results tbody tr.is-active:hover td { background: var(--row-hover); }
 
 .shot-group {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: 6px;
-    white-space: nowrap;
+    gap: 2px 6px;
+    max-width: 100%;
     padding: 2px 7px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
@@ -289,8 +287,10 @@ table.results tbody tr.is-active:hover td { background: var(--row-hover); }
 /* The content. Highest contrast in the row. */
 .shot-group-values {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 2px;
+    min-width: 0;
     font-variant-numeric: tabular-nums;
     font-size: 14px;
     font-weight: 600;
@@ -474,14 +474,14 @@ body.is-fullscreen .shot-group-values { font-size: 16px; }
 }
 
 .header-link {
-    color: rgba(255, 255, 255, 0.85);
+    color: color-mix(in srgb, var(--on-dark) 85%, transparent);
     font-size: 12px;
     text-decoration: none;
-    border: 1px solid rgba(255, 255, 255, 0.35);
+    border: 1px solid color-mix(in srgb, var(--on-dark) 35%, transparent);
     border-radius: var(--radius);
     padding: 5px 12px;
 }
-.header-link:hover { background: rgba(255, 255, 255, 0.12); color: var(--on-dark); }
+.header-link:hover { background: color-mix(in srgb, var(--on-dark) 12%, transparent); color: var(--on-dark); }
 
 .docs-panel {
     border-left: 3px solid var(--emerald);
@@ -792,7 +792,7 @@ body.is-fullscreen table.results tbody td { padding: 11px 12px; }
     display: inline-block;
     white-space: nowrap;
     margin-right: 3.5rem;
-    color: rgba(255, 255, 255, 0.92);
+    color: color-mix(in srgb, var(--on-dark) 92%, transparent);
     font-size: 16px;
     font-variant-numeric: tabular-nums;
 }
@@ -832,13 +832,13 @@ body.is-fullscreen .section { margin-bottom: 0; }
 
 .header-button {
     background: transparent;
-    color: rgba(255, 255, 255, 0.85);
-    border-color: rgba(255, 255, 255, 0.35);
+    color: color-mix(in srgb, var(--on-dark) 85%, transparent);
+    border-color: color-mix(in srgb, var(--on-dark) 35%, transparent);
     font-size: 12px;
     height: 28px;
     padding: 0 12px;
 }
-.header-button:hover { background: rgba(255, 255, 255, 0.12); color: var(--on-dark); }
+.header-button:hover { background: color-mix(in srgb, var(--on-dark) 12%, transparent); color: var(--on-dark); }
 
 /* -- Fullscreen picker ------------------------------------------------------ */
 
@@ -851,7 +851,7 @@ body.is-fullscreen .section { margin-bottom: 0; }
     color: var(--ink);
     box-shadow: var(--shadow);
 }
-.picker-dialog::backdrop { background: rgba(17, 24, 39, 0.45); }
+.picker-dialog::backdrop { background: color-mix(in srgb, var(--forest) 45%, transparent); }
 
 .dialog-header {
     display: flex;
@@ -871,13 +871,13 @@ body.is-fullscreen .section { margin-bottom: 0; }
 .dialog-close {
     border: 0;
     background: transparent;
-    color: rgba(255, 255, 255, 0.7);
+    color: color-mix(in srgb, var(--on-dark) 70%, transparent);
     width: 28px;
     padding: 0;
     justify-content: center;
     font-size: 15px;
 }
-.dialog-close:hover { color: var(--on-dark); background: rgba(255, 255, 255, 0.15); }
+.dialog-close:hover { color: var(--on-dark); background: color-mix(in srgb, var(--on-dark) 15%, transparent); }
 
 .dialog-body { padding: 18px 20px 20px; }
 .dialog-intro { margin: 0 0 16px; font-size: 13px; color: var(--ink-soft); line-height: 1.55; }

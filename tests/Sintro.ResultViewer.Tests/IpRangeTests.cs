@@ -27,9 +27,7 @@ public class IpRangeTests
     [Fact]
     public void wildcard_matchesEverything()
     {
-        var range = Parse("0.0.0.0/0");
-        Assert.True(range.IsWildcard);
-        Assert.True(range.Contains(IPAddress.Parse("203.0.113.9")));
+        Assert.True(Parse("0.0.0.0/0").Contains(IPAddress.Parse("203.0.113.9")));
     }
 
     [Fact]
@@ -53,6 +51,27 @@ public class IpRangeTests
         Assert.False(Parse("10.0.0.0/8").Contains(IPAddress.Parse("2001:db8::1")));
         Assert.False(Parse("fc00::/7").Contains(IPAddress.Parse("10.0.0.1")));
     }
+
+    [Theory]
+    [InlineData("10.5.5.5/8", "10.0.0.0/8")]
+    [InlineData("192.168.1.77/24", "192.168.1.0/24")]
+    [InlineData("fd12:3456::1/7", "fc00::/7")]
+    [InlineData("192.168.1.10", "192.168.1.10/32")]
+    public void hostBitsAreClearedOnParse(string text, string expected)
+    {
+        // Otherwise "10.5.5.5/8" would print as itself in the exposure warning and IsPrivate
+        // would judge the host address rather than the block.
+        Assert.Equal(expected, Parse(text).ToString());
+        Assert.True(Parse(text).IsPrivate());
+    }
+
+    [Theory]
+    [InlineData("fc00::/7", "fd00::1", true)]
+    [InlineData("fc00::/7", "fe00::1", false)]
+    [InlineData("2001:db8::/32", "2001:db8:ffff::1", true)]
+    [InlineData("2001:db8::/32", "2001:db9::1", false)]
+    public void ipv6PrefixesThatEndMidByteAreMatchedBitwise(string cidr, string address, bool expected) =>
+        Assert.Equal(expected, Parse(cidr).Contains(IPAddress.Parse(address)));
 
     [Fact]
     public void bareAddress_isTreatedAsASingleHost() =>

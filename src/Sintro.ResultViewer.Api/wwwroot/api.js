@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { INITIAL_RETRY_MS, nextRetryDelay } from './core/reconnect.js';
+import { isProbeAllowed } from './core/openapi.js';
 
 export class SintroApi {
     constructor(token) {
@@ -26,8 +27,16 @@ export class SintroApi {
         return body ? JSON.parse(body) : null;
     }
 
-    /** Raw variant for the docs page, which shows status and body verbatim. */
+    /**
+     * Raw variant for the docs page, which shows status and body verbatim. Same-origin API
+     * paths only: the token travels with the request, and a pasted external address must not
+     * carry it off the LAN.
+     */
     async probe(path) {
+        if (!isProbeAllowed(path, location.origin)) {
+            return { status: 0, statusText: 'blocked', body: `Only /api/… and /openapi/… on ${location.origin} can be called from here.` };
+        }
+
         const response = await fetch(path, { headers: this.headers });
         const body = await response.text();
         let pretty = body;
@@ -87,14 +96,18 @@ export class SintroApi {
         const connect = () => {
             if (closed) return;
             onStateChange('connecting');
-            socket = new WebSocket(url);
 
-            socket.onopen = () => {
+            // Handlers close over this socket, not the shared variable: a late event from a
+            // superseded socket must never act on the one that replaced it.
+            const ws = new WebSocket(url);
+            socket = ws;
+
+            ws.onopen = () => {
                 retryDelay = INITIAL_RETRY_MS;
                 onStateChange('connected');
             };
 
-            socket.onmessage = (event) => {
+            ws.onmessage = (event) => {
                 try {
                     onMessage(JSON.parse(event.data));
                 } catch {
@@ -102,8 +115,8 @@ export class SintroApi {
                 }
             };
 
-            socket.onclose = () => {
-                if (closed) return;
+            ws.onclose = () => {
+                if (closed || ws !== socket) return;
                 onStateChange('offline');
 
                 // Reconnect for as long as the page is open: a wall display has to survive the
@@ -113,7 +126,7 @@ export class SintroApi {
                 retryDelay = nextRetryDelay(retryDelay);
             };
 
-            socket.onerror = () => socket?.close();
+            ws.onerror = () => ws.close();
         };
 
         connect();

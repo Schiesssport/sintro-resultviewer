@@ -7,16 +7,14 @@ export const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (ch
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 }[char]));
 
-/** Time of day from an ISO timestamp. The offset in the string is authoritative. */
-export const formatTime = (iso, locale = 'de-CH') => {
-    if (!iso) return '';
-    const parsed = new Date(iso);
-    if (Number.isNaN(parsed.getTime())) return '';
-
-    // Read the wall-clock time the API sent rather than the viewer's local zone:
-    // a tablet with the wrong timezone must not shift the displayed shooting times.
-    const match = /T(\d{2}):(\d{2})/.exec(iso);
-    return match ? `${match[1]}:${match[2]}` : parsed.toLocaleTimeString(locale);
+/**
+ * Time of day from an ISO timestamp, read straight off the text rather than through Date:
+ * the API sends the range's wall-clock time with its offset, and a tablet with the wrong
+ * timezone must not shift the displayed shooting times.
+ */
+export const formatTime = (iso) => {
+    const match = /T(\d{2}):(\d{2})/.exec(String(iso ?? ''));
+    return match ? `${match[1]}:${match[2]}` : '';
 };
 
 /**
@@ -67,8 +65,6 @@ export const totalDisplay = (program) => {
     return { hasTotal: false, value: null, valuation: null, reasonKey };
 };
 
-export const isActive = (program) => program.state === 'active';
-
 /** Every whitespace-separated term must appear somewhere in the row. */
 export const matchesFilter = (program, query, labelText = '') => {
     const terms = String(query ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -87,21 +83,29 @@ export const matchesFilter = (program, query, labelText = '') => {
     return terms.every((term) => haystack.includes(term));
 };
 
+/** "20:45/L6": when and where a pass was shot. "L" is for Linie / ligne, the device's term. */
+const whenAndWhere = (program) => {
+    const time = formatTime(program?.startedAt);
+    const line = program?.lane === null || program?.lane === undefined ? '' : `L${program.lane}`;
+    return [time, line].filter(Boolean).join('/');
+};
+
 /**
  * The program with its when and where folded in: "Obligatorisches Programm (20:45/L6)".
  *
  * Time and line do not deserve columns of their own in the result list — they only ever
  * matter as context for the program — so they ride along here and free the width for the
- * shots. "L" is for Linie / ligne, the term the device uses for a firing point.
+ * shots.
  */
 export const programLabel = (program) => {
     const name = program?.name ?? '';
-    const time = formatTime(program?.startedAt);
-    const line = program?.lane === null || program?.lane === undefined ? '' : `L${program.lane}`;
-
-    const context = [time, line].filter(Boolean).join('/');
+    const context = whenAndWhere(program);
     return context ? `${name} (${context})` : name;
 };
+
+/** Club and program under a shooter's name on a line: "SG Muster · Obligatorisches Programm". */
+export const laneContext = (program) =>
+    [program?.shooter?.club?.name, program?.name].filter(Boolean).join(' · ');
 
 /**
  * One compact line for the scrolling ticker: "Hans Muster: 31 (Obligatorisches Programm, 20:45/L6)".
@@ -112,11 +116,7 @@ export const programLabel = (program) => {
 export const tickerEntry = (program, t) => {
     const name = shooterLabel(program, t).text;
     const total = program?.total ? String(program.total.value) : '–';
-
-    const time = formatTime(program?.startedAt);
-    const line = program?.lane === null || program?.lane === undefined ? '' : `L${program.lane}`;
-    const where = [time, line].filter(Boolean).join('/');
-    const context = [program?.name, where].filter(Boolean).join(', ');
+    const context = [program?.name, whenAndWhere(program)].filter(Boolean).join(', ');
 
     return context ? `${name}: ${total} (${context})` : `${name}: ${total}`;
 };

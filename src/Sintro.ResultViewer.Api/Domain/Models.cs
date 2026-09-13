@@ -57,7 +57,8 @@ public sealed record ShotSeries(
     string TargetCode,
     int ShotCount,
     int Subtotal,
-    // Best (lowest-numbered ring, highest tenth) fine value in the series, or null if empty.
+    // The highest fine value (SecondaryResult, in tenths) among the hits, or null when nothing hit.
+    // Shown as a tie-break hint; misses report 0 and are excluded so they cannot win it.
     int? BestFineValue,
     IReadOnlyList<Shot> Shots);
 
@@ -86,9 +87,11 @@ public sealed record ShootingProgram(
     // The same values space-joined, for the viewer's single-column display.
     string ShotValuesText,
     IReadOnlyList<ShotSeries> Series,
-    // Sighting shots (Probe). Never counted towards Total.
-    ShotSeries? Sighting);
+    // Sighting shots (Probe), one series per ShotGroup they were fired in. Never counted towards
+    // Total. Kept per group because the ring scale can differ between groups, and one merged
+    // series would add 5er and 10er values together — the very sum Total refuses to make.
+    IReadOnlyList<ShotSeries> Sighting);
 
 public sealed record LaneStatus(int Number, ShootingProgram? CurrentProgram);
 
-public sealed record ProgramCatalogEntry(int Number, string Name, int ProgramCount, DateTimeOffset? LastShotAt);
+public sealed record ProgramCatalogEntry(int Number, string Name, int ProgramCount, DateTimeOffset? LastStartedAt);

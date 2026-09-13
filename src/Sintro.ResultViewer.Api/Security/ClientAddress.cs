@@ -16,8 +16,14 @@ public static class ClientAddress
     /// themselves trusted proxies are unwound — the chain is read from the nearest hop outwards
     /// and the first address that is not a known proxy is the client. With nothing configured the
     /// header is ignored entirely and the socket peer stands.
+    ///
+    /// Returns null when the client cannot be named: a trusted proxy forwarded a hop that does not
+    /// parse. Falling back to the proxy's own address there would let anyone behind a public proxy
+    /// in, because the proxy sits inside the allowed network by definition — so the caller must
+    /// refuse instead. An empty header from a trusted proxy is different: the proxy itself is the
+    /// client, and it stands.
     /// </summary>
-    public static IPAddress Resolve(
+    public static IPAddress? Resolve(
         IPAddress? peer,
         string? forwardedFor,
         IReadOnlyList<IpRange> trustedProxies)
@@ -29,21 +35,24 @@ public static class ClientAddress
         if (trustedProxies.Count == 0) return socketPeer;
         if (!IsTrusted(socketPeer, trustedProxies)) return socketPeer;
 
-        // Left to right: the original client first, then each proxy it passed through.
         var chain = (forwardedFor ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(Parse)
             .ToList();
 
-        if (chain.Count == 0 || chain.Any(address => address is null)) return socketPeer;
+        if (chain.Count == 0) return socketPeer;
 
+        // The header lists the original client first and each proxy after it. Walking it from the
+        // end is what makes it safe: only the nearest hop's word has been vouched for by a trusted
+        // peer, and each further hop is believed only if the one that reported it is trusted too.
         for (var index = chain.Count - 1; index >= 0; index--)
         {
-            if (!IsTrusted(chain[index]!, trustedProxies)) return chain[index]!;
+            var hop = chain[index];
+            if (hop is null || !IsTrusted(hop, trustedProxies)) return hop;
         }
 
         // Every hop is a proxy we trust; the outermost is the closest thing to a client.
-        return chain[0]!;
+        return chain[0];
     }
 
     private static bool IsTrusted(IPAddress address, IReadOnlyList<IpRange> trustedProxies) =>

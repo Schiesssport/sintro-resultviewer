@@ -125,6 +125,27 @@ public class TrustedProxyTests(TrustedProxyApiFixture fixture) : IClassFixture<T
     }
 
     [Fact]
+    public async Task anUnreadableForwardedHopBehindOurProxyIsRefused()
+    {
+        // nginx appends the real peer to whatever the client sent, so "unknown, <attacker>" is
+        // what arrives. Falling back to the proxy's own (allowed) address would let it through.
+        var client = fixture.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Forwarded-For", "unknown");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiFixture.Token);
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/v2/live")).StatusCode);
+    }
+
+    [Theory]
+    [InlineData("/openapi/v2.json")]
+    [InlineData("/styles.css")]
+    public async Task theTokenFreeWebSurfaceIsStillGated(string path)
+    {
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await fixture.CreateClient().GetAsync(path)).StatusCode);
+    }
+
+    [Fact]
     public async Task unwindingStopsAtTheFirstHopWeDoNotTrust()
     {
         // The nearest hop is a stranger, so nothing it claims about who came before it can be

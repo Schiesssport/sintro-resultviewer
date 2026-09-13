@@ -8,19 +8,17 @@ public sealed class IpRange
 {
     private readonly byte[] _network;
 
-    private IpRange(IPAddress network, int prefixLength)
+    private IpRange(byte[] network, AddressFamily family, int prefixLength)
     {
-        NetworkAddress = network;
+        _network = network;
+        Family = family;
         PrefixLength = prefixLength;
-        _network = network.GetAddressBytes();
     }
 
-    public IPAddress NetworkAddress { get; }
+    /// <summary>The block's first address, host bits cleared: "10.5.5.5/8" is reported as 10.0.0.0/8.</summary>
+    public IPAddress NetworkAddress => new(_network);
     public int PrefixLength { get; }
-    public AddressFamily Family => NetworkAddress.AddressFamily;
-
-    /// <summary>True for /0 — accepts the whole internet.</summary>
-    public bool IsWildcard => PrefixLength == 0;
+    private AddressFamily Family { get; }
 
     public static bool TryParse(string? text, out IpRange range)
     {
@@ -42,7 +40,7 @@ public sealed class IpRange
         if (parts.Length == 2 && (!int.TryParse(parts[1], out prefix) || prefix < 0 || prefix > maximum))
             return false;
 
-        range = new IpRange(address, prefix);
+        range = new IpRange(Mask(address.GetAddressBytes(), prefix), address.AddressFamily, prefix);
         return true;
     }
 
@@ -60,17 +58,7 @@ public sealed class IpRange
 
         if (candidate.AddressFamily != Family) return false;
 
-        var bytes = candidate.GetAddressBytes();
-        var wholeBytes = PrefixLength / 8;
-        var remainingBits = PrefixLength % 8;
-
-        for (var i = 0; i < wholeBytes; i++)
-            if (bytes[i] != _network[i]) return false;
-
-        if (remainingBits == 0) return true;
-
-        var mask = (byte)(0xFF << (8 - remainingBits));
-        return (bytes[wholeBytes] & mask) == (_network[wholeBytes] & mask);
+        return Mask(candidate.GetAddressBytes(), PrefixLength).AsSpan().SequenceEqual(_network);
     }
 
     /// <summary>
@@ -83,6 +71,14 @@ public sealed class IpRange
 
     private static readonly Lazy<IReadOnlyList<IpRange>> PrivateSpace =
         new(() => ParseAll(NetworkOptions.PrivateSpace));
+
+    private static byte[] Mask(byte[] address, int prefixLength)
+    {
+        var masked = (byte[])address.Clone();
+        for (var bit = prefixLength; bit < masked.Length * 8; bit++)
+            masked[bit / 8] &= (byte)~(0x80 >> (bit % 8));
+        return masked;
+    }
 
     public override string ToString() => $"{NetworkAddress}/{PrefixLength}";
 }

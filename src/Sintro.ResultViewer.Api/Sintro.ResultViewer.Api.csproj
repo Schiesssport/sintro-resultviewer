@@ -23,8 +23,9 @@
     <PackageReference Include="Dapper" Version="2.*" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.*" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.*" />
-    <!-- Overrides the 2.0.0 pulled in transitively, which carries GHSA-v5pm-xwqc-g5wc. -->
-    <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
+    <!-- Floor, not pin: the 2.0.0 pulled in transitively carries GHSA-v5pm-xwqc-g5wc, and a hard
+         pin broke restore whenever AspNetCore.OpenApi moved on to a newer 2.x. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.*" />
   </ItemGroup>
 
 </Project>

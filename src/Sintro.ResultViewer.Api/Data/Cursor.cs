@@ -5,6 +5,13 @@ using Microsoft.AspNetCore.WebUtilities;
 namespace Sintro.ResultViewer.Data;
 
 /// <summary>
+/// A cursor was supplied but cannot be honoured. Client error, answered with 400: quietly paging
+/// from the start instead would hand a syncing client every historic record again with nothing
+/// in the response to say why.
+/// </summary>
+public sealed class InvalidCursorException(string detail) : Exception(detail);
+
+/// <summary>
 /// Opaque keyset cursor. Clients must treat the value as a blob and only ever echo it back.
 ///
 /// Keyset rather than offset paging because offsets skip or repeat rows when the underlying set
@@ -18,31 +25,32 @@ public static class Cursor
         WebEncoders.Base64UrlEncode(
             Encoding.UTF8.GetBytes(JsonSerializer.Serialize(parts.Select(part => part?.ToString()))));
 
-    public static bool TryDecode(string? cursor, int expectedParts, out string?[] parts)
+    /// <summary>
+    /// The parts a cursor was encoded from, or null when no cursor was passed at all.
+    /// Throws <see cref="InvalidCursorException"/> for anything in between.
+    /// </summary>
+    public static string?[]? Decode(string? cursor, int expectedParts)
     {
-        parts = [];
-        if (string.IsNullOrWhiteSpace(cursor)) return false;
+        if (string.IsNullOrWhiteSpace(cursor)) return null;
 
+        string?[]? decoded;
         try
         {
-            var decoded = JsonSerializer.Deserialize<string?[]>(
+            decoded = JsonSerializer.Deserialize<string?[]>(
                 Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(cursor)));
-
-            if (decoded is null || decoded.Length != expectedParts) return false;
-
-            parts = decoded;
-            return true;
         }
         catch (Exception ex) when (ex is FormatException or JsonException)
         {
-            // A malformed cursor is client error, not a server fault: page from the start.
-            return false;
+            throw Malformed();
         }
+
+        if (decoded is null || decoded.Length != expectedParts) throw Malformed();
+        return decoded;
     }
 
-    public static bool TryDecodeInt(string? cursor, out int value)
-    {
-        value = 0;
-        return TryDecode(cursor, 1, out var parts) && int.TryParse(parts[0], out value);
-    }
+    public static int DecodeInt(string? part) =>
+        int.TryParse(part, out var value) ? value : throw Malformed();
+
+    private static InvalidCursorException Malformed() =>
+        new("The cursor is not one this API issued. Pass back a nextCursor exactly as received, or omit it to start from the beginning.");
 }

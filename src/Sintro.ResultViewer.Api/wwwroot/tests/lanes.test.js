@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
     isLineAvailable, lastActivityAt, dayOffsetMs,
-    IDLE_AFTER_FINISH_MS, IDLE_AFTER_LAST_SHOT_MS,
+    IDLE_AFTER_FINISH_MS, IDLE_AFTER_LAST_SHOT_MS, holdClearedLines, HOLD_AFTER_CLEAR_MS,
 } from '../core/lanes.js';
 
 const at = (iso) => Date.parse(iso);
@@ -13,7 +13,7 @@ const shot = (iso) => ({ value: 9, at: iso });
 const program = (overrides = {}) => ({
     finishedAt: null,
     series: [{ index: 1, shots: [shot('2026-07-08T20:55:00+02:00')] }],
-    sighting: null,
+    sighting: [],
     ...overrides,
 });
 
@@ -32,14 +32,14 @@ describe('lastActivityAt', () => {
     test('counts sighting shots — the shooter is present either way', () => {
         const value = lastActivityAt(program({
             series: [],
-            sighting: { shots: [shot('2026-07-08T20:59:00+02:00')] },
+            sighting: [{ shots: [shot('2026-07-08T20:59:00+02:00')] }],
         }));
 
         assert.equal(value, at('2026-07-08T20:59:00+02:00'));
     });
 
     test('is null when nothing has been fired', () => {
-        assert.equal(lastActivityAt(program({ series: [], sighting: null })), null);
+        assert.equal(lastActivityAt(program({ series: [], sighting: [] })), null);
         assert.equal(lastActivityAt(null), null);
     });
 
@@ -64,7 +64,7 @@ describe('isLineAvailable', () => {
     test('a program loaded but not yet started is occupied, not free', () => {
         // The shooter is setting up. Freeing the line here would flicker it away
         // the moment it was assigned.
-        assert.equal(isLineAvailable(program({ series: [], sighting: null }), NOW), false);
+        assert.equal(isLineAvailable(program({ series: [], sighting: [] }), NOW), false);
     });
 
     test('frees five minutes after the device wrote an end total', () => {
@@ -128,5 +128,50 @@ describe('dayOffsetMs', () => {
     test('is zero when the reference date is already today', () => {
         const now = new Date(2026, 6, 8, 9, 0).getTime();
         assert.equal(dayOffsetMs('2026-07-08', now), 0);
+    });
+});
+
+describe('holdClearedLines', () => {
+    const T0 = Date.parse('2026-07-08T21:00:00+02:00');
+    const pass = (id) => program({ id, finishedAt: null });
+    const lanes = (current) => [{ number: 1, currentProgram: current }, { number: 2, currentProgram: null }];
+
+    test('a line reporting a program shows it and remembers it', () => {
+        const held = holdClearedLines(new Map(), lanes(pass(7)), T0);
+        assert.equal(held.lanes[0].currentProgram.id, 7);
+        assert.equal(held.memory.get(1).program.id, 7);
+    });
+
+    test('a line the device just cleared keeps showing its last program', () => {
+        // The device drops the lane assignment the moment the end marker is written.
+        const first = holdClearedLines(new Map(), lanes(pass(7)), T0);
+        const cleared = holdClearedLines(first.memory, lanes(null), T0 + 1000);
+
+        assert.equal(cleared.lanes[0].currentProgram.id, 7);
+    });
+
+    test('the hold ends after HOLD_AFTER_CLEAR_MS, measured from the first empty snapshot', () => {
+        const first = holdClearedLines(new Map(), lanes(pass(7)), T0);
+        const cleared = holdClearedLines(first.memory, lanes(null), T0 + 1000);
+        const still = holdClearedLines(cleared.memory, lanes(null), T0 + 1000 + HOLD_AFTER_CLEAR_MS - 1);
+        const over = holdClearedLines(still.memory, lanes(null), T0 + 1000 + HOLD_AFTER_CLEAR_MS);
+
+        assert.equal(still.lanes[0].currentProgram.id, 7);
+        assert.equal(over.lanes[0].currentProgram, null);
+        assert.equal(over.memory.has(1), false);
+    });
+
+    test('a new program on the line replaces the held one at once', () => {
+        const first = holdClearedLines(new Map(), lanes(pass(7)), T0);
+        const cleared = holdClearedLines(first.memory, lanes(null), T0 + 1000);
+        const next = holdClearedLines(cleared.memory, lanes(pass(8)), T0 + 2000);
+
+        assert.equal(next.lanes[0].currentProgram.id, 8);
+    });
+
+    test('a line that never had a program is simply free', () => {
+        const held = holdClearedLines(new Map(), lanes(null), T0);
+        assert.equal(held.lanes[0].currentProgram, null);
+        assert.equal(held.lanes[1].currentProgram, null);
     });
 });

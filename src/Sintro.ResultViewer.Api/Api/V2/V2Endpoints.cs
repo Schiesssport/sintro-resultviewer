@@ -34,15 +34,20 @@ public static class V2Endpoints
         Paging — read `nextCursor` from the response and pass it back as `cursor`. A null
         `nextCursor` means you reached the end. There is deliberately no total: counting the whole
         set costs a second scan per request and grows with the table, and paging never needs it.
+        A cursor that was not issued by this API, or was issued for the other sort order, is
+        answered with 400 `invalid_cursor` rather than silently restarting from page one.
 
         Syncing — request `order=asc` and keep the last `nextCursor` you received. Passing it
         again later returns exactly the records added since, and nothing else. This is the
         supported way to mirror results into event software.
+
+        Errors — every non-2xx answer carries `{"error": "<stable code>", "detail": "<text>"}`.
         """;
 
     public static void MapV2(this WebApplication app)
     {
-        var api = app.MapGroup(RoutePrefix);
+        var api = app.MapGroup(RoutePrefix)
+                     .AddEndpointFilter(RejectInvalidCursor);
 
         // -- 1 · Live -------------------------------------------------------------
 
@@ -57,7 +62,7 @@ public static class V2Endpoints
                 The same URL upgrades to a WebSocket. On connect it pushes the current lane state
                 immediately, then a fresh {"type":"lanes","lanes":[...]} whenever a lane changes
                 or a shot is fired. Browsers cannot set headers on a handshake, so the WebSocket
-                accepts the token as ?token=<token> — this is the only endpoint that does.
+                upgrade — and only the upgrade — accepts the token as ?token=<token>.
                 """);
 
         // -- 2 · Resultate --------------------------------------------------------
@@ -96,8 +101,8 @@ public static class V2Endpoints
 
                 total is null when the program's series used different ring scales — adding a 5er
                 series to a 10er one is meaningless — and totalUnavailable says why. Use each
-                series' subtotal in that case. sighting holds the Probe shots, which never count
-                towards the total.
+                series' subtotal in that case. sighting lists the Probe series, one per stage the
+                device recorded them in; they never count towards the total.
                 """);
 
         api.MapGet("/shooters", ListShooters)
@@ -137,9 +142,10 @@ public static class V2Endpoints
            .WithTags(TagReference)
            .WithSummary("Distinct (number, name) pairs present, with counts")
            .WithDescription("""
-                Not a lookup table and not paged. The operator renames programs freely, so number
-                31 appears as both "A10-Probe" and "Obligatorisches Programm". Filter /programs by
-                number and/or name using the pairs listed here.
+                Not a lookup table and not paged. The operator renames programs freely, so one
+                number can appear under several names. Filter /programs by number and/or name
+                using the pairs listed here. lastStartedAt is when a program of that pair was
+                last started.
                 """);
 
         // -- 4 · Betrieb ----------------------------------------------------------
@@ -150,24 +156,34 @@ public static class V2Endpoints
            .WithDescription("""
                 The only data endpoint that needs no token, so monitoring can reach it. today is
                 the date the today-only default resolves to. publicExposure lists any non-private
-                network ranges the server is configured to accept.
+                network ranges the server is configured to accept. Answers 503 with the same body
+                shape as every other error when the database cannot be reached.
                 """);
     }
 
     // -- Handlers -----------------------------------------------------------------
 
     private static async Task<IResult> Live(
-        HttpContext context, SintroRepository repository, LiveHub hub, CancellationToken token)
+        HttpContext context,
+        SintroRepository repository,
+        LiveHub hub,
+        IHostApplicationLifetime lifetime,
+        CancellationToken token)
     {
         if (!context.WebSockets.IsWebSocketRequest)
             return TypedResults.Ok(await repository.ListLanesAsync(token));
 
+        // Read the snapshot before upgrading: a database failure here is still an ordinary HTTP
+        // error the client can log. After the upgrade there is no response left to fail with.
+        var snapshot = new { type = "lanes", lanes = await repository.ListLanesAsync(token) };
+
+        // RequestAborted fires only once Kestrel gives up draining connections, which for an
+        // idle socket is the whole shutdown timeout. Stopping the application must end the
+        // session at once, or Ctrl+C sits for half a minute whenever a display is connected.
+        using var session = CancellationTokenSource.CreateLinkedTokenSource(token, lifetime.ApplicationStopping);
         using var socket = await context.WebSockets.AcceptWebSocketAsync();
 
-        // The hub queues this for the joining client alone — broadcasting would not reach it any
-        // sooner (it is not registered yet) and would disturb everyone else.
-        await hub.AcceptAsync(
-            socket, new { type = "lanes", lanes = await repository.ListLanesAsync(token) }, token);
+        await hub.AcceptAsync(socket, snapshot, session.Token);
 
         return Results.Empty;
     }
@@ -195,10 +211,9 @@ public static class V2Endpoints
         if (!TryParseOrder(order, out var ascending, out var orderError))
             return TypedResults.BadRequest(orderError!);
 
-        var settings = options.Value;
-
-        // Today-only unless the caller asks for a window. Shooting across midnight is
-        // unrealistic, and one consistent rule beats special-casing the viewer.
+        // Today-only unless the caller asks for a window. One consistent rule beats
+        // special-casing the viewer; a pass that runs past midnight is still filed under the day
+        // it started, which is how the range thinks of it too.
         var explicitWindow = from is not null || to is not null;
 
         var filter = new ProgramFilter
@@ -213,17 +228,19 @@ public static class V2Endpoints
             WithoutResult = withoutResult,
             Ascending = ascending,
             Cursor = cursor,
-            Limit = ClampLimit(limit, settings),
+            Limit = ClampLimit(limit, options.Value),
         };
 
         return TypedResults.Ok(await repository.ListProgramsAsync(filter, token));
     }
 
-    private static async Task<Results<Ok<ShootingProgram>, NotFound>> GetProgram(
+    private static async Task<Results<Ok<ShootingProgram>, NotFound<ApiError>>> GetProgram(
         int id, SintroRepository repository, CancellationToken token)
     {
         var program = await repository.GetProgramAsync(id, token);
-        return program is null ? TypedResults.NotFound() : TypedResults.Ok(program);
+        return program is null
+            ? TypedResults.NotFound(new ApiError("not_found", $"No program with id {id}."))
+            : TypedResults.Ok(program);
     }
 
     private static async Task<Ok<CursorPage<Shooter>>> ListShooters(
@@ -237,7 +254,7 @@ public static class V2Endpoints
         TypedResults.Ok(await repository.ListShootersAsync(
             q, club, ClampLimit(limit, options.Value), cursor, token));
 
-    private static async Task<Results<Ok<ShooterDetail>, NotFound, BadRequest<ApiError>>> GetShooter(
+    private static async Task<Results<Ok<ShooterDetail>, NotFound<ApiError>, BadRequest<ApiError>>> GetShooter(
         string license,
         SintroRepository repository,
         IOptions<SintroOptions> options,
@@ -250,7 +267,8 @@ public static class V2Endpoints
             return TypedResults.BadRequest(orderError!);
 
         var shooters = await repository.FindShootersByLicenseAsync(license, token);
-        if (shooters.Count == 0) return TypedResults.NotFound();
+        if (shooters.Count == 0)
+            return TypedResults.NotFound(new ApiError("not_found", "No shooter carries this licence number."));
 
         // Paged like every other collection. A shooter with more passes than one page used to
         // simply lose the older ones, with nothing in the response to say so.
@@ -282,7 +300,7 @@ public static class V2Endpoints
         SintroRepository repository, CancellationToken token) =>
         TypedResults.Ok(await repository.ListProgramCatalogAsync(token));
 
-    private static async Task<Results<Ok<HealthReport>, ProblemHttpResult>> Health(
+    private static async Task<Results<Ok<HealthReport>, JsonHttpResult<ApiError>>> Health(
         SintroRepository repository,
         ISintroClock clock,
         LiveHub hub,
@@ -296,8 +314,26 @@ public static class V2Endpoints
 
         return reachable
             ? TypedResults.Ok(report)
-            : TypedResults.Problem("Cannot reach the Sintro database.",
+            : TypedResults.Json(
+                new ApiError("database_unreachable", "Cannot reach the Sintro database."),
                 statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
+    /// <summary>
+    /// Cursors are decoded where their shape is known — in the repository — so the 400 for a bad
+    /// one is produced here for every collection at once instead of in each handler.
+    /// </summary>
+    private static async ValueTask<object?> RejectInvalidCursor(
+        EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        try
+        {
+            return await next(context);
+        }
+        catch (InvalidCursorException ex)
+        {
+            return TypedResults.BadRequest(new ApiError("invalid_cursor", ex.Message));
+        }
     }
 
     private static int ClampLimit(int? limit, SintroOptions settings) =>

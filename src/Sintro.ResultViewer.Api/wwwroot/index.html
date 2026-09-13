@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sintro Resultate</title>
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <!-- Mirrors --forest in tokens.css; a meta tag cannot read a CSS variable. -->
     <meta name="theme-color" content="#213F37">
     <link rel="stylesheet" href="/styles.css">
 </head>
@@ -15,10 +16,10 @@
         <img src="/icon.svg" alt="">
         <h1 data-i18n="app.title">Sintro Resultate</h1>
         <div class="header-right">
-            <span id="live-indicator" class="live-dot" data-i18n="live.connecting">Verbinde…</span>
+            <span id="live-indicator" class="live-dot">Verbinde…</span>
             <button id="fullscreen-button" class="header-button"
                     data-i18n="toolbar.fullscreen">Vollbild</button>
-            <select id="language-select" aria-label="Sprache">
+            <select id="language-select" data-i18n-aria-label="aria.language" aria-label="Sprache">
                 <option value="de" selected>DE</option>
                 <option value="fr">FR</option>
             </select>
@@ -96,13 +97,13 @@
      reports on rather than inside it as a footer row. See styles.css. -->
 <div id="results-ticker" class="hidden"></div>
 
-<button id="fullscreen-exit" class="fullscreen-exit hidden" title="Vollbild beenden"
-        aria-label="Vollbild beenden">✕</button>
+<button id="fullscreen-exit" class="fullscreen-exit hidden" data-i18n-title="aria.exitFullscreen"
+        data-i18n-aria-label="aria.exitFullscreen" title="Vollbild beenden" aria-label="Vollbild beenden">✕</button>
 
 <dialog id="fullscreen-dialog" class="picker-dialog">
     <div class="dialog-header">
         <h3 data-i18n="fullscreen.title">Vollbild-Ansicht</h3>
-        <button class="dialog-close" id="fullscreen-dialog-close" aria-label="Schliessen">✕</button>
+        <button class="dialog-close" id="fullscreen-dialog-close" data-i18n-aria-label="aria.close" aria-label="Schliessen">✕</button>
     </div>
     <div class="dialog-body">
         <p class="dialog-intro" data-i18n="fullscreen.intro"></p>

@@ -16,7 +16,6 @@ public sealed record ProgramRow(
     DateTime? StartedAt,
     int HasEndMarker,
     int CountingShots,
-    string? EndShotTime,
     int IsActive);
 
 public sealed record ShotRow(

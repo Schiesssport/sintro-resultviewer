@@ -1,6 +1,5 @@
 using Dapper;
 using Microsoft.Data.SqlClient;
-using Sintro.ResultViewer.Api.V2;
 using Sintro.ResultViewer.Domain;
 
 namespace Sintro.ResultViewer.Data;
@@ -15,6 +14,8 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
     /// <summary>
     /// Programs.StartTime is text in German day-first format, so it is converted before it is
     /// filtered or sorted. IsActive combines "sitting on a lane" with "no end-of-program total".
+    /// Marker rows are ShotNr 9999 only, as in ScoreCalculator.IsMarker: the last real shot of a
+    /// pass carries TotalType 7 as well, so that flag cannot exclude rows.
     /// </summary>
     private const string ProgramProjection = """
         WITH prog AS (
@@ -26,8 +27,7 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         flags AS (
             SELECT  s.ProgramID,
                     MAX(CASE WHEN s.TotalType = 7 THEN 1 ELSE 0 END) AS HasEndMarker,
-                    SUM(CASE WHEN s.ShotNr <> 9999 AND s.ShotType <> 0 THEN 1 ELSE 0 END) AS CountingShots,
-                    MAX(CASE WHEN s.TotalType = 7 THEN s.ShotTime END) AS EndShotTime
+                    SUM(CASE WHEN s.ShotNr <> 9999 AND s.ShotType <> 0 THEN 1 ELSE 0 END) AS CountingShots
             FROM    dbo.Shots s
             WHERE   s.ProgramID IS NOT NULL
             GROUP BY s.ProgramID
@@ -40,7 +40,6 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
                     p.ContestShooterName, p.ShooterID, p.StartedAt,
                     ISNULL(f.HasEndMarker, 0)   AS HasEndMarker,
                     ISNULL(f.CountingShots, 0)  AS CountingShots,
-                    f.EndShotTime,
                     CASE WHEN o.ProgramID IS NOT NULL AND ISNULL(f.HasEndMarker, 0) = 0
                          THEN 1 ELSE 0 END      AS IsActive
             FROM    prog p
@@ -49,12 +48,17 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         )
         """;
 
+    /// <summary>
+    /// A program whose StartTime does not parse has StartedAt NULL, compares UNKNOWN against any
+    /// date window and therefore appears in no list. It is still reachable by id, where its
+    /// start is reported as the epoch so the bad data is obvious rather than hidden.
+    /// </summary>
     private const string ProgramWhere = """
         WHERE   (@from        IS NULL OR CONVERT(date, e.StartedAt) >= @from)
           AND   (@to          IS NULL OR CONVERT(date, e.StartedAt) <= @to)
           AND   (@number      IS NULL OR e.Number = @number)
           AND   (@lane        IS NULL OR e.LaneNr = @lane)
-          AND   (@name        IS NULL OR e.Name LIKE '%' + @name + '%')
+          AND   (@name        IS NULL OR e.Name LIKE @name ESCAPE '\')
           AND   (@activeOnly  = 0 OR e.IsActive = 1)
           AND   (@finishedOnly = 0 OR e.HasEndMarker = 1)
           AND   (@abandonedOnly = 0 OR (e.HasEndMarker = 0 AND e.IsActive = 0))
@@ -70,17 +74,23 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
     {
         await using var connection = Connect();
 
-        var shooterIds = await ResolveLicenseAsync(connection, filter.License, token);
-        // A licence filter that matches nobody must return nothing, not everything.
-        if (filter.License is { Length: > 0 } && shooterIds.Count == 0)
-            return new CursorPage<ShootingProgram>([], null, filter.Limit);
+        LicenseIndex? licenses = null;
+        var shooterIds = new List<int>();
+        if (filter.License is { Length: > 0 })
+        {
+            licenses = await LicenseIndex.LoadAsync(connection, token);
+            shooterIds = licenses.Resolve(filter.License);
+
+            // A licence filter that matches nobody must return nothing, not everything.
+            if (shooterIds.Count == 0) return new CursorPage<ShootingProgram>([], null, filter.Limit);
+        }
 
         var parameters = new DynamicParameters();
         parameters.Add("from", filter.From?.ToDateTime(TimeOnly.MinValue).Date);
         parameters.Add("to", filter.To?.ToDateTime(TimeOnly.MinValue).Date);
         parameters.Add("number", filter.Number);
         parameters.Add("lane", filter.Lane);
-        parameters.Add("name", string.IsNullOrWhiteSpace(filter.Name) ? null : filter.Name.Trim());
+        parameters.Add("name", ContainsPattern(filter.Name));
         parameters.Add("activeOnly", filter.State == ProgramState.Active ? 1 : 0);
         parameters.Add("finishedOnly", filter.State == ProgramState.Finished ? 1 : 0);
         parameters.Add("abandonedOnly", filter.State == ProgramState.Abandoned ? 1 : 0);
@@ -95,9 +105,16 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         var comparison = filter.Ascending ? ">" : "<";
 
         var cursorClause = string.Empty;
-        if (Cursor.TryDecodeInt(filter.Cursor, out var cursorId))
+        if (Cursor.Decode(filter.Cursor, 2) is { } parts)
         {
-            parameters.Add("cursorId", cursorId);
+            // The cursor remembers the order it was issued under. Walking asc, then continuing
+            // with the default desc, would silently return everything older instead of what is
+            // new — the opposite of the sync the client built.
+            if (parts[1] != direction)
+                throw new InvalidCursorException(
+                    $"This cursor was issued for order={parts[1]?.ToLowerInvariant()}; pass the same order to continue from it.");
+
+            parameters.Add("cursorId", Cursor.DecodeInt(parts[0]));
             cursorClause = $"AND e.ProgramID {comparison} @cursorId";
         }
 
@@ -117,8 +134,8 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         var hasMore = rows.Count > filter.Limit;
         if (hasMore) rows.RemoveAt(rows.Count - 1);
 
-        var programs = await HydrateAsync(connection, rows, token);
-        var nextCursor = hasMore && rows.Count > 0 ? Cursor.Encode(rows[^1].ProgramID) : null;
+        var programs = await HydrateAsync(connection, rows, licenses, token);
+        var nextCursor = hasMore && rows.Count > 0 ? Cursor.Encode(rows[^1].ProgramID, direction) : null;
 
         return new CursorPage<ShootingProgram>(programs, nextCursor, filter.Limit);
     }
@@ -131,15 +148,16 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
             $"{ProgramProjection} SELECT e.* FROM enriched e WHERE e.ProgramID = @id",
             new { id }, cancellationToken: token))).ToList();
 
-        return (await HydrateAsync(connection, rows, token)).FirstOrDefault();
+        return (await HydrateAsync(connection, rows, null, token)).FirstOrDefault();
     }
 
     /// <summary>
     /// Loads shots, target info and shooters for a page of programs in three set-based queries
-    /// rather than per program, then scores each one.
+    /// rather than per program, then scores each one. <paramref name="licenses"/> is reused when
+    /// the caller already loaded it, otherwise read only if any program names a shooter.
     /// </summary>
     private async Task<List<ShootingProgram>> HydrateAsync(
-        SqlConnection connection, List<ProgramRow> rows, CancellationToken token)
+        SqlConnection connection, List<ProgramRow> rows, LicenseIndex? licenses, CancellationToken token)
     {
         if (rows.Count == 0) return [];
 
@@ -167,9 +185,12 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
                              .Select(row => row.ShooterID!.Value)
                              .Distinct().ToList();
 
-        var shooters = shooterIds.Count == 0
-            ? new Dictionary<int, Shooter>()
-            : await LoadShootersAsync(connection, shooterIds, token);
+        var shooters = new Dictionary<int, Shooter>();
+        if (shooterIds.Count > 0)
+        {
+            licenses ??= await LicenseIndex.LoadAsync(connection, token);
+            shooters = await LoadShootersAsync(connection, shooterIds, licenses, token);
+        }
 
         return rows.Select(row => ToProgram(
                     row,
@@ -182,17 +203,18 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
     private ShootingProgram ToProgram(
         ProgramRow row, List<ShotRow> shots, List<TargetInfoRow> targets, Shooter? shooter)
     {
-        // A row whose StartTime does not parse still has to surface; fall back to the epoch so
-        // the program stays visible and the bad data is obvious rather than silently dropped.
+        // SQL already tried style 104; the C# parse is the same rule and only ever matters if
+        // the two implementations disagree. Epoch after that, so a row with unreadable data is
+        // visibly wrong rather than missing (see ProgramWhere for how lists treat it).
         var start = row.StartedAt ?? SintroTime.ParseStartTime(row.StartTime) ?? DateTime.UnixEpoch;
 
-        var score = shots.Count == 0
-            ? ScoreCalculator.Empty
-            : ScoreCalculator.Calculate(start, clock, shots, targets);
+        var score = ScoreCalculator.Calculate(start, clock, shots, targets);
 
-        var endTime = row.EndShotTime ?? ScoreCalculator.FindEndShotTime(shots);
+        // The end time comes from the marker with the highest ShotID, not from a SQL MAX over the
+        // time text: a pass that runs past midnight has "23:59:.." sort after "00:03:..".
         DateTimeOffset? finishedAt = null;
-        if (endTime is not null && SintroTime.CombineShotTime(start, endTime) is DateTime end)
+        if (ScoreCalculator.FindEndShotTime(shots) is { } endTime &&
+            SintroTime.CombineShotTime(start, endTime) is DateTime end)
             finishedAt = clock.ToOffset(end);
 
         return new ShootingProgram(
@@ -239,7 +261,7 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
                 $"{ProgramProjection} SELECT e.* FROM enriched e WHERE e.ProgramID IN @programIds",
                 new { programIds }, cancellationToken: token))).ToList();
 
-            programs = (await HydrateAsync(connection, rows, token)).ToDictionary(program => program.Id);
+            programs = (await HydrateAsync(connection, rows, null, token)).ToDictionary(program => program.Id);
         }
 
         return lanes.Select(lane => new LaneStatus(
@@ -268,15 +290,15 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         await using var connection = Connect();
 
         var parameters = new DynamicParameters();
-        parameters.Add("query", string.IsNullOrWhiteSpace(query) ? null : query.Trim());
+        parameters.Add("query", ContainsPattern(query));
         parameters.Add("clubId", clubId);
 
         const string where = """
             WHERE   (@clubId IS NULL OR sh.ClubID = @clubId)
               AND   (@query  IS NULL
-                     OR sh.LastName  LIKE '%' + @query + '%'
-                     OR sh.FirstName LIKE '%' + @query + '%'
-                     OR sh.StartNr   LIKE '%' + @query + '%')
+                     OR sh.LastName  LIKE @query ESCAPE '\'
+                     OR sh.FirstName LIKE @query ESCAPE '\'
+                     OR sh.StartNr   LIKE @query ESCAPE '\')
             """;
 
         // Shooters read alphabetically, so the keyset is the full sort tuple, tie-broken by the
@@ -288,11 +310,11 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         // skipping rows instead of failing — the worst way to be wrong. It is a vendor schema we
         // do not control, and there is no index here for the wrapper to defeat.
         var cursorClause = string.Empty;
-        if (Cursor.TryDecode(cursor, 3, out var parts) && int.TryParse(parts[2], out var cursorShooterId))
+        if (Cursor.Decode(cursor, 3) is { } parts)
         {
             parameters.Add("cLast", parts[0] ?? "");
             parameters.Add("cFirst", parts[1] ?? "");
-            parameters.Add("cId", cursorShooterId);
+            parameters.Add("cId", Cursor.DecodeInt(parts[2]));
             cursorClause = """
                 AND (ISNULL(sh.LastName, '') > @cLast
                      OR (ISNULL(sh.LastName, '') = @cLast AND ISNULL(sh.FirstName, '') > @cFirst)
@@ -317,13 +339,13 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         var hasMore = rows.Count > limit;
         if (hasMore) rows.RemoveAt(rows.Count - 1);
 
-        var duplicates = await LoadDuplicateLicensesAsync(connection, token);
+        var licenses = await LicenseIndex.LoadAsync(connection, token);
         var nextCursor = hasMore && rows.Count > 0
             ? Cursor.Encode(rows[^1].LastName, rows[^1].FirstName, rows[^1].ShooterID)
             : null;
 
         return new CursorPage<Shooter>(
-            rows.Select(row => ToShooter(row, duplicates)).ToList(), nextCursor, limit);
+            rows.Select(row => ToShooter(row, licenses)).ToList(), nextCursor, limit);
     }
 
     /// <summary>
@@ -334,7 +356,8 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
     {
         await using var connection = Connect();
 
-        var ids = await ResolveLicenseAsync(connection, license, token);
+        var licenses = await LicenseIndex.LoadAsync(connection, token);
+        var ids = licenses.Resolve(license);
         if (ids.Count == 0) return [];
 
         var rows = await connection.QueryAsync<ShooterRow>(new CommandDefinition("""
@@ -346,8 +369,7 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
             ORDER BY sh.ShooterID
             """, new { ids }, cancellationToken: token));
 
-        var duplicates = await LoadDuplicateLicensesAsync(connection, token);
-        return rows.Select(row => ToShooter(row, duplicates)).ToList();
+        return rows.Select(row => ToShooter(row, licenses)).ToList();
     }
 
     public async Task<CursorPage<Club>> ListClubsAsync(
@@ -356,19 +378,19 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         await using var connection = Connect();
 
         var parameters = new DynamicParameters();
-        parameters.Add("query", string.IsNullOrWhiteSpace(query) ? null : query.Trim());
+        parameters.Add("query", ContainsPattern(query));
 
         const string where = """
             WHERE   (@query IS NULL
-                     OR c.ClubName   LIKE '%' + @query + '%'
-                     OR c.ClubNumber LIKE '%' + @query + '%')
+                     OR c.ClubName   LIKE @query ESCAPE '\'
+                     OR c.ClubNumber LIKE @query ESCAPE '\')
             """;
 
         var cursorClause = string.Empty;
-        if (Cursor.TryDecode(cursor, 2, out var parts) && int.TryParse(parts[1], out var cursorClubId))
+        if (Cursor.Decode(cursor, 2) is { } parts)
         {
             parameters.Add("cName", parts[0] ?? "");
-            parameters.Add("cId", cursorClubId);
+            parameters.Add("cId", Cursor.DecodeInt(parts[1]));
             cursorClause =
                 "AND (ISNULL(c.ClubName, '') > @cName " +
                 "     OR (ISNULL(c.ClubName, '') = @cName AND c.ClubID > @cId))";
@@ -399,7 +421,7 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
 
     /// <summary>
     /// (Number, Name) pairs actually present. Not a lookup table: the operator renames programs,
-    /// so number 31 appears as both "A10-Probe" and "Obligatorisches Programm".
+    /// so one number can appear under several names.
     /// </summary>
     public async Task<IReadOnlyList<ProgramCatalogEntry>> ListProgramCatalogAsync(CancellationToken token)
     {
@@ -441,39 +463,56 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
     // -- Helpers ------------------------------------------------------------------
 
     /// <summary>
-    /// Resolves a licence to shooter ids in C# rather than SQL: normalisation (digit-stripping
-    /// and zero-padding) has to match OpenRangeOffice exactly, and the table is small.
+    /// A LIKE pattern matching rows that contain the text literally. LIKE treats %, _ and [ as
+    /// wildcards, so "A10_" would match "A10-…" and a stray "[" would be a SQL error; each is
+    /// escaped so the caller's text means exactly what it says.
     /// </summary>
-    private static async Task<List<int>> ResolveLicenseAsync(
-        SqlConnection connection, string? license, CancellationToken token)
+    internal static string? ContainsPattern(string? text)
     {
-        var normalized = LicenseNumber.Normalize(license);
-        if (normalized.Length == 0) return [];
+        if (string.IsNullOrWhiteSpace(text)) return null;
 
-        var rows = await connection.QueryAsync<(int ShooterID, string? StartNr)>(new CommandDefinition(
-            "SELECT ShooterID, StartNr FROM dbo.Shooters", cancellationToken: token));
+        var escaped = text.Trim()
+            .Replace(@"\", @"\\")
+            .Replace("%", @"\%")
+            .Replace("_", @"\_")
+            .Replace("[", @"\[");
 
-        return rows.Where(row => LicenseNumber.Normalize(row.StartNr) == normalized)
-                   .Select(row => row.ShooterID)
-                   .ToList();
+        return $"%{escaped}%";
     }
 
-    private static async Task<HashSet<string>> LoadDuplicateLicensesAsync(
-        SqlConnection connection, CancellationToken token)
+    /// <summary>
+    /// Every licence in dbo.Shooters, normalised the way OpenRangeOffice does (digits only,
+    /// zero-padded), read once per request. The table is small, and doing the matching in C#
+    /// is what keeps the normalisation rule in exactly one place.
+    /// </summary>
+    private sealed class LicenseIndex(Dictionary<string, List<int>> shootersByLicense)
     {
-        var rows = await connection.QueryAsync<string?>(new CommandDefinition(
-            "SELECT StartNr FROM dbo.Shooters", cancellationToken: token));
+        public static async Task<LicenseIndex> LoadAsync(SqlConnection connection, CancellationToken token)
+        {
+            var rows = await connection.QueryAsync<(int ShooterID, string? StartNr)>(new CommandDefinition(
+                "SELECT ShooterID, StartNr FROM dbo.Shooters", cancellationToken: token));
 
-        return rows.Select(LicenseNumber.Normalize)
-                   .Where(license => license.Length > 0)
-                   .GroupBy(license => license)
-                   .Where(group => group.Count() > 1)
-                   .Select(group => group.Key)
-                   .ToHashSet();
+            var index = rows
+                .Select(row => (row.ShooterID, License: LicenseNumber.Normalize(row.StartNr)))
+                .Where(entry => entry.License.Length > 0)
+                .GroupBy(entry => entry.License)
+                .ToDictionary(group => group.Key, group => group.Select(entry => entry.ShooterID).ToList());
+
+            return new LicenseIndex(index);
+        }
+
+        public List<int> Resolve(string? license)
+        {
+            var normalized = LicenseNumber.Normalize(license);
+            return normalized.Length == 0 ? [] : shootersByLicense.GetValueOrDefault(normalized, []);
+        }
+
+        public bool IsDuplicate(string normalizedLicense) =>
+            shootersByLicense.TryGetValue(normalizedLicense, out var ids) && ids.Count > 1;
     }
 
     private static async Task<Dictionary<int, Shooter>> LoadShootersAsync(
-        SqlConnection connection, List<int> shooterIds, CancellationToken token)
+        SqlConnection connection, List<int> shooterIds, LicenseIndex licenses, CancellationToken token)
     {
         var rows = await connection.QueryAsync<ShooterRow>(new CommandDefinition("""
             SELECT  sh.ShooterID, sh.FirstName, sh.LastName, sh.RFID, sh.StartNr, sh.ClubID,
@@ -483,11 +522,10 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
             WHERE   sh.ShooterID IN @shooterIds
             """, new { shooterIds }, cancellationToken: token));
 
-        var duplicates = await LoadDuplicateLicensesAsync(connection, token);
-        return rows.ToDictionary(row => row.ShooterID, row => ToShooter(row, duplicates));
+        return rows.ToDictionary(row => row.ShooterID, row => ToShooter(row, licenses));
     }
 
-    private static Shooter ToShooter(ShooterRow row, HashSet<string> duplicateLicenses)
+    private static Shooter ToShooter(ShooterRow row, LicenseIndex licenses)
     {
         var license = LicenseNumber.Normalize(row.StartNr);
 
@@ -500,7 +538,7 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
             Club: row.ClubID is int clubId
                 ? ToClub(clubId, row.ClubNumber, row.ClubName)
                 : null,
-            DuplicateLicense: duplicateLicenses.Contains(license));
+            DuplicateLicense: licenses.IsDuplicate(license));
     }
 
     // The shipped club register carries trailing CR characters in its names.

@@ -47,6 +47,38 @@ public class SecurityTests(ApiFixture fixture)
     }
 
     [Fact]
+    public async Task everyRefusalCarriesTheSameErrorEnvelope()
+    {
+        // The viewer has exactly one error parser; a middleware answering in a different shape
+        // would render as a bare "HTTP 401".
+        var response = await fixture.CreateClient().GetAsync("/api/v2/live");
+        var body = await response.Content.ReadFromJsonAsync<Api.V2.ApiError>(SintroJson.Options);
+
+        Assert.Equal("unauthorized", body!.Error);
+        Assert.False(string.IsNullOrWhiteSpace(body.Detail));
+    }
+
+    [RequiresDatabaseFact]
+    public async Task aNotFoundCarriesTheErrorEnvelopeToo()
+    {
+        var response = await fixture.CreateAuthorizedClient().GetAsync("/api/v2/programs/999999999");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<Api.V2.ApiError>(SintroJson.Options);
+        Assert.Equal("not_found", body!.Error);
+    }
+
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/fullscreen/live")]
+    [InlineData("/docs")]
+    public async Task pagesCarryingTheSessionTokenAreNeverCached(string path)
+    {
+        var response = await fixture.CreateClient().GetAsync(path);
+        Assert.True(response.Headers.CacheControl?.NoStore, "expected Cache-Control: no-store");
+    }
+
+    [Fact]
     public async Task theViewerIsServedWithItsTokenSubstituted()
     {
         var html = await fixture.CreateClient().GetStringAsync("/");
@@ -146,8 +178,8 @@ public class SecurityTests(ApiFixture fixture)
         Assert.Contains("/api/v2/programs", spec);
 
         var shooters = await fixture.CreateAuthorizedClient()
-            .GetFromJsonAsync<Api.V2.CursorPage<Domain.Shooter>>(
-                "/api/v2/shooters?limit=50", TestJson.Options);
+            .GetFromJsonAsync<Domain.CursorPage<Domain.Shooter>>(
+                "/api/v2/shooters?limit=50", SintroJson.Options);
 
         foreach (var shooter in shooters?.Items ?? [])
         {
@@ -295,6 +327,30 @@ public class StartupCheckTests
             Network = new NetworkOptions { Api = ["192.168.1.0/24", "10.0.0.5"], Web = ["fd00::/8"] },
             TrustedProxies = ["127.0.0.1"],
         });
+
+    [Theory]
+    [InlineData(0, 200)]
+    [InlineData(-5, 200)]
+    [InlineData(100, 200)]   // default larger than maximum
+    [InlineData(2000, 0)]
+    public void impossiblePageSizes_refuseToStart(int maxPageSize, int defaultPageSize)
+    {
+        // Math.Clamp throws when the bounds cross, so this used to turn every list request into
+        // a 500 while /health stayed green.
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            Check(new SintroOptions { MaxPageSize = maxPageSize, DefaultPageSize = defaultPageSize }));
+
+        Assert.Contains("PageSize", error.Message);
+    }
+
+    [Fact]
+    public void anUnknownTimeZone_startsButIsNotSilent()
+    {
+        // Refusing to start would leave an event without results over a typo; the clock falls
+        // back to the host zone. The log must say so, which the NullLogger cannot assert, so
+        // this only pins that startup succeeds. See SintroClock for the fallback itself.
+        Check(new SintroOptions { TimeZone = "Mars/Olympus_Mons" });
+    }
 
     [Fact]
     public void generatedTokens_areLongAndUnique()

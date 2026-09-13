@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-    escapeHtml, formatTime, shooterLabel, totalDisplay, isActive, matchesFilter,
+    escapeHtml, formatTime, shooterLabel, totalDisplay, matchesFilter, laneContext,
     shotText, shotGroups, programLabel, tickerEntry,
 } from '../core/format.js';
 import { TRANSLATIONS, translate } from '../core/i18n.js';
@@ -137,10 +137,16 @@ describe('totalDisplay', () => {
     });
 });
 
-describe('isActive', () => {
-    test('matches the API enum name', () => {
-        assert.equal(isActive(program({ state: 'active' })), true);
-        assert.equal(isActive(program({ state: 'finished' })), false);
+describe('laneContext', () => {
+    test('club and program, separated by a middle dot', () => {
+        assert.equal(
+            laneContext(program({ shooter: { club: { name: 'SG Muster' } }, name: 'Obligatorisches Programm' })),
+            'SG Muster · Obligatorisches Programm');
+    });
+
+    test('an anonymous pass shows the program alone, with no dangling separator', () => {
+        assert.equal(laneContext(program({ shooter: null, name: 'A10-Probe' })), 'A10-Probe');
+        assert.equal(laneContext(null), '');
     });
 });
 

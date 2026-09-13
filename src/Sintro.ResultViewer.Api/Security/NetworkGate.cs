@@ -1,4 +1,7 @@
+using System.Collections.Concurrent;
+using System.Net;
 using Microsoft.Extensions.Options;
+using Sintro.ResultViewer.Api.V2;
 
 namespace Sintro.ResultViewer.Security;
 
@@ -22,6 +25,14 @@ public sealed class NetworkGate(RequestDelegate next, IOptions<SintroOptions> op
     private readonly IReadOnlyList<IpRange> _trustedProxies =
         IpRange.ParseAll(options.Value.TrustedProxies ?? []);
 
+    /// <summary>
+    /// Sources already reported once. A port scan against a forwarded port would otherwise print
+    /// thousands of warnings and scroll the address banner — the one line the operator needs —
+    /// out of the window. Bounded so a scan cannot grow it without limit.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, byte> _reportedSources = new();
+    private const int MaxReportedSources = 1000;
+
     public async Task InvokeAsync(HttpContext context)
     {
         var surface = ClassifySurface(context.Request.Path);
@@ -32,21 +43,32 @@ public sealed class NetworkGate(RequestDelegate next, IOptions<SintroOptions> op
             context.Request.Headers["X-Forwarded-For"].ToString(),
             _trustedProxies);
 
-        if (!allowed.Any(range => range.Contains(source)))
+        if (source is null || !allowed.Any(range => range.Contains(source)))
         {
-            logger.LogWarning("Blocked {Surface} request from {Source} for {Path}",
-                surface, source, context.Request.Path);
+            LogRejection(surface, source, context.Request.Path);
 
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsJsonAsync(new
-            {
-                error = "forbidden_network",
-                detail = $"Source address is not in the allowed {surface} ranges.",
-            });
+            await context.Response.WriteAsJsonAsync(new ApiError(
+                "forbidden_network",
+                source is null
+                    ? "The forwarded client address could not be read, so the request is refused."
+                    : $"Source address is not in the allowed {surface} ranges."));
             return;
         }
 
         await next(context);
+    }
+
+    private void LogRejection(Surface surface, IPAddress? source, PathString path)
+    {
+        var key = source?.ToString() ?? "unresolvable";
+        var firstTime = _reportedSources.Count < MaxReportedSources && _reportedSources.TryAdd(key, 0);
+
+        if (firstTime)
+            logger.LogWarning("Blocked {Surface} request from {Source} for {Path} (further requests from it are logged at debug level)",
+                surface, key, path);
+        else
+            logger.LogDebug("Blocked {Surface} request from {Source} for {Path}", surface, key, path);
     }
 
     /// <summary>

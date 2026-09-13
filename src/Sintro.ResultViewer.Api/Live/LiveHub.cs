@@ -45,7 +45,7 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
 
     /// <summary>
     /// Registers the socket, hands <paramref name="initialPayload"/> to it alone, and stays until
-    /// the client goes away.
+    /// the client goes away or <paramref name="token"/> is cancelled.
     /// </summary>
     public async Task AcceptAsync<T>(WebSocket socket, T initialPayload, CancellationToken token)
     {
@@ -73,7 +73,10 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
         }
         catch (OperationCanceledException)
         {
-            // Shutting down.
+            // Shutting down: drop the connection at once rather than negotiating a close with a
+            // display that may never answer. Kestrel would otherwise hold the process open until
+            // its shutdown timeout ran out.
+            Abort(client);
         }
         catch (WebSocketException)
         {
@@ -86,11 +89,9 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
         }
     }
 
-    /// <summary>Offers a payload to every client. Never waits on a socket.</summary>
-    public Task BroadcastAsync<T>(T payload, CancellationToken token)
+    /// <summary>Offers a payload to every client. Never waits on a socket, hence not async.</summary>
+    public void Broadcast<T>(T payload)
     {
-        if (_clients.IsEmpty) return Task.CompletedTask;
-
         var json = Serialize(payload);
 
         foreach (var (id, client) in _clients)
@@ -104,8 +105,6 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
             // Replaces whatever was waiting; cannot block however far behind the client is.
             client.Pending.Writer.TryWrite(json);
         }
-
-        return Task.CompletedTask;
     }
 
     /// <summary>One writer per socket, which is also what keeps SendAsync calls from overlapping.</summary>
@@ -168,12 +167,5 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
     }
 
     private static ReadOnlyMemory<byte> Serialize<T>(T payload) =>
-        JsonSerializer.SerializeToUtf8Bytes(payload, JsonOptions);
-
-    // Must serialize identically to the HTTP endpoints (Program.cs), or the same program
-    // would carry "active" over REST and "Active" over the socket.
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
+        JsonSerializer.SerializeToUtf8Bytes(payload, SintroJson.Options);
 }

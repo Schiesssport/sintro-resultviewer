@@ -13,12 +13,13 @@ public sealed record ProgramFilter
     public DateOnly? To { get; init; }
 
     /// <summary>
-    /// Include programs the device started but that carry no counting shots — 328 aborted or
-    /// cleared runs. Excluded by default so result lists show results.
+    /// Include programs the device started but that carry no counting shots: aborted or cleared
+    /// runs. Excluded by default so result lists show results.
     /// </summary>
     public bool WithoutResult { get; init; }
 
-    public int Limit { get; init; } = 200;
+    /// <summary>Page size, already clamped by the caller. Required so no second default can drift from SintroOptions.</summary>
+    public required int Limit { get; init; }
 
     /// <summary>Opaque keyset cursor from a previous page's <c>nextCursor</c>.</summary>
     public string? Cursor { get; init; }

@@ -5,18 +5,19 @@
 
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
 import {
-    escapeHtml, shooterLabel, totalDisplay, matchesFilter, shotGroups, programLabel, tickerEntry,
+    escapeHtml, shooterLabel, totalDisplay, matchesFilter, shotGroups, programLabel, laneContext,
+    tickerEntry,
 } from './core/format.js';
 import { shotDial } from './core/sectors.js';
-import { isLineAvailable, dayOffsetMs } from './core/lanes.js';
+import { isLineAvailable, dayOffsetMs, holdClearedLines } from './core/lanes.js';
 import { parseViewMode, layoutFor, pathForMode, FULLSCREEN_MODES } from './core/viewmode.js';
 import {
     tickerConfig, rowsThatFit, splitForTicker, tickerDurationSeconds, tickerContentKey, tickerQuery,
+    normaliseTickerSettings,
 } from './core/ticker.js';
 import { SintroApi } from './api.js';
 
 const RESULT_LIMIT = 100;
-const RESULT_COLUMNS = 5;
 
 /** How often availability is re-evaluated when no new data arrives. */
 const IDLE_SWEEP_MS = 15_000;
@@ -30,14 +31,25 @@ let ticker = tickerConfig(location.search);
 let language = DEFAULT_LANGUAGE;
 let programs = [];
 let lanes = [];
+
+/** What each line last showed, so a result outlives the device clearing the line. */
+let laneMemory = new Map();
 let filterText = '';
 let mode = 'dashboard';
 let clockOffsetMs = 0;
 let tickerItems = [];
 let tickerKey = null;
+let liveStatus = 'connecting';
+let health = null;
+
+/** Sequence number of the latest result request; older responses are discarded. */
+let resultsRequest = 0;
 
 const t = (key, params) => translate(TRANSLATIONS[language], key, params);
 const el = (id) => document.getElementById(id);
+
+/** Read from the markup so the colspan of a message row cannot drift from the <colgroup>. */
+const resultColumns = () => document.querySelectorAll('.results colgroup col').length;
 
 /** Wall clock, shifted onto the data's day when a ReferenceDate is pinning development. */
 const now = () => Date.now() + clockOffsetMs;
@@ -121,17 +133,13 @@ const lineRow = (lane) => {
     }
 
     const { label, html } = shooterName(program);
-    const club = program.shooter?.club?.name ?? '';
-
-    // Club and program are context under the name: present, readable, never competing.
-    const context = [club, program.name].filter(Boolean).map(escapeHtml).join(' · ');
 
     return `
         <tr class="lane-row">
             <td class="lane-number">${lane.number}</td>
             <td class="lane-shooter">
                 <div class="lane-shooter-name ${label.fallback ? 'is-fallback' : ''}">${html}</div>
-                <div class="lane-context">${context}</div>
+                <div class="lane-context">${escapeHtml(laneContext(program))}</div>
             </td>
             <td class="lane-total">${totalCell(program)}</td>
             <td class="lane-shots">${shotGroupsCell(program, { withRings: true })}</td>
@@ -139,9 +147,13 @@ const lineRow = (lane) => {
 };
 
 const renderLines = () => {
+    // Recomputed on every render, not only on new data: a hold ends purely through time.
+    const held = holdClearedLines(laneMemory, lanes, now());
+    laneMemory = held.memory;
+
     el('lanes-body').innerHTML = lanes.length === 0
         ? `<tr><td class="message" colspan="4">${escapeHtml(t('msg.noLanes'))}</td></tr>`
-        : lanes.map(lineRow).join('');
+        : held.lanes.map(lineRow).join('');
 
     // The line-only view spreads the lines over the whole screen, so the row height has to
     // come from how many there are. CSS cannot count rows; this is the one number it needs.
@@ -260,7 +272,7 @@ const renderResults = () => {
     const body = el('results-body');
 
     if (visible.length === 0) {
-        body.innerHTML = `<tr><td colspan="${RESULT_COLUMNS}" class="message">${escapeHtml(t('msg.empty'))}</td></tr>`;
+        body.innerHTML = `<tr><td colspan="${resultColumns()}" class="message">${escapeHtml(t('msg.empty'))}</td></tr>`;
         tickerItems = [];
         renderTicker();
     } else if (!layoutFor(mode).fullscreen) {
@@ -292,6 +304,16 @@ const renderStaticText = () => {
     for (const node of document.querySelectorAll('[data-i18n-placeholder]')) {
         node.placeholder = t(node.dataset.i18nPlaceholder);
     }
+    for (const node of document.querySelectorAll('[data-i18n-title]')) {
+        node.title = t(node.dataset.i18nTitle);
+    }
+    for (const node of document.querySelectorAll('[data-i18n-aria-label]')) {
+        node.setAttribute('aria-label', t(node.dataset.i18nAriaLabel));
+    }
+
+    // Texts that are set from state rather than from a key in the markup.
+    liveState(liveStatus);
+    showExposureWarning();
 };
 
 const renderAll = () => {
@@ -302,6 +324,11 @@ const renderAll = () => {
 // -- Data ---------------------------------------------------------------------
 
 const loadResults = async () => {
+    // Every live message triggers a reload, so two requests routinely overlap. Only the most
+    // recent may render: a slow older response landing last would put a stale list — or
+    // today's list over a date the operator just picked — on screen until the next message.
+    const request = ++resultsRequest;
+
     try {
         // Finished only: a pass still being shot appears on its line above, never twice.
         // The API already returns newest first, so no client-side sorting is needed.
@@ -310,12 +337,18 @@ const loadResults = async () => {
             limit: RESULT_LIMIT,
             state: 'finished',
         });
+        if (request !== resultsRequest) return;
+
         programs = page.items;
         renderResults();
     } catch (error) {
+        if (request !== resultsRequest) return;
+
         programs = [];
+        tickerItems = [];
+        renderTicker();
         el('results-body').innerHTML =
-            `<tr><td colspan="${RESULT_COLUMNS}" class="message">${escapeHtml(t('msg.error', { detail: error.message }))}</td></tr>`;
+            `<tr><td colspan="${resultColumns()}" class="message">${escapeHtml(t('msg.error', { detail: error.message }))}</td></tr>`;
         el('result-count').textContent = '';
     }
 };
@@ -333,7 +366,7 @@ const loadLanes = async () => {
     }
 };
 
-const showExposureWarning = (health) => {
+const showExposureWarning = () => {
     if (!health?.publicExposure?.length) return;
 
     const banner = el('exposure-warning');
@@ -342,6 +375,7 @@ const showExposureWarning = (health) => {
 };
 
 const liveState = (state) => {
+    liveStatus = state;
     const indicator = el('live-indicator');
     indicator.classList.toggle('is-live', state === 'connected');
     indicator.classList.toggle('is-down', state === 'offline');
@@ -376,10 +410,13 @@ const goTo = (next, { replace = false, query = location.search } = {}) => {
     applyMode(next);
 };
 
-/** The settings the dialog currently shows, which the built URLs carry. */
-const pickerTicker = () => ({
-    seconds: Number(el('ticker-seconds-input').value) || ticker.seconds,
-    count: Number(el('ticker-count-input').value),
+/**
+ * The settings the dialog currently shows, as the display will actually apply them — clamped
+ * and whole — so the URL beside each mode is exactly what that display gets.
+ */
+const pickerTicker = () => normaliseTickerSettings({
+    seconds: el('ticker-seconds-input').value,
+    count: el('ticker-count-input').value,
 });
 
 // Always spelled out in the URL, so what an operator copies is exactly what the display gets.
@@ -481,14 +518,25 @@ const attachHandlers = () => {
         if (!document.fullscreenElement && layoutFor(mode).fullscreen) exitFullscreen();
     });
 
-    // A resize changes both how many rows fit and how fast the ticker must run.
+    // A resize changes both how many rows fit and how fast the ticker must run. Coalesced to
+    // one re-render per frame: a drag fires dozens of events, each of which would rebuild
+    // the whole table.
+    let resizeFrame = 0;
     window.addEventListener('resize', () => {
-        renderResults();
-        applyTickerSpeed();
+        if (resizeFrame) return;
+        resizeFrame = requestAnimationFrame(() => {
+            resizeFrame = 0;
+            if (!layoutFor(mode).fullscreen) return;   // nothing width-dependent in the office view
+            renderResults();
+            applyTickerSpeed();
+        });
     });
 
     el('language-select').addEventListener('change', (event) => {
         language = event.target.value;
+        // Anonymous ticker entries ("Linie 3 · 20:45") are language-dependent, and the ticker
+        // key is id-based, so force one rebuild.
+        tickerKey = null;
         renderStaticText();
         renderAll();
     });
@@ -501,7 +549,6 @@ const start = async () => {
 
     // Ask the API which day it treats as today, so the date box agrees with the today-only
     // default and idle detection is measured against the data's day, not the wall clock.
-    let health = null;
     try {
         health = await api.health();
         el('date-input').value = health.today;
@@ -511,7 +558,7 @@ const start = async () => {
     }
 
     await Promise.all([loadLanes(), loadResults()]);
-    showExposureWarning(health);
+    showExposureWarning();
 
     // A line frees up purely through the passage of time, so re-render on a slow sweep
     // even when the device sends nothing.

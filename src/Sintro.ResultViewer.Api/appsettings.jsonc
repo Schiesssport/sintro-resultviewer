@@ -110,7 +110,8 @@
 
     // The target system records times without a timezone, so the API adds this machine's own.
     // Leave as null: it is right whenever the computer's clock is set for where the range is.
-    // Set it only if this machine is configured for somewhere else, e.g. "Europe/Zurich".
+    // Set it only if this machine is configured for somewhere else, e.g. "Europe/Zurich". An
+    // unknown name is logged as a warning at startup and this machine's zone is used instead.
     "TimeZone": null,
 
     // Development only. Makes the service treat a fixed date as "today" so an old exported
@@ -119,6 +120,8 @@
 
     // How many records a list returns when the caller does not say, and the most it will return
     // however large a limit is asked for. Larger pages mean fewer requests but bigger responses.
+    // Both must be at least 1 and the default may not exceed the maximum; the service refuses
+    // to start otherwise.
     "DefaultPageSize": 200,
     "MaxPageSize": 2000,
 

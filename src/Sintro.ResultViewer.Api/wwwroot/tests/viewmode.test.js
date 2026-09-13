@@ -10,6 +10,12 @@ describe('parseViewMode', () => {
         assert.equal(parseViewMode('/index.html'), 'dashboard');
     });
 
+    test('a malformed percent escape falls back rather than throwing', () => {
+        // decodeURIComponent throws on "%E0"; this runs before anything is on screen, so a
+        // typo in a TV's bookmark must not leave the display blank.
+        assert.equal(parseViewMode('/fullscreen/%E0'), DEFAULT_FULLSCREEN_MODE);
+    });
+
     test('each fullscreen variant resolves to itself', () => {
         assert.equal(parseViewMode('/fullscreen/live'), 'live');
         assert.equal(parseViewMode('/fullscreen/results'), 'results');

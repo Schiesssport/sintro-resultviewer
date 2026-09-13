@@ -5,6 +5,7 @@
 
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
 import { escapeHtml } from './core/format.js';
+import { typeOf, groupByTag } from './core/openapi.js';
 import { SintroApi } from './api.js';
 
 const api = new SintroApi(window.SINTRO_TOKEN);
@@ -13,13 +14,6 @@ const t = (key, params) => translate(TRANSLATIONS[language], key, params);
 
 /** Blob URLs opened for the JSON viewer, revoked when the page goes away. */
 const openedBlobs = [];
-
-const typeOf = (schema) => {
-    if (!schema) return '';
-    if (schema.type === 'array') return `${typeOf(schema.items)}[]`;
-    if (schema.$ref) return schema.$ref.split('/').pop();
-    return [schema.type, schema.format].filter(Boolean).join(' ');
-};
 
 const parameterTable = (parameters) => {
     if (!parameters?.length) return `<p class="endpoint-note">${t('docs.noParameters')}</p>`;
@@ -34,7 +28,7 @@ const parameterTable = (parameters) => {
 
     return `
         <table class="param-table">
-            <thead><tr><th>Name</th><th>${t('docs.type')}</th><th></th><th></th></tr></thead>
+            <thead><tr><th>${t('docs.name')}</th><th>${t('docs.type')}</th><th></th><th></th></tr></thead>
             <tbody>${rows}</tbody>
         </table>`;
 };
@@ -72,24 +66,6 @@ const endpointCard = (path, method, operation, index) => `
             <pre class="response hidden" data-response="${index}"></pre>
         </div>
     </section>`;
-
-/**
- * Groups endpoints by their OpenAPI tag. Tags are numbered ("1 · Live") so the reading
- * order is the one the API author intended rather than alphabetical by path.
- */
-const groupByTag = (spec) => {
-    const groups = new Map();
-
-    for (const [path, methods] of Object.entries(spec.paths ?? {})) {
-        for (const [method, operation] of Object.entries(methods)) {
-            const tag = operation.tags?.[0] ?? '';
-            if (!groups.has(tag)) groups.set(tag, []);
-            groups.get(tag).push({ path, method, operation });
-        }
-    }
-
-    return [...groups.entries()].sort(([left], [right]) => left.localeCompare(right));
-};
 
 const showResponse = (index, result) => {
     const status = document.querySelector(`[data-status="${index}"]`);

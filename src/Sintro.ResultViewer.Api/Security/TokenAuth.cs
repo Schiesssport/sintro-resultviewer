@@ -16,8 +16,12 @@ public enum ApiScope
 /// <summary>
 /// Bearer-token check for /api: <c>Authorization: Bearer &lt;token&gt;</c> and nothing else, so
 /// there is exactly one documented way in. Accepts any configured read or write token, plus the
-/// viewer's per-start session token. Comparison is constant-time so a wrong token leaks nothing through
-/// timing, and every candidate is checked so the work does not depend on which one matched.
+/// viewer's per-start session token.
+///
+/// Tokens are compared as SHA-256 digests in constant time. Hashing first is what makes the
+/// comparison genuinely length-independent: FixedTimeEquals returns at once on unequal lengths,
+/// which would otherwise reveal how long each configured token is. Every candidate is checked so
+/// the work does not depend on which one matched.
 /// </summary>
 public sealed class TokenAuth(
     RequestDelegate next,
@@ -26,12 +30,12 @@ public sealed class TokenAuth(
 {
     private readonly byte[][] _readTokens =
     [
-        .. options.Value.ReadTokens.Select(Encoding.UTF8.GetBytes),
-        Encoding.UTF8.GetBytes(sessionToken.Value),
+        .. options.Value.ReadTokens.Select(Digest),
+        Digest(sessionToken.Value),
     ];
 
     private readonly byte[][] _writeTokens =
-        [.. options.Value.WriteTokens.Select(Encoding.UTF8.GetBytes)];
+        [.. options.Value.WriteTokens.Select(Digest)];
 
     public async Task InvokeAsync(HttpContext context)
     {
@@ -41,34 +45,18 @@ public sealed class TokenAuth(
             return;
         }
 
-        var scope = ScopeOf(ReadPresentedToken(context));
-
-        if (scope == ApiScope.None)
+        if (ScopeOf(ReadPresentedToken(context)) == ApiScope.None)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             context.Response.Headers.WWWAuthenticate = "Bearer";
-            await context.Response.WriteAsJsonAsync(new
-            {
-                error = "unauthorized",
-                detail = "Provide an API token as 'Authorization: Bearer <token>'.",
-            });
+            await context.Response.WriteAsJsonAsync(new ApiError(
+                "unauthorized",
+                "Provide an API token as 'Authorization: Bearer <token>'."));
             return;
         }
 
-        // Recorded for the endpoints: nothing writes yet, but when something does it reads the
-        // scope from here rather than re-deriving it.
-        context.Items[ScopeKey] = scope;
-
         await next(context);
     }
-
-    public const string ScopeKey = "sintro.scope";
-
-    /// <summary>The scope granted to the current request, or None outside an authenticated one.</summary>
-    public static ApiScope ScopeFor(HttpContext context) =>
-        context.Items.TryGetValue(ScopeKey, out var value) && value is ApiScope scope
-            ? scope
-            : ApiScope.None;
 
     /// <summary>
     /// Only /api needs a token, and /health is exempt so monitoring works. The OpenAPI document
@@ -85,9 +73,12 @@ public sealed class TokenAuth(
             return header["Bearer ".Length..].Trim();
 
         // Browsers cannot set headers on a WebSocket handshake, so the live endpoint — and only
-        // the live endpoint — also accepts the token as a query parameter. Restricting it by path
-        // keeps tokens out of query strings (and therefore out of logs) elsewhere.
-        if (context.Request.Path.StartsWithSegments(LivePath) &&
+        // an actual upgrade request to it — also accepts the token as a query parameter. A plain
+        // GET is held to the header like everywhere else, which keeps tokens out of query strings
+        // (and therefore out of logs). IsWebSocketRequest is only meaningful after UseWebSockets
+        // has run, which is why that middleware must precede this one.
+        if (context.WebSockets.IsWebSocketRequest &&
+            context.Request.Path.StartsWithSegments(LivePath) &&
             context.Request.Query.TryGetValue("token", out var query))
             return query[0];
 
@@ -101,7 +92,7 @@ public sealed class TokenAuth(
     {
         if (string.IsNullOrEmpty(presented)) return ApiScope.None;
 
-        var candidate = Encoding.UTF8.GetBytes(presented);
+        var candidate = Digest(presented);
 
         // Both lists are always walked in full: an early return would make "matched the first
         // write token" measurably faster than "matched the last read token".
@@ -120,6 +111,8 @@ public sealed class TokenAuth(
 
         return matched;
     }
+
+    private static byte[] Digest(string token) => SHA256.HashData(Encoding.UTF8.GetBytes(token));
 }
 
 public static class TokenAuthExtensions

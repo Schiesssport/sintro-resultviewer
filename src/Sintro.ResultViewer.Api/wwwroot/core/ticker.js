@@ -1,9 +1,9 @@
 // =============================================================================
-// Splitting a result list between the rows that fit on screen and a rotating ticker.
+// Splitting a result list between the rows that fit on screen and a scrolling ticker.
 // Pure — no DOM, no timers; the app layer measures and schedules.
 //
 // A fullscreen display cannot be scrolled, so anything past the last visible row would
-// otherwise never be seen. The overflow rotates through a single ticker row instead.
+// otherwise never be seen. The overflow scrolls through a marquee strip along the bottom edge.
 // =============================================================================
 
 /** Reading time per entry. 20s is a comfortable glance-up-and-read pace on a wall display. */
@@ -15,13 +15,25 @@ export const DEFAULT_TICKER_SECONDS = 20;
  */
 export const DEFAULT_TICKER_COUNT = 50;
 
-const MAX_TICKER_SECONDS = 120;
-const MAX_TICKER_COUNT = 500;
+export const MAX_TICKER_SECONDS = 120;
+export const MAX_TICKER_COUNT = 500;
 
 const clampNumber = (raw, fallback, min, max) => {
     const value = Number.parseInt(raw, 10);
     return Number.isFinite(value) ? Math.min(Math.max(value, min), max) : fallback;
 };
+
+/**
+ * The settings a display will actually run with, from whatever was typed or passed: whole
+ * numbers within the allowed range, defaults for anything unreadable. Used both when reading
+ * a URL and when building one, so the URL the picker shows is exactly what the display gets.
+ */
+export const normaliseTickerSettings = ({ seconds, count } = {}) => ({
+    // How long a given entry stays on screen — from entering at one edge to leaving at
+    // the other. Effectively the reading time, and therefore the scroll speed.
+    seconds: clampNumber(seconds, DEFAULT_TICKER_SECONDS, 1, MAX_TICKER_SECONDS),
+    count: clampNumber(count, DEFAULT_TICKER_COUNT, 0, MAX_TICKER_COUNT),
+});
 
 /**
  * Per-display configuration, read from the query string so two screens on the same range
@@ -31,14 +43,10 @@ const clampNumber = (raw, fallback, min, max) => {
 export const tickerConfig = (search) => {
     const params = new URLSearchParams(search ?? '');
 
-    return {
-        // How long a given entry stays on screen — from entering at one edge to leaving at
-        // the other. Effectively the reading time, and therefore the scroll speed.
-        seconds: clampNumber(
-            params.get('tickerSeconds'), DEFAULT_TICKER_SECONDS, 1, MAX_TICKER_SECONDS),
-        count: clampNumber(
-            params.get('tickerCount'), DEFAULT_TICKER_COUNT, 0, MAX_TICKER_COUNT),
-    };
+    return normaliseTickerSettings({
+        seconds: params.get('tickerSeconds'),
+        count: params.get('tickerCount'),
+    });
 };
 
 /** How many rows of a given height fit in the space available. Always at least one. */
@@ -50,7 +58,7 @@ export const rowsThatFit = (availableHeight, rowHeight, minimum = 1) => {
 };
 
 /**
- * Splits results into the rows to render and the overflow to rotate.
+ * Splits results into the rows to render and the overflow to scroll.
  *
  * A ticker holding a single entry is pointless, so in that case the entry is simply shown
  * as an ordinary row and the ticker stays empty.
@@ -68,10 +76,6 @@ export const splitForTicker = (items, visibleCount, tickerCount) => {
 
     return { visible: all.slice(0, visible), ticker: overflow };
 };
-
-/** Wraps around forever, so the ticker never runs out. */
-export const tickerIndexAt = (step, length) =>
-    length <= 0 ? 0 : ((step % length) + length) % length;
 
 /**
  * How long one full pass of the ticker content takes, given that each entry should remain
@@ -107,5 +111,7 @@ export const tickerContentKey = (items) =>
     (items ?? []).map((item) => item?.id ?? '').join(',');
 
 /** The query string a display should carry, so a copied URL keeps its settings. */
-export const tickerQuery = ({ seconds, count }) =>
-    `?tickerSeconds=${seconds}&tickerCount=${count}`;
+export const tickerQuery = (settings) => {
+    const { seconds, count } = normaliseTickerSettings(settings);
+    return `?tickerSeconds=${seconds}&tickerCount=${count}`;
+};

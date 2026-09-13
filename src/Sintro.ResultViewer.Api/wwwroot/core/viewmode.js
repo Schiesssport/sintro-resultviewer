@@ -37,7 +37,16 @@ export const parseViewMode = (pathname) => {
         return 'dashboard';
     }
 
-    const requested = decodeURIComponent(path.slice(FULLSCREEN_PREFIX.length).replace(/^\//, ''));
+    const raw = path.slice(FULLSCREEN_PREFIX.length).replace(/^\//, '');
+
+    // A malformed escape ("/fullscreen/%E0") makes decodeURIComponent throw, and this runs
+    // before anything is on screen — so a typo in a TV's bookmark must not blank the display.
+    let requested;
+    try {
+        requested = decodeURIComponent(raw);
+    } catch {
+        return DEFAULT_FULLSCREEN_MODE;
+    }
     if (requested === '') return DEFAULT_FULLSCREEN_MODE;
 
     // "live results" arrives when a "+" is percent-decoded or typed as a space.

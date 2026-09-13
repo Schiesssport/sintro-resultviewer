@@ -2,16 +2,16 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-    tickerConfig, rowsThatFit, splitForTicker, tickerIndexAt, tickerDurationSeconds,
-    tickerContentKey, tickerQuery,
-    DEFAULT_TICKER_SECONDS, DEFAULT_TICKER_COUNT,
+    tickerConfig, rowsThatFit, splitForTicker, tickerDurationSeconds,
+    tickerContentKey, tickerQuery, normaliseTickerSettings,
+    DEFAULT_TICKER_SECONDS, DEFAULT_TICKER_COUNT, MAX_TICKER_COUNT,
 } from '../core/ticker.js';
 
 const items = (count) => Array.from({ length: count }, (_, index) => ({ id: index + 1 }));
 const ids = (list) => list.map((item) => item.id);
 
 describe('tickerConfig', () => {
-    test('defaults to 60 entries at 5 s of reading time each', () => {
+    test('defaults to the documented count and reading time', () => {
         const config = tickerConfig('');
         assert.equal(config.seconds, DEFAULT_TICKER_SECONDS);
         assert.equal(config.count, DEFAULT_TICKER_COUNT);
@@ -103,15 +103,25 @@ describe('splitForTicker', () => {
     });
 });
 
-describe('tickerIndexAt', () => {
-    test('wraps forever so the ticker never runs dry', () => {
-        assert.equal(tickerIndexAt(0, 3), 0);
-        assert.equal(tickerIndexAt(3, 3), 0);
-        assert.equal(tickerIndexAt(7, 3), 1);
+describe('normaliseTickerSettings', () => {
+    test('a cleared count box does not silently switch the ticker off', () => {
+        // Number('') is 0, which used to be written into the URL as tickerCount=0.
+        assert.equal(normaliseTickerSettings({ seconds: '', count: '' }).count, DEFAULT_TICKER_COUNT);
     });
 
-    test('is safe on an empty ticker', () => {
-        assert.equal(tickerIndexAt(5, 0), 0);
+    test('clamps and truncates the way the display will read them back', () => {
+        const settings = normaliseTickerSettings({ seconds: '7.9', count: '9999' });
+        assert.equal(settings.seconds, 7);
+        assert.equal(settings.count, MAX_TICKER_COUNT);
+    });
+
+    test('the built query round-trips through tickerConfig unchanged', () => {
+        const settings = normaliseTickerSettings({ seconds: '12', count: '30' });
+        assert.deepEqual(tickerConfig(tickerQuery(settings)), settings);
+    });
+
+    test('tickerQuery normalises too, so a URL never carries an unreadable value', () => {
+        assert.equal(tickerQuery({ seconds: 'abc', count: -4 }), `?tickerSeconds=${DEFAULT_TICKER_SECONDS}&tickerCount=0`);
     });
 });
 

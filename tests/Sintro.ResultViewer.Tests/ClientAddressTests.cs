@@ -8,11 +8,11 @@ public class ClientAddressTests
     private static readonly IReadOnlyList<IpRange> NoProxies = [];
     private static IReadOnlyList<IpRange> Proxies(params string[] cidrs) => IpRange.ParseAll(cidrs);
 
-    private static string Resolve(string? peer, string? forwarded, params string[] trusted) =>
+    private static string? Resolve(string? peer, string? forwarded, params string[] trusted) =>
         ClientAddress.Resolve(
             peer is null ? null : IPAddress.Parse(peer),
             forwarded,
-            trusted.Length == 0 ? NoProxies : Proxies(trusted)).ToString();
+            trusted.Length == 0 ? NoProxies : Proxies(trusted))?.ToString();
 
     [Fact]
     public void withoutTrustedProxies_theSocketPeerDecides()
@@ -68,19 +68,28 @@ public class ClientAddressTests
     }
 
     [Fact]
-    public void aGarbledHeaderFallsBackToThePeerRatherThanGuessing()
+    public void anEmptyHeaderFromATrustedProxyMeansTheProxyIsTheClient()
     {
-        Assert.Equal("192.168.1.10", Resolve("192.168.1.10", "not-an-address", "192.168.1.0/24"));
         Assert.Equal("192.168.1.10", Resolve("192.168.1.10", "", "192.168.1.0/24"));
         Assert.Equal("192.168.1.10", Resolve("192.168.1.10", null, "192.168.1.0/24"));
     }
 
     [Fact]
-    public void oneBadEntryDiscreditsTheWholeChain()
+    public void aGarbledHopBehindATrustedProxyCannotBeNamed_soNobodyIsLetIn()
     {
-        // A chain we cannot fully parse cannot be safely unwound.
-        Assert.Equal("192.168.1.10",
-            Resolve("192.168.1.10", "203.0.113.9, junk", "192.168.1.0/24"));
+        // The proxy is inside the allowed network by definition. Falling back to its address
+        // would admit anyone who sends "X-Forwarded-For: unknown" through it — nginx appends
+        // the real peer, but the unparseable entry then sits nearest to us. Refuse instead.
+        Assert.Null(Resolve("192.168.1.10", "not-an-address", "192.168.1.0/24"));
+        Assert.Null(Resolve("192.168.1.10", "203.0.113.9, junk", "192.168.1.0/24"));
+    }
+
+    [Fact]
+    public void aGarbledHopBeyondAnUntrustedOneIsNeverReached()
+    {
+        // Trust stops at 198.51.100.7; whatever it claims about earlier hops is not examined.
+        Assert.Equal("198.51.100.7",
+            Resolve("192.168.1.10", "junk, 198.51.100.7", "192.168.1.0/24"));
     }
 
     [Fact]

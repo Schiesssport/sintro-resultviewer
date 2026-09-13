@@ -7,7 +7,9 @@ namespace Sintro.ResultViewer.Data;
 /// this is where every scoring subtlety of the schema lives and it must be testable in isolation.
 ///
 /// Measured facts this encodes:
-///   - ShotNr 9999 rows are synthetic end-of-program markers, not shots.
+///   - ShotNr 9999 rows are synthetic end-of-program markers, not shots. TotalType 7 alone
+///     does NOT mark one: the last real shot of a pass carries it too (645 such shots against
+///     438 markers in one export), so filtering on it would drop every final shot.
 ///   - Sighting shots are identified by ShotType 0, NOT by ShotGroup 0: counting shots do occur
 ///     in ShotGroup 0, and sighting shots do occur in higher groups.
 ///   - Ring scale comes from Targetinformation per (ProgramID, ShotGroup) and can change between
@@ -30,14 +32,11 @@ public static class ScoreCalculator
 
     public sealed record ProgramScore(
         IReadOnlyList<ShotSeries> Series,
-        ShotSeries? Sighting,
+        IReadOnlyList<ShotSeries> Sighting,
         ProgramTotal? Total,
         TotalUnavailableReason? TotalUnavailable,
         IReadOnlyList<int> ShotValues,
         int ShotCount);
-
-    public static readonly ProgramScore Empty =
-        new([], null, null, null, [], 0);
 
     public static ProgramScore Calculate(
         DateTime programStart,
@@ -48,18 +47,10 @@ public static class ScoreCalculator
         var targets = ResolveTargetInfo(targetInfo);
 
         var realShots = shots.Where(row => !IsMarker(row)).OrderBy(row => row.ShotID).ToList();
-        var sightingShots = realShots.Where(IsSighting).ToList();
         var countingShots = realShots.Where(row => !IsSighting(row)).ToList();
 
-        var series = countingShots
-            .GroupBy(row => row.ShotGroup)
-            .OrderBy(group => group.Key)
-            .Select(group => BuildSeries(group.Key, group, targets, programStart, clock))
-            .ToList();
-
-        var sighting = sightingShots.Count == 0
-            ? null
-            : BuildSeries(sightingShots[0].ShotGroup, sightingShots, targets, programStart, clock);
+        var series = GroupIntoSeries(countingShots, targets, programStart, clock);
+        var sighting = GroupIntoSeries(realShots.Where(IsSighting), targets, programStart, clock);
 
         var (total, unavailable) = BuildTotal(series);
 
@@ -89,6 +80,16 @@ public static class ScoreCalculator
                     var current = group.OrderByDescending(row => row.TargeinformationID).First();
                     return ((int?)current.TargetValuation, (int?)current.TargetType);
                 });
+
+    private static List<ShotSeries> GroupIntoSeries(
+        IEnumerable<ShotRow> rows,
+        Dictionary<int, (int? Valuation, int? TargetType)> targets,
+        DateTime programStart,
+        ISintroClock clock) =>
+        rows.GroupBy(row => row.ShotGroup)
+            .OrderBy(group => group.Key)
+            .Select(group => BuildSeries(group.Key, group, targets, programStart, clock))
+            .ToList();
 
     private static ShotSeries BuildSeries(
         int index,

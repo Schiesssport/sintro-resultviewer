@@ -30,9 +30,9 @@ public class LiveFeedTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task theLiveFeedAcceptsTheTokenAsAQueryParameter()
     {
-        // Regression guard: browsers cannot set headers on a WebSocket handshake, and
-        // UseWebSockets must run before the token check or IsWebSocketRequest is false
-        // and every handshake is refused with 401.
+        // Regression guard: browsers cannot set headers on a WebSocket handshake, and the
+        // token check accepts ?token= only when IsWebSocketRequest is true — which it is only
+        // after UseWebSockets has run. Reverse the middleware order and every handshake is 401.
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var client = fixture.Server.CreateWebSocketClient();
 
@@ -40,6 +40,17 @@ public class LiveFeedTests(ApiFixture fixture)
         using var socket = await client.ConnectAsync(uri, cts.Token);
 
         Assert.Equal(WebSocketState.Open, socket.State);
+    }
+
+    [Theory]
+    [InlineData("/api/v2/live")]
+    [InlineData("/api/v2/programs")]
+    public async Task aPlainGetDoesNotAcceptTheTokenInTheQueryString(string path)
+    {
+        // Query-string tokens end up in proxy and browser logs. The exception exists for the
+        // WebSocket handshake alone, so an ordinary request with ?token= is held to the header.
+        var response = await fixture.CreateClient().GetAsync($"{path}?token={ApiFixture.Token}");
+        Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [RequiresDatabaseFact]
@@ -59,7 +70,7 @@ public class LiveFeedTests(ApiFixture fixture)
         // Invariant, not a count: the pushed state must be exactly what a plain GET of the
         // same URL reports — how many lines exist and which are occupied is per-installation.
         var snapshot = (await fixture.CreateAuthorizedClient()
-            .GetFromJsonAsync<List<Domain.LaneStatus>>("/api/v2/live", TestJson.Options))!;
+            .GetFromJsonAsync<List<Domain.LaneStatus>>("/api/v2/live", SintroJson.Options))!;
 
         var lanes = document.RootElement.GetProperty("lanes");
         Assert.Equal(snapshot.Count, lanes.GetArrayLength());
@@ -120,7 +131,7 @@ public class LiveFeedTests(ApiFixture fixture)
         // Far more than any client's queue depth, so the stalled one is certainly saturated.
         var started = Stopwatch.StartNew();
         for (var index = 0; index < 50; index++)
-            await hub.BroadcastAsync(new { type = "lanes", lanes = Array.Empty<object>() }, cts.Token);
+            hub.Broadcast(new { type = "lanes", lanes = Array.Empty<object>() });
 
         // Broadcasting only enqueues, so it cannot be waiting on a socket.
         Assert.True(started.Elapsed < TimeSpan.FromSeconds(5),
@@ -152,7 +163,7 @@ public class LiveFeedTests(ApiFixture fixture)
         var hub = fixture.Services.GetRequiredService<LiveHub>();
 
         for (var index = 0; index < 200; index++)
-            await hub.BroadcastAsync(new { type = "lanes", lanes = Array.Empty<object>() }, cts.Token);
+            hub.Broadcast(new { type = "lanes", lanes = Array.Empty<object>() });
 
         // Still connected and still serving; nothing queued without bound.
         Assert.True(hub.ClientCount >= 1);

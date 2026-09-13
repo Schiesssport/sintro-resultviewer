@@ -54,8 +54,8 @@ public sealed class ApiFixture : WebApplicationFactory<SintroRepository>
     public async Task<string?> AnyLicenceAsync()
     {
         using var client = CreateAuthorizedClient();
-        var page = await client.GetFromJsonAsync<Api.V2.CursorPage<Domain.Shooter>>(
-            "/api/v2/shooters?limit=1", TestJson.Options);
+        var page = await client.GetFromJsonAsync<Domain.CursorPage<Domain.Shooter>>(
+            "/api/v2/shooters?limit=1", SintroJson.Options);
 
         return page?.Items.FirstOrDefault()?.License;
     }
@@ -64,25 +64,11 @@ public sealed class ApiFixture : WebApplicationFactory<SintroRepository>
     public async Task<string?> AnyClubNameAsync()
     {
         using var client = CreateAuthorizedClient();
-        var page = await client.GetFromJsonAsync<Api.V2.CursorPage<Domain.Club>>(
-            "/api/v2/clubs?limit=1", TestJson.Options);
+        var page = await client.GetFromJsonAsync<Domain.CursorPage<Domain.Club>>(
+            "/api/v2/clubs?limit=1", SintroJson.Options);
 
         return page?.Items.FirstOrDefault()?.Name;
     }
-}
-
-/// <summary>Mirrors the API's serializer settings so enums round-trip as their names.</summary>
-public static class TestJson
-{
-    public static readonly System.Text.Json.JsonSerializerOptions Options =
-        new(System.Text.Json.JsonSerializerDefaults.Web)
-        {
-            Converters =
-            {
-                new System.Text.Json.Serialization.JsonStringEnumConverter(
-                    System.Text.Json.JsonNamingPolicy.CamelCase),
-            },
-        };
 }
 
 [CollectionDefinition(Name)]

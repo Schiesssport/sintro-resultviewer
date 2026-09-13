@@ -76,7 +76,14 @@ adding `Api/V3/` and one `app.MapV3()` line — nothing else moves. The implemen
 - **Today only by default.** Shooting across midnight is unrealistic, and one consistent rule beats
   special-casing the viewer. `from`/`to` widen the window.
 - **A bad filter value is a 400, never an ignored parameter.** Dropping `?state=finishd` silently
-  returned everything — the opposite of the request, and invisible to an importer.
+  returned everything — the opposite of the request, and invisible to an importer. The same goes
+  for a cursor this API did not issue, or one issued for the other sort order: `400 invalid_cursor`
+  rather than a silent restart from page one.
+- **One error shape.** Every non-2xx answer, from the middlewares as well as the endpoints, is
+  `{"error": "<stable code>", "detail": "<text>"}` (`ApiError` in `Api/V2/`). The viewer has exactly
+  one error parser.
+- **`sighting` is a list**, one series per `ShotGroup` the sighting shots were fired in. Merging
+  them would add a 5er group to a 10er one — the sum `total` refuses to make.
 - **ISO 8601 everywhere**, with the range's UTC offset attached.
 - The OpenAPI document at `/openapi/v2.json` needs no token — it is schema, not data — and `/docs`
   renders it as a browsable, try-it-here page.
@@ -91,12 +98,15 @@ split as [OpenRangeOffice](https://github.com/Schiesssport/OpenRangeOffice):
 | `wwwroot/core/` | **Pure logic.** No DOM, no `fetch`, no globals. Unit-tested under `node --test` |
 | `wwwroot/app.js`, `docs.js` | The app layer. Owns the DOM, and only it may |
 | `wwwroot/api.js` | `fetch` and WebSocket client |
-| `wwwroot/tokens.css` | Vendored from the shared [design system](https://github.com/Schiesssport/design-system). Never hard-code a colour |
+| `wwwroot/tokens.css` | Vendored from the shared [design system](https://github.com/Schiesssport/design-system), plus a clearly marked block of project-local tokens at the end. Never hard-code a colour in `styles.css`; derived tints use `color-mix()` on a token |
 
 Anything that can be tested without a browser belongs in `core/`. That is where the interesting
 parts live: `format.js` (labels, shot rendering, the shooter fallback chain), `sectors.js` (the hit
-dial), `lanes.js` (when a line frees up), `ticker.js` (what scrolls, and how fast), `viewmode.js`
-(which view a URL means), `i18n.js` (German and French).
+dial), `lanes.js` (when a line frees up, and the 30-second hold that keeps a finished pass on its line
+after the device has already cleared the lane), `ticker.js` (what scrolls, and how fast), `viewmode.js`
+(which view a URL means), `openapi.js` (reading the spec for `/docs`, and which URLs the try box may
+call with the token), `i18n.js` (German and French — a test asserts every key is used and every
+used key exists, so `data-i18n`, `data-i18n-title` and `data-i18n-aria-label` in the HTML count).
 
 ### Views
 

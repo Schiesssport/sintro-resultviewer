@@ -23,7 +23,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
     {
         var response = await Client().GetAsync($"/api/v2/programs?{query}");
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<CursorPage<ShootingProgram>>(TestJson.Options))!;
+        return (await response.Content.ReadFromJsonAsync<CursorPage<ShootingProgram>>(SintroJson.Options))!;
     }
 
     private Task<CursorPage<ShootingProgram>> AllProgramsAsync(string extra = "") =>
@@ -97,7 +97,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
     public async Task activePassesAreExactlyThoseOnALine()
     {
         var active = await AllProgramsAsync("&state=active");
-        var lanes = (await Client().GetFromJsonAsync<List<LaneStatus>>("/api/v2/live", TestJson.Options))!;
+        var lanes = (await Client().GetFromJsonAsync<List<LaneStatus>>("/api/v2/live", SintroJson.Options))!;
 
         var onALine = lanes
             .Where(lane => lane.CurrentProgram is not null)
@@ -155,11 +155,15 @@ public class ProgramEndpointTests(ApiFixture fixture)
     public async Task sightingShotsAreNeverCountedTowardsATotal()
     {
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
-        var withSighting = page.Items.Where(program => program.Sighting is not null).ToList();
+        var withSighting = page.Items.Where(program => program.Sighting.Count > 0).ToList();
 
         Assert.NotEmpty(withSighting);
         Assert.All(withSighting, program =>
-            Assert.DoesNotContain(program.Sighting!.Index, program.Series.Select(series => series.Index)));
+        {
+            // Counting shots alone make up the result; the sighting series sit beside it.
+            Assert.Equal(program.Series.Sum(series => series.ShotCount), program.ShotCount);
+            Assert.All(program.Sighting, series => Assert.True(series.ShotCount > 0));
+        });
     }
 
     [RequiresDatabaseFact]
@@ -168,7 +172,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         var page = await AllProgramsAsync();
 
         var everyShot = page.Items
-            .SelectMany(program => program.Series.Concat(program.Sighting is null ? [] : [program.Sighting]))
+            .SelectMany(program => program.Series.Concat(program.Sighting))
             .SelectMany(series => series.Shots);
 
         Assert.DoesNotContain(9999, everyShot.Select(shot => shot.Number));

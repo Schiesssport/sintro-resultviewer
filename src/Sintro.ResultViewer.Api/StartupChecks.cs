@@ -56,13 +56,18 @@ public static class StartupChecks
         // No allowlist means nothing could connect — including the machine it runs on. That is
         // never what someone intended, and silently denying everything is as unhelpful as
         // silently allowing everything. Say what is missing and what to put there.
-        foreach (var (key, entries) in new[]
+        //
+        // And the gate silently skips entries it cannot parse, so a typo'd CIDR would not widen
+        // access — it would silently lock that network out (or shrink the proxy list), which is
+        // miserable to debug on a range PC. Refuse to start and name the entry instead.
+        foreach (var (key, entries, mustNotBeEmpty) in new[]
                  {
-                     ("Sintro:Network:Api", settings.Network.Api ?? []),
-                     ("Sintro:Network:Web", settings.Network.Web ?? []),
+                     ("Sintro:Network:Api", settings.Network.Api ?? [], true),
+                     ("Sintro:Network:Web", settings.Network.Web ?? [], true),
+                     ("Sintro:TrustedProxies", settings.TrustedProxies ?? [], false),
                  })
         {
-            if (entries.Length == 0)
+            if (mustNotBeEmpty && entries.Length == 0)
                 throw new InvalidOperationException(
                     $"{key} is empty, so nothing could reach that surface and the API refuses to " +
                     "start. List the networks that may connect — a range LAN is usually:" +
@@ -70,18 +75,7 @@ public static class StartupChecks
                     "  " + string.Join(", ", NetworkOptions.PrivateSpace) +
                     Environment.NewLine + Environment.NewLine +
                     "See appsettings.jsonc, which ships with exactly that list.");
-        }
 
-        // The gate silently skips entries it cannot parse, so a typo'd CIDR would not widen
-        // access — it would silently lock that network out (or shrink the proxy list), which
-        // is miserable to debug on a range PC. Refuse to start and name the entry instead.
-        foreach (var (key, entries) in new[]
-                 {
-                     ("Sintro:Network:Api", settings.Network.Api ?? []),
-                     ("Sintro:Network:Web", settings.Network.Web ?? []),
-                     ("Sintro:TrustedProxies", settings.TrustedProxies ?? []),
-                 })
-        {
             var invalid = entries.Where(entry => !IpRange.TryParse(entry, out _)).ToList();
             if (invalid.Count > 0)
                 throw new InvalidOperationException(
@@ -89,6 +83,27 @@ public static class StartupChecks
                     $"so the API refuses to start: {string.Join(", ", invalid.Select(entry => $"'{entry}'"))}. " +
                     "Expected forms: 192.168.1.0/24, 10.0.0.5, fd00::/8.");
         }
+
+        // Math.Clamp throws when the bounds cross, so a zero or negative maximum would turn every
+        // list request into a 500 while /health stayed green.
+        if (settings.MaxPageSize < 1)
+            throw new InvalidOperationException(
+                $"Sintro:MaxPageSize is {settings.MaxPageSize}; it must be at least 1.");
+
+        if (settings.DefaultPageSize < 1 || settings.DefaultPageSize > settings.MaxPageSize)
+            throw new InvalidOperationException(
+                $"Sintro:DefaultPageSize is {settings.DefaultPageSize}; it must be between 1 and " +
+                $"Sintro:MaxPageSize ({settings.MaxPageSize}).");
+
+        // The clock falls back to the host zone rather than refusing to start, because a wrong
+        // offset is a nuisance and a service that will not start is an event without results.
+        // But it must not be silent: the setting exists precisely for hosts whose own zone is wrong.
+        if (!string.IsNullOrWhiteSpace(settings.TimeZone) &&
+            !TimeZoneInfo.TryFindSystemTimeZoneById(settings.TimeZone, out _))
+            logger.LogWarning(
+                "Sintro:TimeZone '{TimeZone}' is not a known time zone; using this machine's zone " +
+                "({Local}) instead. Timestamps will carry the wrong offset if the two differ.",
+                settings.TimeZone, TimeZoneInfo.Local.Id);
 
         if (settings.TrustedProxies is { Length: > 0 })
             logger.LogInformation(

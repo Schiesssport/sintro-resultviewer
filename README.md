@@ -122,7 +122,8 @@ document itself and needs no token.
 
 **Collections are cursor-paged, never offset-paged** — the device inserts while you read and prunes
 from the other end, so an offset would skip or repeat rows. Read `nextCursor`, pass it back as
-`cursor`; `null` means the end.
+`cursor`; `null` means the end. A cursor the API did not issue is a `400 invalid_cursor`, and every
+error carries the same `{"error", "detail"}` body.
 
 **To sync**, request `order=asc` and keep the last `nextCursor`. Passing it again later returns
 exactly what has been added since — nothing to diff.

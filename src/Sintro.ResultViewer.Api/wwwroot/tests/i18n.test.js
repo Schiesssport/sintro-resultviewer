@@ -1,7 +1,36 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from '../core/i18n.js';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const source = (file) => readFileSync(join(root, file), 'utf8');
+
+/** Every key the markup and the DOM layer name literally. Dynamic keys are listed by hand. */
+const keysInUse = () => {
+    const keys = new Set();
+    const files = ['app.js', 'docs.js', 'core/format.js', 'index.html', 'docs.html'];
+
+    for (const file of files) {
+        const text = source(file);
+        for (const match of text.matchAll(/\bt\('([a-zA-Z0-9_.+-]+)'/g)) keys.add(match[1]);
+        for (const match of text.matchAll(/data-i18n(?:-[a-z-]+)?="([a-zA-Z0-9_.+-]+)"/g)) keys.add(match[1]);
+    }
+
+    // Built from state: t(`live.${state}`), t(display.reasonKey), t(`fullscreen.mode.${target}`).
+    for (const key of [
+        'live.connected', 'live.connecting', 'live.offline',
+        'total.mixedValuation', 'total.unknownValuation',
+        'fullscreen.mode.live+results', 'fullscreen.mode.live', 'fullscreen.mode.results',
+        'fullscreen.mode.leaderboard',
+    ]) keys.add(key);
+
+    return keys;
+};
 
 describe('translate', () => {
     test('substitutes named placeholders', () => {
@@ -61,5 +90,15 @@ describe('dictionaries', () => {
         const german = Object.values(TRANSLATIONS.de).join(' ');
         assert.ok(german.includes('Passe'), 'expected the German UI to say "Passe"');
         assert.ok(!/Stich/.test(german), 'the German UI must not say "Stich"');
+    });
+
+    test('every key the UI names exists, and every key that exists is named somewhere', () => {
+        // Both directions: a missing key renders as itself on screen, and an orphaned one
+        // is a translation nobody will ever see drift out of date.
+        const used = keysInUse();
+        const defined = new Set(Object.keys(TRANSLATIONS.de));
+
+        assert.deepEqual([...used].filter((key) => !defined.has(key)), [], 'used but not defined');
+        assert.deepEqual([...defined].filter((key) => !used.has(key)), [], 'defined but never used');
     });
 });

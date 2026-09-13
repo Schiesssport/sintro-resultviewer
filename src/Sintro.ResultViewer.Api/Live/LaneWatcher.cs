@@ -36,17 +36,18 @@ public sealed class LaneWatcher(
                 if (fingerprint == lastFingerprint) continue;
 
                 lastFingerprint = fingerprint;
-                var lanes = await repository.ListLanesAsync(stoppingToken);
-
-                await hub.BroadcastAsync(new { type = "lanes", lanes }, stoppingToken);
+                hub.Broadcast(new { type = "lanes", lanes = await repository.ListLanesAsync(stoppingToken) });
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 break;
             }
             catch (Exception ex)
             {
-                // A transient DB blip must not kill the watcher; retry on the next tick.
+                // A transient DB blip must not kill the watcher; retry on the next tick. That
+                // includes a cancelled read: SqlClient reports a connection lost mid-query as an
+                // OperationCanceledException too, and treating that as shutdown once froze the
+                // live view for the rest of the day while every REST call kept working.
                 logger.LogWarning(ex, "Lane watcher poll failed");
                 lastFingerprint = null;
             }

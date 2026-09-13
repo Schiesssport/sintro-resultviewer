@@ -17,7 +17,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task everyLineIsListedInOrder()
     {
-        var lanes = (await Client().GetFromJsonAsync<List<LaneStatus>>("/api/v2/live", TestJson.Options))!;
+        var lanes = (await Client().GetFromJsonAsync<List<LaneStatus>>("/api/v2/live", SintroJson.Options))!;
 
         // How many lines an installation has is site-specific; that they are all listed,
         // in order, so a display can show the whole firing line, is not.
@@ -30,7 +30,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task aLineWithAPassOnItReportsThatPassAsActive()
     {
-        var lanes = (await Client().GetFromJsonAsync<List<LaneStatus>>("/api/v2/live", TestJson.Options))!;
+        var lanes = (await Client().GetFromJsonAsync<List<LaneStatus>>("/api/v2/live", SintroJson.Options))!;
 
         Assert.All(lanes.Where(lane => lane.CurrentProgram is not null),
             lane => Assert.Equal(ProgramState.Active, lane.CurrentProgram!.State));
@@ -64,7 +64,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
     public async Task everyShooterHasANormalisedLicence()
     {
         var page = (await Client().GetFromJsonAsync<CursorPage<Shooter>>(
-            "/api/v2/shooters?limit=500", TestJson.Options))!;
+            "/api/v2/shooters?limit=500", SintroJson.Options))!;
 
         Assert.All(page.Items, shooter =>
         {
@@ -77,7 +77,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
     public async Task theAllZeroRfidPlaceholderIsReportedAsAbsent()
     {
         var page = (await Client().GetFromJsonAsync<CursorPage<Shooter>>(
-            "/api/v2/shooters?limit=500", TestJson.Options))!;
+            "/api/v2/shooters?limit=500", SintroJson.Options))!;
 
         // RFID is deprecated and installations share one all-zero placeholder across many
         // shooters. It must never surface as if it were a real card id.
@@ -92,12 +92,12 @@ public class CatalogEndpointTests(ApiFixture fixture)
         if (licence is null) return;
 
         var byLicence = (await Client().GetFromJsonAsync<CursorPage<Shooter>>(
-            $"/api/v2/shooters?q={licence}", TestJson.Options))!;
+            $"/api/v2/shooters?q={licence}", SintroJson.Options))!;
         Assert.NotEmpty(byLicence.Items);
 
         var surname = byLicence.Items[0].LastName;
         var byName = (await Client().GetFromJsonAsync<CursorPage<Shooter>>(
-            $"/api/v2/shooters?q={Uri.EscapeDataString(surname)}", TestJson.Options))!;
+            $"/api/v2/shooters?q={Uri.EscapeDataString(surname)}", SintroJson.Options))!;
 
         Assert.Contains(byName.Items, shooter => shooter.LastName == surname);
     }
@@ -109,7 +109,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         if (licence is null) return;
 
         var detail = (await Client().GetFromJsonAsync<ShooterDetail>(
-            $"/api/v2/shooters/{licence}", TestJson.Options))!;
+            $"/api/v2/shooters/{licence}", SintroJson.Options))!;
 
         Assert.Equal(licence, detail.License);
         Assert.NotEmpty(detail.Shooters);
@@ -126,7 +126,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         if (licence is null) return;
 
         var everything = (await Client().GetFromJsonAsync<ShooterDetail>(
-            $"/api/v2/shooters/{licence}?limit=5000", TestJson.Options))!;
+            $"/api/v2/shooters/{licence}?limit=5000", SintroJson.Options))!;
         if (everything.Programs.Items.Count < 2) return;
 
         var walked = new List<int>();
@@ -135,7 +135,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         {
             var suffix = cursor is null ? "" : $"&cursor={Uri.EscapeDataString(cursor)}";
             var page = (await Client().GetFromJsonAsync<ShooterDetail>(
-                $"/api/v2/shooters/{licence}?limit=1{suffix}", TestJson.Options))!;
+                $"/api/v2/shooters/{licence}?limit=1{suffix}", SintroJson.Options))!;
 
             walked.AddRange(page.Programs.Items.Select(program => program.Id));
             cursor = page.Programs.NextCursor;
@@ -157,7 +157,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
             var response = await Client().GetAsync($"/api/v2/programs?{query}");
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
-            var body = await response.Content.ReadFromJsonAsync<ApiError>(TestJson.Options);
+            var body = await response.Content.ReadFromJsonAsync<ApiError>(SintroJson.Options);
             Assert.False(string.IsNullOrWhiteSpace(body!.Error));
             Assert.Contains("Expected", body.Detail);
         }
@@ -195,9 +195,9 @@ public class CatalogEndpointTests(ApiFixture fixture)
         if (licence is null || !licence.StartsWith('0')) return;
 
         var padded = (await Client().GetFromJsonAsync<ShooterDetail>(
-            $"/api/v2/shooters/{licence}", TestJson.Options))!;
+            $"/api/v2/shooters/{licence}", SintroJson.Options))!;
         var unpadded = (await Client().GetFromJsonAsync<ShooterDetail>(
-            $"/api/v2/shooters/{licence.TrimStart('0')}", TestJson.Options))!;
+            $"/api/v2/shooters/{licence.TrimStart('0')}", SintroJson.Options))!;
 
         Assert.Equal(padded.Shooters[0].ShooterId, unpadded.Shooters[0].ShooterId);
     }
@@ -218,7 +218,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         var term = name.Split(' ', StringSplitOptions.RemoveEmptyEntries).First();
 
         var search = (await Client().GetFromJsonAsync<CursorPage<Club>>(
-            $"/api/v2/clubs?q={Uri.EscapeDataString(term)}", TestJson.Options))!;
+            $"/api/v2/clubs?q={Uri.EscapeDataString(term)}", SintroJson.Options))!;
 
         Assert.NotEmpty(search.Items);
         Assert.All(search.Items, club =>
@@ -231,7 +231,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         // The register the device ships carries trailing CR characters in its names; the
         // API must absorb that, not hand it to every client.
         var page = (await Client().GetFromJsonAsync<CursorPage<Club>>(
-            "/api/v2/clubs?limit=500", TestJson.Options))!;
+            "/api/v2/clubs?limit=500", SintroJson.Options))!;
 
         Assert.NotEmpty(page.Items);
         Assert.All(page.Items, club =>
@@ -245,11 +245,11 @@ public class CatalogEndpointTests(ApiFixture fixture)
     public async Task theProgramCatalogAccountsForEveryPass()
     {
         var catalog = (await Client().GetFromJsonAsync<List<ProgramCatalogEntry>>(
-            "/api/v2/program-catalog", TestJson.Options))!;
+            "/api/v2/program-catalog", SintroJson.Options))!;
 
         var everything = (await Client().GetFromJsonAsync<CursorPage<ShootingProgram>>(
             $"/api/v2/programs?{ApiFixture.WholeRange}&withoutResult=true&limit=5000",
-            TestJson.Options))!;
+            SintroJson.Options))!;
 
         Assert.Equal(everything.Items.Count, catalog.Sum(entry => entry.ProgramCount));
 
@@ -262,7 +262,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
     [RequiresDatabaseFact]
     public async Task healthReportsReachabilityAndNoPublicExposureByDefault()
     {
-        var health = (await Client().GetFromJsonAsync<HealthReport>("/api/v2/health", TestJson.Options))!;
+        var health = (await Client().GetFromJsonAsync<HealthReport>("/api/v2/health", SintroJson.Options))!;
 
         Assert.True(health.DatabaseReachable);
         Assert.Empty(health.PublicExposure);
