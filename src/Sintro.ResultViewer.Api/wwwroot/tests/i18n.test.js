@@ -26,7 +26,6 @@ const keysInUse = () => {
         'live.connected', 'live.connecting', 'live.offline',
         'total.mixedValuation', 'total.unknownValuation',
         'fullscreen.mode.live+results', 'fullscreen.mode.live', 'fullscreen.mode.results',
-        'fullscreen.mode.leaderboard',
     ]) keys.add(key);
 
     return keys;

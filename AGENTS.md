@@ -119,7 +119,7 @@ The viewer's shooter fallback chain — name → licence → `contestShooterName
 is in `core/format.js`; keep it. **The viewer** is documented in `docs/architecture.md`. Three rules
 that fail silently if broken:
 
-- **Asset URLs must be absolute** (`/app.js`) — a relative one hits the SPA catch-all and gets HTML.
+- **Asset URLs must be absolute** (`/app.js`) — a relative one resolves under `/fullscreen/` and is not served.
 - **Column widths belong on `<colgroup>`** — `table-layout: fixed` reads the first row, often a
   colspan message row.
 - **Never rebuild the ticker DOM unless `tickerContentKey` changed** — a rebuild restarts the

@@ -92,15 +92,11 @@ public class SecurityTests(ApiFixture fixture)
     }
 
     [Theory]
-    [InlineData("/fullscreen")]
     [InlineData("/fullscreen/live")]
     [InlineData("/fullscreen/results")]
-    [InlineData("/fullscreen/leaderboard")]
     [InlineData("/fullscreen/live+results")]
-    [InlineData("/fullscreen/anything-else")]
-    public async Task everyFullscreenVariantServesTheViewer(string path)
+    public async Task eachFullscreenVariantServesTheViewer(string path)
     {
-        // Including variants the server has never heard of, or a bookmarked TV shows a 404.
         var response = await fixture.CreateClient().GetAsync(path);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -108,11 +104,19 @@ public class SecurityTests(ApiFixture fixture)
     }
 
     [Theory]
+    [InlineData("/fullscreen")]
+    [InlineData("/fullscreen/anything-else")]
+    public async Task anUnknownFullscreenVariantIsNotServed(string path)
+    {
+        Assert.Equal(HttpStatusCode.NotFound, (await fixture.CreateClient().GetAsync(path)).StatusCode);
+    }
+
+    [Theory]
     [InlineData("/fullscreen/live")]
     [InlineData("/fullscreen/live+results")]
     public async Task fullscreenPagesReferenceAssetsAbsolutely(string path)
     {
-        // A relative src="app.js" resolves to /fullscreen/app.js, which the catch-all answers with HTML.
+        // A relative src="app.js" would resolve to /fullscreen/app.js, which nothing serves.
         var html = await fixture.CreateClient().GetStringAsync(path);
 
         Assert.Contains("src=\"/app.js\"", html);

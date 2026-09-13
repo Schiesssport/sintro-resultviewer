@@ -360,7 +360,6 @@ const applyMode = (next) => {
 
     el('section-lanes').classList.toggle('hidden', !layout.lanes);
     el('section-results').classList.toggle('hidden', !layout.results);
-    el('section-leaderboard').classList.toggle('hidden', !layout.leaderboard);
     el('fullscreen-exit').classList.toggle('hidden', !layout.fullscreen);
 
     renderAll();

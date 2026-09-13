@@ -116,15 +116,15 @@ used key exists, so `data-i18n`, `data-i18n-title` and `data-i18n-aria-label` in
 
 `/` is the office dashboard: lines on top, a scrollable result table below, controls visible.
 
-`/fullscreen/{live,results,leaderboard,live+results}` are wall displays — no controls, sized to be
+`/fullscreen/{live,results,live+results}` are wall displays — no controls, sized to be
 read across a room. They are real routes so each can be bookmarked and pointed at from a TV; the
-server returns the same page for all of them and the client reads `location.pathname`. An unknown
-variant falls back to `live+results`, because nobody can fix a typo on a wall-mounted screen.
+server returns the same page for the three of them and the client reads `location.pathname`. Any
+other path under `/fullscreen/` is a 404.
 
 Two consequences worth knowing before editing the HTML:
 
 - **Asset URLs must be absolute** (`/app.js`, not `app.js`). Under `/fullscreen/live` a relative
-  path resolves into the SPA catch-all, which returns HTML, and the module then fails to parse.
+  path resolves to `/fullscreen/app.js`, which nothing serves.
 - **Table column widths belong on `<colgroup>`**, never on cells. With `table-layout: fixed` the
   browser reads widths from the first row, which is routinely a colspan message row or a free line.
 

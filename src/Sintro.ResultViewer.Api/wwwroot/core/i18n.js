@@ -24,7 +24,6 @@ export const TRANSLATIONS = {
         'fullscreen.mode.live+results': 'Linien und Resultate',
         'fullscreen.mode.live':     'Nur Linien',
         'fullscreen.mode.results':  'Nur Resultate',
-        'fullscreen.mode.leaderboard': 'Rangliste (noch nicht umgesetzt)',
         'toolbar.filterPlaceholder': 'Suchen…',
         'aria.language':            'Sprache',
         'aria.exitFullscreen':      'Vollbild beenden',
@@ -43,8 +42,6 @@ export const TRANSLATIONS = {
         'section.lanes':            'Linien',
         'section.results':          'Letzte Resultate',
         'lane.available':           'frei',
-        'section.leaderboard':      'Rangliste',
-        'leaderboard.placeholder':  'Die Rangliste ist noch nicht umgesetzt.',
 
         'series.subtotal':          'Total',
         'series.bestFine':          'Bester Zehntelwert',
@@ -100,7 +97,6 @@ export const TRANSLATIONS = {
         'fullscreen.mode.live+results': 'Lignes et résultats',
         'fullscreen.mode.live':     'Lignes seulement',
         'fullscreen.mode.results':  'Résultats seulement',
-        'fullscreen.mode.leaderboard': 'Classement (pas encore implémenté)',
         'toolbar.filterPlaceholder': 'Rechercher…',
         'aria.language':            'Langue',
         'aria.exitFullscreen':      'Quitter le plein écran',
@@ -119,8 +115,6 @@ export const TRANSLATIONS = {
         'section.lanes':            'Lignes',
         'section.results':          'Derniers résultats',
         'lane.available':           'libre',
-        'section.leaderboard':      'Classement',
-        'leaderboard.placeholder':  'Le classement n’est pas encore implémenté.',
 
         'series.subtotal':          'Total',
         'series.bestFine':          'Meilleure valeur au dixième',

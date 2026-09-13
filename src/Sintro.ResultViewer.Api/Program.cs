@@ -56,8 +56,8 @@ IResult RenderPage(HttpContext context, ViewerPage page, string fileName)
     return Results.Content(page.Render(fileName, sessionToken.Value), "text/html; charset=utf-8");
 }
 
-// The fullscreen variants are client-side routes; the catch-all keeps a new one a front-end-only change.
-foreach (var route in new[] { "/", "/index.html", "/fullscreen", "/fullscreen/{**variant}" })
+// The fullscreen variants are client-side routes, listed here so an unknown one is a 404, not a guess.
+foreach (var route in new[] { "/", "/index.html", "/fullscreen/live", "/fullscreen/results", "/fullscreen/live+results" })
     app.MapGet(route, (HttpContext context, ViewerPage page) => RenderPage(context, page, "index.html")).ExcludeFromDescription();
 
 foreach (var route in new[] { "/docs", "/docs.html" })
