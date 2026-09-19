@@ -87,20 +87,32 @@ const shotHtml = (shot, withRing) => {
     return `<span class="shot${withRing ? ' is-ringed' : ''}">${ring}${value}</span>`;
 };
 
-const shotGroupChip = (group, withRings) => `
+const fineValues = (group, withLast) => {
+    const last = withLast && Number.isFinite(group.lastFineValue)
+        ? `<span class="shot-fine-last" title="${escapeHtml(t('series.lastFine'))}">${group.lastFineValue}</span>`
+        : '';
+    const best = !Number.isFinite(group.bestFineValue) ? ''
+        : `<span class="shot-fine-best" title="${escapeHtml(t('series.bestFine'))}">${group.bestFineValue}</span>`;
+
+    return last || best ? `<span class="shot-group-fine">${last}${best}</span>` : '';
+};
+
+const shotGroupChip = (group, { withRings, withLast }) => `
         <span class="shot-group" title="${escapeHtml(t('series.subtotal'))} ${group.subtotal}">
             <span class="shot-group-code">${escapeHtml(group.code)}</span>
             <span class="shot-group-values">${group.shots.map((shot) => shotHtml(shot, withRings)).join('')}</span>
-            ${group.bestFineValue === null ? '' :
-                `<span class="shot-group-fine" title="${escapeHtml(t('series.bestFine'))}">${group.bestFineValue}</span>`}
+            ${fineValues(group, withLast)}
         </span>`;
 
-// One chip per series: [A10 | 7 6 0 6 | 96].
-const shotGroupsCell = (program, { withRings = false } = {}) => {
+// One chip per series: [A10 | 7 6 0 6 | 96]. Live only, the series being shot also shows its last shot's fine value.
+const shotGroupsCell = (program, { live = false } = {}) => {
     const groups = shotGroups(program);
     if (groups.length === 0) return '';
 
-    return `<div class="shot-groups">${groups.map((group) => shotGroupChip(group, withRings)).join('')}</div>`;
+    const chips = groups.map((group, index) =>
+        shotGroupChip(group, { withRings: live, withLast: live && index === groups.length - 1 }));
+
+    return `<div class="shot-groups">${chips.join('')}</div>`;
 };
 
 // -- Lines --------------------------------------------------------------------
@@ -122,7 +134,7 @@ const occupiedLineRow = (lane, program) => {
                 <div class="lane-context">${escapeHtml(laneContext(program))}</div>
             </td>
             <td class="lane-total">${totalCell(program)}</td>
-            <td class="lane-shots">${shotGroupsCell(program, { withRings: true })}</td>
+            <td class="lane-shots">${shotGroupsCell(program, { live: true })}</td>
         </tr>`;
 };
 
@@ -131,10 +143,29 @@ const lineRow = (lane) => {
     return !program || isLineAvailable(program, now()) ? freeLineRow(lane) : occupiedLineRow(lane, program);
 };
 
+// The device writes the last shot and clears the line in one step, so the held snapshot lacks that
+// shot. Fetch the finished pass and swap it in while the hold lasts.
+const refreshHeldProgram = async (laneNumber) => {
+    const id = laneMemory.get(laneNumber)?.program?.id;
+    if (id === undefined) return;
+
+    try {
+        const fresh = await api.program(id);
+        const entry = laneMemory.get(laneNumber);
+        if (entry?.program?.id !== id) return;   // the line moved on meanwhile
+
+        laneMemory.set(laneNumber, { ...entry, program: fresh });
+        renderLines();
+    } catch {
+        // The stale snapshot stays; the result list shows the final pass anyway.
+    }
+};
+
 const renderLines = () => {
     // A hold ends purely through time, so recompute on every render, not only on new data.
     const held = holdClearedLines(laneMemory, lanes, now());
     laneMemory = held.memory;
+    held.justCleared.forEach(refreshHeldProgram);
 
     el('lanes-body').innerHTML = lanes.length === 0
         ? `<tr><td class="message" colspan="4">${escapeHtml(t('msg.noLanes'))}</td></tr>`
@@ -228,17 +259,10 @@ const renderTicker = () => {
     if (key === tickerKey) return;
     tickerKey = key;
 
-    if (tickerItems.length === 0) {
-        bar.classList.add('hidden');
-        bar.innerHTML = '';
-        return;
-    }
-
     // Resume at the same point in the loop rather than jumping back to the start.
     const elapsed = document.querySelector('.ticker-track')?.getAnimations?.()[0]?.currentTime ?? 0;
 
-    bar.classList.remove('hidden');
-    bar.innerHTML = tickerMarkup();
+    bar.innerHTML = tickerItems.length === 0 ? '' : tickerMarkup();
     applyTickerSpeed(elapsed);
 };
 

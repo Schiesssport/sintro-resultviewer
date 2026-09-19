@@ -158,6 +158,16 @@ describe('holdClearedLines', () => {
         assert.equal(over.memory.has(1), false);
     });
 
+    test('names a line only in the snapshot that starts its hold', () => {
+        const first = holdClearedLines(new Map(), lanes(pass(7)), T0);
+        const cleared = holdClearedLines(first.memory, lanes(null), T0 + 1000);
+        const still = holdClearedLines(cleared.memory, lanes(null), T0 + 2000);
+
+        assert.deepEqual(first.justCleared, []);
+        assert.deepEqual(cleared.justCleared, [1]);
+        assert.deepEqual(still.justCleared, []);
+    });
+
     test('a new program on the line replaces the held one at once', () => {
         const first = holdClearedLines(new Map(), lanes(pass(7)), T0);
         const cleared = holdClearedLines(first.memory, lanes(null), T0 + 1000);

@@ -95,5 +95,6 @@ export const shotGroups = (program) => (program.series ?? []).map((series) => ({
     code: series.targetCode ?? '',
     shots: (series.shots ?? []).map((shot) => ({ text: String(shot.value), sector: shot.hitSector ?? null })),
     bestFineValue: series.bestFineValue ?? null,
+    lastFineValue: series.shots?.at(-1)?.fineValue ?? null,
     subtotal: series.subtotal,
 }));
