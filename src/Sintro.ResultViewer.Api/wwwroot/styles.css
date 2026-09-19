@@ -300,15 +300,20 @@ table.results tbody tr:hover td { background: var(--row-hover); }
 /* A centre hit has no direction, so the whole ring is filled rather than one wedge. */
 .shot-ring.is-centre .ring-wedge { fill: var(--ink); stroke: var(--ink); }
 
-/* Trailing best tenth-value — context again, so dim. */
+/* Trailing tenth-values: the last shot (live only) above the best; the best is context, so dim. */
 .shot-group-fine {
     flex: 0 0 var(--shot-fine-width);
     width: var(--shot-fine-width);
+    display: inline-flex;
+    flex-direction: column;
+    align-self: center;
     text-align: right;
     font-size: 11px;
-    color: var(--muted);
+    line-height: 1.2;
     font-variant-numeric: tabular-nums;
 }
+.shot-fine-last { color: var(--ink); }
+.shot-fine-best { color: var(--muted); }
 
 /* -- Messages & warnings --------------------------------------------------- */
 
@@ -660,6 +665,7 @@ body[data-mode="live"] .lane-total { font-size: 54px; }
 body[data-mode="live"] .cg-lane-total { width: 150px; }
 body[data-mode="live"] .lane-free { font-size: 22px; }
 body[data-mode="live"] { --shot-dial-size: 46px; --shot-dial-font: 15px; }
+body[data-mode="live"] .shot-group-fine { font-size: 15px; --shot-fine-width: 3.6ch; }
 body.is-fullscreen #results-scroll {
     flex: 1;
     min-height: 0;
@@ -672,17 +678,18 @@ body.is-fullscreen table.results tbody td { padding: 11px 12px; }
 
 /* The result overflow, fixed to the viewport: as a table footer row it needed an exact row count. */
 #results-ticker {
+    display: none;   /* fullscreen only; always shown there, empty or not */
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 20;
-    display: flex;
     align-items: center;
     height: var(--ticker-space, 54px);
     background: var(--forest);
     border-top: 2px solid var(--emerald);
 }
+body.is-fullscreen #results-ticker { display: flex; }
 
 .ticker-viewport {
     overflow: hidden;

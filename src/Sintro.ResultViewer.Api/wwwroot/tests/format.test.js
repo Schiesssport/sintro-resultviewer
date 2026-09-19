@@ -233,6 +233,15 @@ describe('shotGroups', () => {
         assert.deepEqual(shotGroups(program({ series: undefined })), []);
     });
 
+    test('carries the last shot\'s fine value, null when the series has none', () => {
+        const groups = shotGroups(withSeries([
+            { index: 1, targetCode: 'A10', subtotal: 19, shots: [{ value: 9, fineValue: 94 }, { value: 10, fineValue: 102 }] },
+            { index: 2, targetCode: 'A10', subtotal: 0, shots: [] },
+        ]));
+        assert.equal(groups[0].lastFineValue, 102);
+        assert.equal(groups[1].lastFineValue, null);
+    });
+
     test('a missing best fine value stays null rather than rendering as 0', () => {
         const groups = shotGroups(withSeries([
             { index: 1, targetCode: 'A10', subtotal: 0, bestFineValue: null, shots: [{ value: 0 }] },

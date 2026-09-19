@@ -78,6 +78,10 @@ export class SintroApi {
         return this.get(`/api/v2/programs?${query}`);
     }
 
+    program(id) {
+        return this.get(`/api/v2/programs/${encodeURIComponent(id)}`);
+    }
+
     lanes() {
         return this.get('/api/v2/live');
     }

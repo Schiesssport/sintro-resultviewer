@@ -4,7 +4,7 @@ export const IDLE_AFTER_FINISH_MS = 5 * 60 * 1000;
 // The device does not always write an end total, so the last shot is the fallback signal.
 export const IDLE_AFTER_LAST_SHOT_MS = 6 * 60 * 1000;
 // The device drops Lanes.ProgramID with the end marker; without a hold the result would vanish unread.
-export const HOLD_AFTER_CLEAR_MS = 30 * 1000;
+export const HOLD_AFTER_CLEAR_MS = 60 * 1000;
 
 const parse = (iso) => {
     const value = Date.parse(iso ?? '');
@@ -35,8 +35,10 @@ export const isLineAvailable = (program, nowMs) => {
 };
 
 // memory: lane number → { program, clearedAt }. A cleared line keeps its program for HOLD_AFTER_CLEAR_MS.
+// justCleared: the lanes whose hold began with this snapshot, so the caller can fetch the final pass.
 export const holdClearedLines = (memory, lanes, nowMs) => {
     const next = new Map();
+    const justCleared = [];
 
     const shown = (lanes ?? []).map((lane) => {
         const program = lane.currentProgram ?? null;
@@ -52,11 +54,12 @@ export const holdClearedLines = (memory, lanes, nowMs) => {
         const clearedAt = previous.clearedAt ?? nowMs;
         if (nowMs - clearedAt >= HOLD_AFTER_CLEAR_MS) return { ...lane, currentProgram: null };
 
+        if (previous.clearedAt === null) justCleared.push(lane.number);
         next.set(lane.number, { program: previous.program, clearedAt });
         return { ...lane, currentProgram: previous.program };
     });
 
-    return { lanes: shown, memory: next };
+    return { lanes: shown, memory: next, justCleared };
 };
 
 // Non-zero only in development, where ReferenceDate pins "today" to an old backup.

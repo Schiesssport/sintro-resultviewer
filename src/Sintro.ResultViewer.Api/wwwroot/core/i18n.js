@@ -45,6 +45,7 @@ export const TRANSLATIONS = {
 
         'series.subtotal':          'Total',
         'series.bestFine':          'Bester Zehntelwert',
+        'series.lastFine':          'Zehntelwert des letzten Schusses',
 
         'total.mixedValuation':     'Wertung wechselt – kein Gesamttotal',
         'total.unknownValuation':   'Wertung unbekannt – kein Gesamttotal',
@@ -118,6 +119,7 @@ export const TRANSLATIONS = {
 
         'series.subtotal':          'Total',
         'series.bestFine':          'Meilleure valeur au dixième',
+        'series.lastFine':          'Valeur au dixième du dernier tir',
 
         'total.mixedValuation':     'Cotation variable – pas de total général',
         'total.unknownValuation':   'Cotation inconnue – pas de total général',

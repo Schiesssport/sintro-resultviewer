@@ -106,7 +106,7 @@ split as [OpenRangeOffice](https://github.com/Schiesssport/OpenRangeOffice):
 
 Anything that can be tested without a browser belongs in `core/`. That is where the interesting
 parts live: `format.js` (labels, shot rendering, the shooter fallback chain), `sectors.js` (the hit
-dial), `lanes.js` (when a line frees up, and the 30-second hold that keeps a finished pass on its line
+dial), `lanes.js` (when a line frees up, and the 60-second hold that keeps a finished pass on its line
 after the device has already cleared the lane), `ticker.js` (what scrolls, and how fast), `viewmode.js`
 (which view a URL means), `openapi.js` (reading the spec for `/docs`, and which URLs the try box may
 call with the token), `i18n.js` (German and French — a test asserts every key is used and every
