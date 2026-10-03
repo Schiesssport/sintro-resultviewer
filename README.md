@@ -110,11 +110,11 @@ with [`docs/api.md`](docs/api.md): access setup, the results list field by field
 | Endpoint | Returns |
 |---|---|
 | `GET /live` | Every line and the pass currently on it. The same URL upgrades to a **WebSocket** pushing changes |
-| `GET /programs` | Passes, newest first. `state`, `number`, `name`, `license`, `lane`, `from`, `to`, `withoutResult`, `order`, `cursor`, `limit` |
+| `GET /programs` | Passes, newest first. `state`, `targetCode`, `targetProgram`, `license`, `lane`, `from`, `to`, `withoutResult`, `order`, `cursor`, `limit` |
 | `GET /programs/{id}` | One pass with all series and shots |
 | `GET /shooters`, `/shooters/{license}` | Registered shooters; licence lookup with their passes (also cursor-paged) |
 | `GET /clubs` | The Swiss club register held by the device |
-| `GET /program-catalog` | Distinct `(number, name)` pairs present, with counts |
+| `GET /program-catalog` | Distinct `(targetCode, targetProgram)` pairs present, with counts |
 | `GET /health` | Database reachability (no token required) |
 
 `/docs` renders the OpenAPI document as a browsable, try-it-here page; `/openapi/v2.json` is the
@@ -137,7 +137,7 @@ A few things worth knowing before building against it:
 - **A pass is `active`, `finished` or `abandoned`.** The third is real: started, never ended, and
   no longer on a line.
 - **`total` is `null` when a pass mixes ring scales**, with `totalUnavailable` giving the reason;
-  use the per-series `subtotal`. Each series carries a `targetCode` (`A10`, `B4`, `S10`) combining
+  use the per-series `subtotal`. Each series carries a `targetType` (`A10`, `B4`, `S10`) combining
   target and scale.
 - **Timestamps are ISO 8601** with the range's offset.
 - **An unknown `state` or `order` value is a 400**, not a silently ignored filter.

@@ -5,8 +5,8 @@ namespace Sintro.ResultViewer.Data;
 public sealed record ProgramFilter
 {
     public ProgramState? State { get; init; }
-    public int? Number { get; init; }
-    public string? Name { get; init; }
+    public int? TargetCode { get; init; }
+    public string? TargetProgram { get; init; }
     public string? License { get; init; }
     public int? Lane { get; init; }
     public DateOnly? From { get; init; }

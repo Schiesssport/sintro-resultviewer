@@ -108,6 +108,7 @@ public static class ScoreCalculator
 
         return new Shot(
             Number: row.ShotNr,
+            MatchCode: row.ExternalNumber == 0 ? null : row.ExternalNumber,
             Value: row.PrimaryResult,
             FineValue: row.SecondaryResult,
             Mouche: row.Mouche == 1,

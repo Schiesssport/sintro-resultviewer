@@ -28,7 +28,8 @@ public sealed record ShotRow(
     double X,
     double Y,
     int TotalType,
-    int ShotGroup);
+    int ShotGroup,
+    int ExternalNumber);
 
 public sealed record TargetInfoRow(
     int TargeinformationID,

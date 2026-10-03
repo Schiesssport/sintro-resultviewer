@@ -51,8 +51,8 @@ export const matchesFilter = (program, query, labelText = '') => {
     if (terms.length === 0) return true;
 
     const haystack = [
-        program.name,
-        program.number,
+        program.targetProgram,
+        program.targetCode,
         program.lane,
         labelText,
         program.shooter?.license,
@@ -72,29 +72,33 @@ const whenAndWhere = (program) => {
 
 // "Obligatorisches Programm (20:45/L6)": time and line ride along instead of taking columns.
 export const programLabel = (program) => {
-    const name = program?.name ?? '';
+    const name = program?.targetProgram ?? '';
     const context = whenAndWhere(program);
     return context ? `${name} (${context})` : name;
 };
 
 // "SG Muster · Obligatorisches Programm" under a shooter's name on a line.
 export const laneContext = (program) =>
-    [program?.shooter?.club?.name, program?.name].filter(Boolean).join(' · ');
+    [program?.shooter?.club?.name, program?.targetProgram].filter(Boolean).join(' · ');
 
 // "Hans Muster: 31 (Obligatorisches Programm, 20:45/L6)" — who, how much, and where.
 export const tickerEntry = (program, t) => {
     const name = shooterLabel(program, t).text;
     const total = program?.total ? String(program.total.value) : '–';
-    const context = [program?.name, whenAndWhere(program)].filter(Boolean).join(', ');
+    const context = [program?.targetProgram, whenAndWhere(program)].filter(Boolean).join(', ');
 
     return context ? `${name}: ${total} (${context})` : `${name}: ${total}`;
 };
 
 // A mouche is not marked: on 5er and 4er targets a glyph in place of the single digit reads as a zero.
-export const shotGroups = (program) => (program.series ?? []).map((series) => ({
-    code: series.targetCode ?? '',
-    shots: (series.shots ?? []).map((shot) => ({ text: String(shot.value), sector: shot.hitSector ?? null })),
-    bestFineValue: series.bestFineValue ?? null,
-    lastFineValue: series.shots?.at(-1)?.fineValue ?? null,
-    subtotal: series.subtotal,
-}));
+// On a 100er target the fine value is the ring value itself, so showing it twice would only confuse.
+export const shotGroups = (program) => (program.series ?? []).map((series) => {
+    const fineIsRing = series.valuation === 100;
+    return {
+        code: series.targetType ?? '',
+        shots: (series.shots ?? []).map((shot) => ({ text: String(shot.value), sector: shot.hitSector ?? null })),
+        bestFineValue: fineIsRing ? null : series.bestFineValue ?? null,
+        lastFineValue: fineIsRing ? null : series.shots?.at(-1)?.fineValue ?? null,
+        subtotal: series.subtotal,
+    };
+});

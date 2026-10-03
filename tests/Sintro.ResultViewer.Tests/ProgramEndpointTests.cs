@@ -181,16 +181,34 @@ public class ProgramEndpointTests(ApiFixture fixture)
     }
 
     [RequiresDatabaseFact]
-    public async Task everySeriesCarriesAReadableTargetCode()
+    public async Task everySeriesCarriesAReadableTargetType()
     {
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
 
         Assert.All(page.Items.SelectMany(program => program.Series), series =>
         {
-            Assert.False(string.IsNullOrWhiteSpace(series.TargetCode));
+            Assert.False(string.IsNullOrWhiteSpace(series.TargetType));
 
             // Letter plus ring scale, e.g. A10 / B4 / S10; "?" only where the device gave nothing.
-            Assert.Matches(@"^[ABS?]\d+$|^[ABS?]\?$", series.TargetCode);
+            Assert.Matches(@"^[ABS?]\d+$|^[ABS?]\?$", series.TargetType);
+        });
+    }
+
+    [RequiresDatabaseFact]
+    public async Task aMatchCodeIsNeverZeroAndDoesNotChangeWithinAPass()
+    {
+        var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
+
+        Assert.All(page.Items, program =>
+        {
+            var codes = program.Series.Concat(program.Sighting)
+                .SelectMany(series => series.Shots)
+                .Select(shot => shot.MatchCode)
+                .Distinct()
+                .ToList();
+
+            Assert.DoesNotContain(0, codes);
+            Assert.True(codes.Count <= 1, $"program {program.Id} carries several match codes");
         });
     }
 

@@ -11,8 +11,8 @@ const t = (key, params) => translate(TRANSLATIONS.de, key, params);
 
 const program = (overrides = {}) => ({
     id: 2000,
-    number: 31,
-    name: 'Obligatorisches Programm',
+    targetCode: 31,
+    targetProgram: 'Obligatorisches Programm',
     lane: 6,
     startedAt: '2026-07-08T20:45:54+02:00',
     state: 'finished',
@@ -143,7 +143,7 @@ describe('laneContext', () => {
     });
 
     test('an anonymous pass shows the program alone, with no dangling separator', () => {
-        assert.equal(laneContext(program({ shooter: null, name: 'A10-Probe' })), 'A10-Probe');
+        assert.equal(laneContext(program({ shooter: null, targetProgram: 'A10-Probe' })), 'A10-Probe');
         assert.equal(laneContext(null), '');
     });
 });
@@ -190,7 +190,7 @@ describe('shotGroups', () => {
     test('one group per series, carrying code, shots and best fine value', () => {
         const groups = shotGroups(withSeries([
             {
-                index: 1, valuation: 10, targetCode: 'A10', subtotal: 19, bestFineValue: 96,
+                index: 1, valuation: 10, targetType: 'A10', subtotal: 19, bestFineValue: 96,
                 shots: [{ value: 9, mouche: false }, { value: 10, mouche: true }],
             },
         ]));
@@ -204,8 +204,8 @@ describe('shotGroups', () => {
 
     test('keeps series order so the groups read as they were shot', () => {
         const groups = shotGroups(withSeries([
-            { index: 1, targetCode: 'A10', subtotal: 9, shots: [{ value: 9 }] },
-            { index: 2, targetCode: 'A10', subtotal: 8, shots: [{ value: 8 }] },
+            { index: 1, targetType: 'A10', subtotal: 9, shots: [{ value: 9 }] },
+            { index: 2, targetType: 'A10', subtotal: 8, shots: [{ value: 8 }] },
         ]));
 
         assert.deepEqual(groups.map((group) => group.subtotal), [9, 8]);
@@ -213,15 +213,15 @@ describe('shotGroups', () => {
 
     test('a B target keeps its own code', () => {
         const groups = shotGroups(withSeries([
-            { index: 1, valuation: 4, targetCode: 'B4', subtotal: 4, shots: [{ value: 4 }] },
+            { index: 1, valuation: 4, targetType: 'B4', subtotal: 4, shots: [{ value: 4 }] },
         ]));
         assert.equal(groups[0].code, 'B4');
     });
 
     test('sighting shots are excluded — they are not the result', () => {
         const groups = shotGroups(program({
-            series: [{ index: 1, targetCode: 'A10', subtotal: 9, shots: [{ value: 9 }] }],
-            sighting: { index: 0, targetCode: 'A5', subtotal: 5, shots: [{ value: 5 }] },
+            series: [{ index: 1, targetType: 'A10', subtotal: 9, shots: [{ value: 9 }] }],
+            sighting: { index: 0, targetType: 'A5', subtotal: 5, shots: [{ value: 5 }] },
         }));
 
         assert.equal(groups.length, 1);
@@ -235,16 +235,27 @@ describe('shotGroups', () => {
 
     test('carries the last shot\'s fine value, null when the series has none', () => {
         const groups = shotGroups(withSeries([
-            { index: 1, targetCode: 'A10', subtotal: 19, shots: [{ value: 9, fineValue: 94 }, { value: 10, fineValue: 102 }] },
-            { index: 2, targetCode: 'A10', subtotal: 0, shots: [] },
+            { index: 1, targetType: 'A10', subtotal: 19, shots: [{ value: 9, fineValue: 94 }, { value: 10, fineValue: 102 }] },
+            { index: 2, targetType: 'A10', subtotal: 0, shots: [] },
         ]));
         assert.equal(groups[0].lastFineValue, 102);
         assert.equal(groups[1].lastFineValue, null);
     });
 
+    test('a 100er series drops its fine values, which only repeat the ring value', () => {
+        const groups = shotGroups(withSeries([
+            { index: 1, valuation: 100, targetType: 'A100', subtotal: 97, bestFineValue: 97, shots: [{ value: 97, fineValue: 97 }] },
+            { index: 2, valuation: 10, targetType: 'A10', subtotal: 9, bestFineValue: 94, shots: [{ value: 9, fineValue: 94 }] },
+        ]));
+        assert.equal(groups[0].bestFineValue, null);
+        assert.equal(groups[0].lastFineValue, null);
+        assert.equal(groups[1].bestFineValue, 94);
+        assert.equal(groups[1].lastFineValue, 94);
+    });
+
     test('a missing best fine value stays null rather than rendering as 0', () => {
         const groups = shotGroups(withSeries([
-            { index: 1, targetCode: 'A10', subtotal: 0, bestFineValue: null, shots: [{ value: 0 }] },
+            { index: 1, targetType: 'A10', subtotal: 0, bestFineValue: null, shots: [{ value: 0 }] },
         ]));
         assert.equal(groups[0].bestFineValue, null);
     });
@@ -252,7 +263,7 @@ describe('shotGroups', () => {
 
 describe('shotGroups shot entries', () => {
     const shotsOf = (shots) => shotGroups(program({
-        series: [{ index: 1, targetCode: 'A10', subtotal: 19, shots }],
+        series: [{ index: 1, targetType: 'A10', subtotal: 19, shots }],
     }))[0].shots;
 
     test('each shot carries its text and the raw sector for the ring', () => {
@@ -281,7 +292,7 @@ describe('shotGroups shot entries', () => {
     test('a missing hitSector becomes null rather than undefined', () => {
         // The renderer decides "no ring" on === null, so undefined must not leak through.
         const groups = shotGroups(program({
-            series: [{ index: 1, targetCode: 'A10', subtotal: 9, shots: [{ value: 9 }] }],
+            series: [{ index: 1, targetType: 'A10', subtotal: 9, shots: [{ value: 9 }] }],
         }));
 
         assert.equal(groups[0].shots[0].sector, null);
@@ -295,24 +306,24 @@ describe('programLabel', () => {
 
     test('drops the empty parenthesis when there is no context at all', () => {
         assert.equal(
-            programLabel({ name: 'Feldschiessen', startedAt: null, lane: null }),
+            programLabel({ targetProgram: 'Feldschiessen', startedAt: null, lane: null }),
             'Feldschiessen');
     });
 
     test('keeps the line when the time is unusable', () => {
         assert.equal(
-            programLabel({ name: 'Feldschiessen', startedAt: 'nonsense', lane: 3 }),
+            programLabel({ targetProgram: 'Feldschiessen', startedAt: 'nonsense', lane: 3 }),
             'Feldschiessen (L3)');
     });
 
     test('keeps the time when the line is missing', () => {
         assert.equal(
-            programLabel({ name: 'Feldschiessen', startedAt: '2026-07-08T09:05:00+02:00' }),
+            programLabel({ targetProgram: 'Feldschiessen', startedAt: '2026-07-08T09:05:00+02:00' }),
             'Feldschiessen (09:05)');
     });
 
     test('line 0 is a real line, not a missing one', () => {
-        assert.match(programLabel({ name: 'X', lane: 0 }), /L0/);
+        assert.match(programLabel({ targetProgram: 'X', lane: 0 }), /L0/);
     });
 });
 
@@ -337,7 +348,7 @@ describe('tickerEntry', () => {
 
     test('drops context that is not there instead of leaving empty brackets', () => {
         assert.equal(
-            tickerEntry({ name: '', startedAt: null, lane: null, total: { value: 7 }, shooter: shooter() }, t),
+            tickerEntry({ targetProgram: '', startedAt: null, lane: null, total: { value: 7 }, shooter: shooter() }, t),
             'Hans Muster: 7');
     });
 });

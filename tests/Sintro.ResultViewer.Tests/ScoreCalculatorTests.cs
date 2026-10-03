@@ -11,9 +11,9 @@ public class ScoreCalculatorTests
     private static ShotRow Shot(
         int shotId, int shotNr, int primary, int shotGroup,
         int shotType = 1, int totalType = 0, int mouche = 0, int hitPosition = 3,
-        string? shotTime = "20:46:12.55", int secondary = 0) =>
+        string? shotTime = "20:46:12.55", int secondary = 0, int externalNumber = 0) =>
         new(shotId, 1, shotNr, primary, secondary, hitPosition, shotType, shotTime,
-            mouche, 39.0, 129.0, totalType, shotGroup);
+            mouche, 39.0, 129.0, totalType, shotGroup, externalNumber);
 
     private static TargetInfoRow Target(int shotGroup, int valuation, int id = 1, int targetType = 0) =>
         new(id, 1, shotGroup, valuation, targetType);
@@ -256,32 +256,42 @@ public class ScoreCalculatorTests
     [InlineData(0, 100, "A100")]
     [InlineData(1, 4, "B4")]
     [InlineData(1, 100, "B100")]
-    public void targetCodeCombinesTheTargetLetterAndTheRingScale(int targetType, int valuation, string expected)
+    public void targetTypeCombinesTheTargetLetterAndTheRingScale(int targetType, int valuation, string expected)
     {
         // These are exactly the codes operators use in program names ("A10-EF6-SF4").
         var score = Calculate([Shot(1, 1, 9, 1)], [Target(1, valuation, targetType: targetType)]);
-        Assert.Equal(expected, score.Series[0].TargetCode);
+        Assert.Equal(expected, score.Series[0].TargetType);
     }
 
     [Fact]
     public void theSauSilhouetteIsItsOwnTarget()
     {
         var score = Calculate([Shot(1, 1, 9, 1)], [Target(1, 10, targetType: 3)]);
-        Assert.Equal("S10", score.Series[0].TargetCode);
+        Assert.Equal("S10", score.Series[0].TargetType);
     }
 
     [Fact]
     public void anUnknownTargetTypeIsMarkedRatherThanGuessed()
     {
         var score = Calculate([Shot(1, 1, 9, 1)], [Target(1, 10, targetType: 42)]);
-        Assert.Equal("?10", score.Series[0].TargetCode);
+        Assert.Equal("?10", score.Series[0].TargetType);
     }
 
     [Fact]
     public void aSeriesWithoutTargetInfoStillGetsAReadableCode()
     {
         var score = Calculate([Shot(1, 1, 9, 1)], []);
-        Assert.Equal("??", score.Series[0].TargetCode);
+        Assert.Equal("??", score.Series[0].TargetType);
+    }
+
+    [Fact]
+    public void matchCodeIsNullWhenTheDeviceStoresZero()
+    {
+        var shots = new[] { Shot(1, 1, 9, 1), Shot(2, 2, 8, 1, externalNumber: 21) };
+        var score = Calculate(shots, [Target(1, 10)]);
+
+        Assert.Null(score.Series[0].Shots[0].MatchCode);
+        Assert.Equal(21, score.Series[0].Shots[1].MatchCode);
     }
 
     [Fact]

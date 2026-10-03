@@ -28,7 +28,7 @@ One item is one *program*: one shooter's pass at the target, a "Passe". Newest f
 |---|---|
 | `from`, `to` | Date window, `YYYY-MM-DD`, inclusive. **Default: today only.** |
 | `state` | `active` (on a line now), `finished` (end total written), `abandoned` (neither) |
-| `number`, `name` | Program number; program name contains text |
+| `targetCode`, `targetProgram` | Program number on the device; program name contains text |
 | `license` | Shooter's licence number, leading zeros optional |
 | `lane` | Line number |
 | `withoutResult` | `true` also returns passes with no counting shots. Default `false` |
@@ -45,8 +45,8 @@ curl -H "Authorization: Bearer $TOKEN" \
   "items": [
     {
       "id": 2000,
-      "number": 31,
-      "name": "Hirssimatch Vorrunde",
+      "targetCode": 31,
+      "targetProgram": "Hirssimatch Vorrunde",
       "lane": 6,
       "startedAt": "2026-07-08T20:45:54+02:00",
       "finishedAt": "2026-07-08T20:46:51.89+02:00",
@@ -68,12 +68,12 @@ curl -H "Authorization: Bearer $TOKEN" \
         {
           "index": 1,
           "valuation": 5,
-          "targetCode": "A5",
+          "targetType": "A5",
           "shotCount": 4,
           "subtotal": 14,
           "bestFineValue": 74,
           "shots": [
-            { "number": 1, "value": 4, "fineValue": 74, "mouche": false, "hitSector": 1,
+            { "number": 1, "matchCode": 12, "value": 4, "fineValue": 74, "mouche": false, "hitSector": 1,
               "x": 39, "y": 129, "at": "2026-07-08T20:46:12.55+02:00" }
           ]
         }
@@ -95,7 +95,9 @@ curl -H "Authorization: Bearer $TOKEN" \
 | `total` | Sum of all counting shots. `null` when the series used different ring scales (`totalUnavailable: "mixedValuation"`) or a scale is unknown (`"unknownValuation"`); use each series' `subtotal` then |
 | `total.valuation` | Ring scale: `5`, `10`, `100`, ... |
 | `shotValues` | Counting-shot ring values in firing order, sighting shots excluded |
-| `series` | Counting shots grouped by stage. `targetCode` is target letter plus scale: `A10`, `B4`, `S10` (Sau). `bestFineValue` is the best tenth-value among hits |
+| `targetCode`, `targetProgram` | The program number and name as the operator set them on the device. Free text, not a key: operators rename programs |
+| `series` | Counting shots grouped by stage. `targetType` is target letter plus scale: `A10`, `B4`, `S10` (Sau). `bestFineValue` is the best tenth-value among hits |
+| `shots[].matchCode` | The event match (Stich) the operator entered for the pass, stored by the device on every shot. `null` outside events. It is independent of `targetCode`: one program is shot under several match codes |
 | `shots[].fineValue` | Tenth-ring value (`74` = 7.4). `mouche`: centre hit. `hitSector`: `1` is twelve o'clock, clockwise in 45° steps, `0` centre, `null` unknown. `x`, `y`: device coordinates |
 | `sighting` | Probe series, same shape as `series`, one per stage. Never counted in `total` |
 | `startedAt`, `finishedAt`, `at` | ISO 8601 with the range's UTC offset. `finishedAt` is `null` until the device writes the end total |
@@ -142,7 +144,7 @@ device prunes its oldest passes.
 | `GET /shooters?q=&club=` | Registered shooters, paged. `q` matches name or licence |
 | `GET /shooters/{license}` | Every shooter on that licence plus their passes (paged with `cursor`, `limit`, `order`) |
 | `GET /clubs?q=` | The Swiss club register as held by the device, paged |
-| `GET /program-catalog` | Distinct `(number, name)` pairs with counts; operators rename programs freely |
+| `GET /program-catalog` | Distinct `(targetCode, targetProgram)` pairs with counts; operators rename programs freely |
 | `GET /live` | Every line with the pass currently on it, `currentProgram: null` when free |
 | `GET /health` | `{ databaseReachable, today, liveClients, publicExposure }`, no token needed |
 

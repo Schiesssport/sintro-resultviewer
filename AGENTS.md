@@ -4,7 +4,7 @@ Blueprint for coding agents. Keep in sync; max 10 000 chars.
 
 ## Rules
 
-Non-negotiable; they override everything else.
+Non-negotiable.
 
 1. **Always read a file before editing it** — never edit from memory.
 2. **No real personal data anywhere.** `.db/` is gitignored and stays so; device exports hold real
@@ -86,10 +86,9 @@ shared, so v3 is a new folder plus one `app.MapV3()` line. **v1 is the legacy Gr
 
 Code is **English**; UI strings are **German** (default) and French.
 
-A row of `dbo.Programs` is one shooter's pass at the target: a **`program`** in code and API (1:1
-with the table), a **"Passe"** in the UI; the C# type is `ShootingProgram` only because `Program` is
-the entry point. **Never call it a `match`**: in OpenRangeOffice that is a *Stich* in the
-registration sense, and the two systems exchange data.
+A row of `dbo.Programs` is one shooter's pass at the target: a **`program`** in code and API, a
+**"Passe"** in the UI; the C# type is `ShootingProgram` because `Program` is the entry point.
+**Never call it a `match`**: a Stich in OpenRangeOffice, which `matchCode` names.
 
 ## Mapping rules you must not undo
 
@@ -105,7 +104,8 @@ The integration tests assert the resulting counts.
 | `Shooters.StartNr` **is the licence number**, no length cap | Six digits, zero-padded; 7-9 digits planned |
 | `shooter: null` is normal | Most passes are anonymous |
 | Parse `StartTime` as `dd.MM.yyyy-HH:mm:ss`, emit ISO 8601 | Day-first text; its order is meaningless |
-| `(number, name)` is free text, not a key | Operators rename programs |
+| `targetCode`/`targetProgram` = `Programs.Number`/`Name`, free text | Operators rename programs |
+| `matchCode` = `Shots.ExternalNumber`, `0` → `null` | The event Stich, per shot |
 | `TargetType` is the Scheibe: `0`=A, `1`=B, `3`=S (Sau) | Matches the A/B prefixes in program names |
 | `hitSector` 1 is twelve o'clock, **clockwise** in 45° steps | Derived from the mean `atan2(y,x)` per sector |
 | Nulls are serialized, never omitted | `shooter`/`currentProgram` null are documented states |

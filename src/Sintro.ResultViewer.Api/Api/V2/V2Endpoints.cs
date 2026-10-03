@@ -84,8 +84,9 @@ public static class V2Endpoints
                 An unrecognised value for either is answered with 400 rather than ignored, so a
                 typo cannot quietly widen what you receive.
 
-                Each series carries a targetCode such as A10 or B4 — the target letter plus the
-                ring scale, the same notation used in program names. Shots carry hitSector: 1 is
+                Each series carries a targetType such as A10 or B4 — the target letter plus the
+                ring scale, the same notation used in program names. Shots carry matchCode, the
+                event match the operator entered for the pass (null outside events), and hitSector: 1 is
                 twelve o'clock and the numbers run clockwise in 45 degree steps, 0 is a centre
                 hit, and null means the device reported no sector.
 
@@ -141,12 +142,12 @@ public static class V2Endpoints
 
         api.MapGet("/program-catalog", ListCatalog)
            .WithTags(TagReference)
-           .WithSummary("Distinct (number, name) pairs present, with counts")
+           .WithSummary("Distinct (targetCode, targetProgram) pairs present, with counts")
            .WithDescription("""
                 Not a lookup table and not paged. The operator renames programs freely, so one
-                number can appear under several names. Filter /programs by number and/or name
-                using the pairs listed here. lastStartedAt is when a program of that pair was
-                last started.
+                targetCode can appear under several targetProgram names. Filter /programs by
+                targetCode and/or targetProgram using the pairs listed here. lastStartedAt is when
+                a program of that pair was last started.
                 """);
     }
 
@@ -191,8 +192,8 @@ public static class V2Endpoints
         IOptions<SintroOptions> options,
         CancellationToken token,
         [FromQuery] string? state = null,
-        [FromQuery] int? number = null,
-        [FromQuery] string? name = null,
+        [FromQuery] int? targetCode = null,
+        [FromQuery] string? targetProgram = null,
         [FromQuery] string? license = null,
         [FromQuery] int? lane = null,
         [FromQuery] DateOnly? from = null,
@@ -211,8 +212,8 @@ public static class V2Endpoints
         var filter = new ProgramFilter
         {
             State = parsedState,
-            Number = number,
-            Name = name,
+            TargetCode = targetCode,
+            TargetProgram = targetProgram,
             License = license,
             Lane = lane,
             From = explicitWindow ? from : clock.Today,

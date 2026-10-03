@@ -32,7 +32,8 @@ a synonym for something already listed.
 | English (code & API) | German (UI) | In the device DB | Notes |
 |---|---|---|---|
 | program | Passe | `Programs` (one row) | One shooter shooting one program on one line, once |
-| program number | Programmnummer | `Programs.Number` | Operator-assigned; not a stable identifier |
+| program number | Programmnummer | `Programs.Number` | Operator-assigned; not a stable identifier. API: `targetCode`, with `Programs.Name` as `targetProgram` |
+| match code | Stich-Nummer | `Shots.ExternalNumber` | The event match the operator enters in contest mode; `0` = none. API: `matchCode` per shot |
 | line | Linie | `Lanes.Number`, `Programs.LaneNr` | A firing point. Count is site-specific |
 | shooter | Schütze | `Shooters` | Optional — most passes have none |
 | club | Verein | `Club` | Swiss club register, numbered `1.01.0.01.005` |
@@ -203,7 +204,8 @@ Irrelevant to results, and unused here.
 | `TimeSinceNewYear` | Centiseconds since 1 January |
 | `StartNr` | **Do not join on this.** Nominally the shooter's number, but it is zero on almost every row and rarely matches the pass's shooter. Always go `Shots.ProgramID → Programs.ShooterID`. **TODO:** possibly populated only in *ContestMode* — worth checking before assuming it is useless |
 | `TargetType` | A `varchar`, unrelated to `Targetinformation.TargetType`, and not used |
-| `GunType`, `ShotPosition`, `InsDel`, `InTime`, `LogEvent`, `LogType`, `ExternalNumber` | Device internals. Not interpreted |
+| `ExternalNumber` | **The match code** (Stich-Nummer) the operator enters in contest mode, written to every shot of the pass. `0` means none: training days carry `0` throughout, event days carry it on the counting **and** sighting shots, while the `9999` marker row has been seen with `0`. Constant within a pass, and independent of `Programs.Number`: one program is shot under several match codes. Exposed as `matchCode` per shot, `0` → `null` |
+| `GunType`, `ShotPosition`, `InsDel`, `InTime`, `LogEvent`, `LogType` | Device internals. Not interpreted |
 
 ### `Targetinformation`
 
@@ -213,7 +215,7 @@ Irrelevant to results, and unused here.
 | `TargetType` | The target: `0` = A, `1` = B, `3` = Sau silhouette. Confirmed by a clean correlation with the `A…`/`B…` prefixes operators put in program names. Mapped in `Data/TargetKind.cs`, the single place to extend |
 
 Target and valuation combine into the notation the sport already uses — `A10`, `B4`, `A100`,
-`S10` — which is what the API exposes as `targetCode`.
+`S10` — which is what the API exposes as `targetType` on each series.
 
 ### `Shooters` / `Club`
 
@@ -227,7 +229,9 @@ Target and valuation combine into the notation the sport already uses — `A10`,
 
 One row per firing point. `ProgramID` is the pass currently loaded on it, or null. The row persists
 after a pass ends, so "on a line" does not mean "being shot" — see how the viewer derives
-availability in `wwwroot/core/lanes.js`.
+availability in `wwwroot/core/lanes.js`. A pass left unfinished keeps its line: shots fired days later land
+under the old `ProgramID`, so its `finishedAt` and shot order come out wrong. Seen only in testing;
+a shooter ends the pass in normal use, so the API does not correct for it.
 
 ## Consequences for the API
 
@@ -243,8 +247,8 @@ availability in `wwwroot/core/lanes.js`.
 
 Contributions very welcome — each of these needs someone with device access to check.
 
-- **ContestMode.** What does it change? Does it fill `Programs.ContestShooterName`, and does it
-  populate `Shots.StartNr`? Both would be useful if reliable.
+- **ContestMode.** Fills `Shots.ExternalNumber` (see above). It does **not** fill
+  `Programs.ContestShooterName` or `Shots.StartNr`; both stayed empty across an event day.
 - **`FireMethod`.** Confirm `0` sighting / `1` precision / `2` rapid-fire, ideally against a program
   whose name states its stages (`A10-EF6-SF4` = six precision, four rapid-fire). Once confirmed, the
   viewer should show the stage.

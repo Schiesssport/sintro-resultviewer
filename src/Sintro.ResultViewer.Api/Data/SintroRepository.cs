@@ -45,9 +45,9 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
     private const string ProgramWhere = """
         WHERE   (@from        IS NULL OR CONVERT(date, e.StartedAt) >= @from)
           AND   (@to          IS NULL OR CONVERT(date, e.StartedAt) <= @to)
-          AND   (@number      IS NULL OR e.Number = @number)
+          AND   (@targetCode  IS NULL OR e.Number = @targetCode)
           AND   (@lane        IS NULL OR e.LaneNr = @lane)
-          AND   (@name        IS NULL OR e.Name LIKE @name ESCAPE '\')
+          AND   (@targetProgram IS NULL OR e.Name LIKE @targetProgram ESCAPE '\')
           AND   (@activeOnly  = 0 OR e.IsActive = 1)
           AND   (@finishedOnly = 0 OR e.EndShotId IS NOT NULL)
           AND   (@abandonedOnly = 0 OR (e.EndShotId IS NULL AND e.IsActive = 0))
@@ -105,9 +105,9 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         var parameters = new DynamicParameters();
         parameters.Add("from", filter.From?.ToDateTime(TimeOnly.MinValue).Date);
         parameters.Add("to", filter.To?.ToDateTime(TimeOnly.MinValue).Date);
-        parameters.Add("number", filter.Number);
+        parameters.Add("targetCode", filter.TargetCode);
         parameters.Add("lane", filter.Lane);
-        parameters.Add("name", ContainsPattern(filter.Name));
+        parameters.Add("targetProgram", ContainsPattern(filter.TargetProgram));
         parameters.Add("activeOnly", filter.State == ProgramState.Active ? 1 : 0);
         parameters.Add("finishedOnly", filter.State == ProgramState.Finished ? 1 : 0);
         parameters.Add("abandonedOnly", filter.State == ProgramState.Abandoned ? 1 : 0);
@@ -179,7 +179,7 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
     {
         var rows = await connection.QueryAsync<ShotRow>(new CommandDefinition("""
             SELECT  ShotID, ProgramID, ShotNr, PrimaryResult, SecondaryResult, HitPosition,
-                    ShotType, ShotTime, Mouche, X, Y, TotalType, ShotGroup
+                    ShotType, ShotTime, Mouche, X, Y, TotalType, ShotGroup, ExternalNumber
             FROM    dbo.Shots
             WHERE   ProgramID IN @programIds
             ORDER BY ShotID
@@ -224,8 +224,8 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
 
         return new ShootingProgram(
             Id: row.ProgramID,
-            Number: row.Number,
-            Name: row.Name,
+            TargetCode: row.Number,
+            TargetProgram: row.Name,
             Lane: row.LaneNr,
             StartedAt: clock.ToOffset(start),
             FinishedAt: FinishedAt(start, shots),

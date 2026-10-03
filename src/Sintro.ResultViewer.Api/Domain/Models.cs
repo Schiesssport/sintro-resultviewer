@@ -34,6 +34,8 @@ public sealed record Shooter(
 
 public sealed record Shot(
     int Number,
+    // Shots.ExternalNumber: the event match (Stich) the operator entered for the pass; 0 on the device means none.
+    int? MatchCode,
     int Value,
     int FineValue,
     bool Mouche,
@@ -47,7 +49,7 @@ public sealed record ShotSeries(
     int Index,
     int? Valuation,
     // Target letter plus ring scale, e.g. "A10" or "B4", the notation used in program names.
-    string TargetCode,
+    string TargetType,
     int ShotCount,
     int Subtotal,
     // Highest fine value (SecondaryResult, tenths) among the hits; misses report 0 and are excluded so they cannot win it.
@@ -59,8 +61,9 @@ public sealed record ProgramTotal(int Value, int Valuation);
 /// <summary>One row of dbo.Programs, a "Passe"; named ShootingProgram because <c>Program</c> is the entry point, exposed as the <c>program</c> resource.</summary>
 public sealed record ShootingProgram(
     int Id,
-    int Number,
-    string Name,
+    // Programs.Number and Programs.Name: operator-assigned free text, not a key.
+    int TargetCode,
+    string TargetProgram,
     int Lane,
     DateTimeOffset StartedAt,
     DateTimeOffset? FinishedAt,
@@ -78,4 +81,4 @@ public sealed record ShootingProgram(
 
 public sealed record LaneStatus(int Number, ShootingProgram? CurrentProgram);
 
-public sealed record ProgramCatalogEntry(int Number, string Name, int ProgramCount, DateTimeOffset? LastStartedAt);
+public sealed record ProgramCatalogEntry(int TargetCode, string TargetProgram, int ProgramCount, DateTimeOffset? LastStartedAt);
