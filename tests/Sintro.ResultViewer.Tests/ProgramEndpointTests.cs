@@ -291,6 +291,39 @@ public class ProgramEndpointTests(ApiFixture fixture)
     }
 
     [RequiresDatabaseFact]
+    public async Task listFiltersUnionTheirValuesAndRefuseNonNumbers()
+    {
+        var all = await AllProgramsAsync();
+        var codes = all.Items.Select(program => program.TargetCode).Distinct().Take(2).ToList();
+        if (codes.Count < 2) return;
+
+        var first = await AllProgramsAsync($"&targetCode={codes[0]}");
+        var second = await AllProgramsAsync($"&targetCode={codes[1]}");
+        var both = await AllProgramsAsync($"&targetCode={codes[0]},{codes[1]}");
+
+        Assert.Equal(first.Items.Count + second.Items.Count, both.Items.Count);
+        Assert.All(both.Items, program => Assert.Contains(program.TargetCode, codes));
+
+        var response = await Client().GetAsync($"/api/v2/programs?{ApiFixture.WholeRange}&targetCode=41,abc");
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [RequiresDatabaseFact]
+    public async Task theMatchCodeFilterKeepsOnlyPassesShotUnderThatCode()
+    {
+        var all = await AllProgramsAsync();
+        var code = all.Items.SelectMany(program => program.Series).SelectMany(series => series.Shots)
+            .Select(shot => shot.MatchCode).FirstOrDefault(value => value is not null);
+        if (code is null) return;
+
+        var filtered = await AllProgramsAsync($"&matchCode={code}");
+
+        Assert.NotEmpty(filtered.Items);
+        Assert.All(filtered.Items, program =>
+            Assert.Contains(program.Series.Concat(program.Sighting).SelectMany(series => series.Shots), shot => shot.MatchCode == code));
+    }
+
+    [RequiresDatabaseFact]
     public async Task theLicenceFilterIgnoresLeadingZerosAndRejectsTheUnknown()
     {
         var licence = await fixture.AnyLicenceAsync();

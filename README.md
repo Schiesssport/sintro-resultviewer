@@ -13,8 +13,8 @@ Free and open source, for Swiss shooting clubs.
 ## Für Anwender:innen
 
 **Sintro Resultviewer** zeigt die Resultate der Trefferanzeige im Browser: oben alle Linien mit
-der Passe, die gerade geschossen wird, darunter die zuletzt beendeten – mit Schütze, Resultat und
-allen Einzelschüssen. Bei den laufenden Passen zeigt ein Ring um jeden Schuss, in welchem der acht
+des Stichs, der gerade geschossen wird, darunter die zuletzt beendeten – mit Schütze, Resultat und
+allen Einzelschüssen. Bei den laufenden Stichen zeigt ein Ring um jeden Schuss, in welchem der acht
 Sektoren er sitzt.
 
 Für Fernseher und Beamer gibt es eigene Adressen ohne Bedienelemente, als Lesezeichen speicherbar:
@@ -29,8 +29,8 @@ Weil auf einem Fernseher nicht gescrollt werden kann, laufen die Resultate, die 
 Bildschirm passen, als Laufschrift durch. Beides – Lesezeit pro Eintrag und Anzahl – lässt sich im
 Vollbild-Dialog einstellen und ist in der kopierten Adresse enthalten.
 
-Eine Linie gilt wieder als frei, wenn die Passe abgeschlossen ist oder eine Weile nicht mehr
-geschossen wurde. Wird nach einer Pause weitergeschossen, erscheint die Passe mit allen bisherigen
+Eine Linie gilt wieder als frei, wenn der Stich abgeschlossen ist oder eine Weile nicht mehr
+geschossen wurde. Wird nach einer Pause weitergeschossen, erscheint der Stich mit allen bisherigen
 Schüssen wieder.
 
 Die Ansicht liest ausschliesslich – sie kann in der Anlage nichts verändern. Sprachen: **Deutsch**
@@ -110,7 +110,7 @@ with [`docs/api.md`](docs/api.md): access setup, the results list field by field
 | Endpoint | Returns |
 |---|---|
 | `GET /live` | Every line and the pass currently on it. The same URL upgrades to a **WebSocket** pushing changes |
-| `GET /programs` | Passes, newest first. `state`, `targetCode`, `targetProgram`, `license`, `lane`, `from`, `to`, `withoutResult`, `order`, `cursor`, `limit` |
+| `GET /programs` | Passes, newest first. `state`, `targetCode`, `targetProgram`, `matchCode`, `license`, `lane`, `from`, `to`, `withoutResult`, `order`, `cursor`, `limit` |
 | `GET /programs/{id}` | One pass with all series and shots |
 | `GET /shooters`, `/shooters/{license}` | Registered shooters; licence lookup with their passes (also cursor-paged) |
 | `GET /clubs` | The Swiss club register held by the device |

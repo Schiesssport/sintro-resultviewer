@@ -84,6 +84,9 @@ public static class V2Endpoints
                 An unrecognised value for either is answered with 400 rather than ignored, so a
                 typo cannot quietly widen what you receive.
 
+                targetCode, matchCode and license each take one value or a comma-separated list;
+                a pass matches when any value fits. matchCode is looked up on the pass's shots.
+
                 Each series carries a targetType such as A10 or B4 — the target letter plus the
                 ring scale, the same notation used in program names. Shots carry matchCode, the
                 event match the operator entered for the pass (null outside events), and hitSector: 1 is
@@ -192,8 +195,9 @@ public static class V2Endpoints
         IOptions<SintroOptions> options,
         CancellationToken token,
         [FromQuery] string? state = null,
-        [FromQuery] int? targetCode = null,
+        [FromQuery] string? targetCode = null,
         [FromQuery] string? targetProgram = null,
+        [FromQuery] string? matchCode = null,
         [FromQuery] string? license = null,
         [FromQuery] int? lane = null,
         [FromQuery] DateOnly? from = null,
@@ -205,6 +209,8 @@ public static class V2Endpoints
     {
         if (ParseState(state, out var parsedState) is { } stateError) return TypedResults.BadRequest(stateError);
         if (ParseOrder(order, out var ascending) is { } orderError) return TypedResults.BadRequest(orderError);
+        if (ParseIntList("targetCode", targetCode, out var targetCodes) is { } targetError) return TypedResults.BadRequest(targetError);
+        if (ParseIntList("matchCode", matchCode, out var matchCodes) is { } matchError) return TypedResults.BadRequest(matchError);
 
         // Today only unless a window or a cursor is given: the cursor is the position, and a stored one must not lose yesterday's late passes.
         var explicitWindow = from is not null || to is not null || !string.IsNullOrWhiteSpace(cursor);
@@ -212,9 +218,10 @@ public static class V2Endpoints
         var filter = new ProgramFilter
         {
             State = parsedState,
-            TargetCode = targetCode,
+            TargetCodes = targetCodes,
             TargetProgram = targetProgram,
-            License = license,
+            MatchCodes = matchCodes,
+            Licenses = SplitList(license),
             Lane = lane,
             From = explicitWindow ? from : clock.Today,
             To = explicitWindow ? to : clock.Today,
@@ -265,7 +272,7 @@ public static class V2Endpoints
         var programs = await repository.ListProgramsAsync(
             new ProgramFilter
             {
-                License = license,
+                Licenses = [license],
                 WithoutResult = true,
                 Ascending = ascending,
                 Cursor = cursor,
@@ -346,6 +353,22 @@ public static class V2Endpoints
         return parsed is null
             ? new ApiError("invalid_state", $"Unknown state '{state}'. Expected one of: active, finished, abandoned.")
             : null;
+    }
+
+    private static List<string> SplitList(string? raw) =>
+        (raw ?? string.Empty).Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+
+    // Comma-separated integers; a value that is not one is refused rather than dropped.
+    private static ApiError? ParseIntList(string name, string? raw, out List<int> values)
+    {
+        values = [];
+        foreach (var part in SplitList(raw))
+        {
+            if (!int.TryParse(part, out var value))
+                return new ApiError("invalid_filter", $"{name} must be a number or a comma-separated list of numbers, got '{part}'.");
+            values.Add(value);
+        }
+        return null;
     }
 
     private static ApiError? ParseOrder(string? order, out bool ascending)

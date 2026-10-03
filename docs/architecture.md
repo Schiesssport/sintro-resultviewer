@@ -121,6 +121,10 @@ read across a room. They are real routes so each can be bookmarked and pointed a
 server returns the same page for the three of them and the client reads `location.pathname`. Any
 other path under `/fullscreen/` is a 404.
 
+`/browse` is the result browser: a date window plus comma-separated programme number, match code and
+licence filters, one row per pass, series or shot, sortable in the browser. Its state lives in page
+memory only, so several tabs can hold different filters.
+
 Two consequences worth knowing before editing the HTML:
 
 - **Asset URLs must be absolute** (`/app.js`, not `app.js`). Under `/fullscreen/live` a relative

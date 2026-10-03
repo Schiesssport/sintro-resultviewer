@@ -63,6 +63,9 @@ foreach (var route in new[] { "/", "/index.html", "/fullscreen/live", "/fullscre
 foreach (var route in new[] { "/docs", "/docs.html" })
     app.MapGet(route, (HttpContext context, ViewerPage page) => RenderPage(context, page, "docs.html")).ExcludeFromDescription();
 
+foreach (var route in new[] { "/browse", "/browse.html" })
+    app.MapGet(route, (HttpContext context, ViewerPage page) => RenderPage(context, page, "browse.html")).ExcludeFromDescription();
+
 app.UseStaticFiles();
 
 // Only after binding is a framework-chosen port known.

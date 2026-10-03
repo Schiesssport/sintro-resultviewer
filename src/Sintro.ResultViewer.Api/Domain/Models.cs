@@ -58,7 +58,7 @@ public sealed record ShotSeries(
 
 public sealed record ProgramTotal(int Value, int Valuation);
 
-/// <summary>One row of dbo.Programs, a "Passe"; named ShootingProgram because <c>Program</c> is the entry point, exposed as the <c>program</c> resource.</summary>
+/// <summary>One row of dbo.Programs, a "Stich" in the UI; named ShootingProgram because <c>Program</c> is the entry point, exposed as the <c>program</c> resource.</summary>
 public sealed record ShootingProgram(
     int Id,
     // Programs.Number and Programs.Name: operator-assigned free text, not a key.

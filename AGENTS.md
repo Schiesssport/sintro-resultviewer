@@ -87,8 +87,8 @@ shared, so v3 is a new folder plus one `app.MapV3()` line. **v1 is the legacy Gr
 Code is **English**; UI strings are **German** (default) and French.
 
 A row of `dbo.Programs` is one shooter's pass at the target: a **`program`** in code and API, a
-**"Passe"** in the UI; the C# type is `ShootingProgram` because `Program` is the entry point.
-**Never call it a `match`**: a Stich in OpenRangeOffice, which `matchCode` names.
+**"Stich"** in the German UI (French "cible"); a **series** is a **"Passe"**. The C# type is
+`ShootingProgram` since `Program` is the entry point. **Never call it a `match`.**
 
 ## Mapping rules you must not undo
 

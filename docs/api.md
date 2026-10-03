@@ -28,8 +28,10 @@ One item is one *program*: one shooter's pass at the target, a "Passe". Newest f
 |---|---|
 | `from`, `to` | Date window, `YYYY-MM-DD`, inclusive. **Default: today only.** |
 | `state` | `active` (on a line now), `finished` (end total written), `abandoned` (neither) |
-| `targetCode`, `targetProgram` | Program number on the device; program name contains text |
-| `license` | Shooter's licence number, leading zeros optional |
+| `targetCode` | Program number on the device, one or a comma-separated list: `targetCode=41,44` |
+| `targetProgram` | Program name contains text |
+| `matchCode` | Passes with a shot carrying one of these match codes, comma-separated like `targetCode` |
+| `license` | Shooter's licence number, leading zeros optional; comma-separated for several shooters |
 | `lane` | Line number |
 | `withoutResult` | `true` also returns passes with no counting shots. Default `false` |
 | `order` | `desc` (default) or `asc`. With `state=finished` the list is in finishing order, otherwise in starting order |
@@ -171,7 +173,7 @@ Every non-2xx answer has the same body:
 
 | Status | `error` |
 |---|---|
-| 400 | `invalid_state`, `invalid_order`, `invalid_cursor` |
+| 400 | `invalid_state`, `invalid_order`, `invalid_filter`, `invalid_cursor` |
 | 401 | `unauthorized` |
 | 403 | `forbidden_network` |
 | 404 | `not_found` |

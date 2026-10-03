@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Resultate durchsuchen — Sintro Resultate</title>
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <!-- Mirrors --forest in tokens.css; a meta tag cannot read a CSS variable. -->
+    <meta name="theme-color" content="#213F37">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<div id="ui-wrapper">
+    <header class="app-header">
+        <img src="/icon.svg" alt="">
+        <h1 data-i18n="browse.title">Resultate durchsuchen</h1>
+        <div class="header-right">
+            <select id="language-select" data-i18n-aria-label="aria.language" aria-label="Sprache">
+                <option value="de" selected>DE</option>
+                <option value="fr">FR</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="card">
+        <form class="browse-filters" id="filters">
+            <label>
+                <span data-i18n="toolbar.date">Datum</span>
+                <span class="browse-range">
+                    <input type="date" id="from-input">
+                    <input type="date" id="to-input">
+                </span>
+            </label>
+            <label>
+                <span data-i18n="browse.targetCode">Programmnummer</span>
+                <input type="text" id="target-code-input" data-i18n-placeholder="browse.listHint" autocomplete="off">
+            </label>
+            <label>
+                <span data-i18n="browse.matchCode">Stichnummer</span>
+                <input type="text" id="match-code-input" data-i18n-placeholder="browse.listHint" autocomplete="off">
+            </label>
+            <label>
+                <span data-i18n="browse.license">Lizenz</span>
+                <input type="text" id="license-input" data-i18n-placeholder="browse.listHint" autocomplete="off">
+            </label>
+            <label>
+                <span data-i18n="browse.groupBy">Zeile pro</span>
+                <select id="group-select">
+                    <option value="program" data-i18n="browse.group.program">Stich</option>
+                    <option value="series" data-i18n="browse.group.series">Passe</option>
+                    <option value="shot" data-i18n="browse.group.shot">Schuss</option>
+                </select>
+            </label>
+            <label>
+                <span data-i18n="browse.detail">Detail</span>
+                <select id="detail-select">
+                    <option value="value" data-i18n="browse.detail.value">Wert</option>
+                    <option value="fineValue" data-i18n="browse.detail.fineValue">Zehntelwert</option>
+                </select>
+            </label>
+            <label>
+                <span data-i18n="browse.order">Reihenfolge</span>
+                <select id="order-select">
+                    <option value="time" data-i18n="browse.order.time">Zeitlich</option>
+                    <option value="value" data-i18n="browse.order.value">Bester zuerst</option>
+                </select>
+            </label>
+            <div class="browse-actions">
+                <button type="submit" class="btn-secondary" data-i18n="toolbar.reload">Aktualisieren</button>
+                <span id="result-count" class="result-count"></span>
+            </div>
+        </form>
+
+        <div class="table-scroll">
+            <table class="results browse">
+                <colgroup>
+                    <col class="cg-license">
+                    <col class="cg-shooter">
+                    <col class="cg-club">
+                    <col class="cg-code">
+                    <col class="cg-code">
+                    <col class="cg-total">
+                    <col class="cg-breakdown">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort="license"><span data-i18n="browse.license">Lizenz</span></th>
+                        <th class="sortable" data-sort="name"><span data-i18n="col.shooter">Schütze</span></th>
+                        <th class="sortable" data-sort="club"><span data-i18n="col.club">Verein</span></th>
+                        <th class="sortable" data-sort="targetCode"><span data-i18n="browse.targetCode">Programmnummer</span></th>
+                        <th class="sortable" data-sort="matchCode"><span data-i18n="browse.matchCode">Wettkampfnummer</span></th>
+                        <th class="sortable col-total" data-sort="total"><span data-i18n="col.total">Resultat</span></th>
+                        <th data-i18n="col.shots">Schüsse</th>
+                    </tr>
+                </thead>
+                <tbody id="results-body">
+                    <tr><td colspan="7" class="message" data-i18n="browse.loading"></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer class="app-footer">
+        <span data-i18n="footer.note"></span>
+        <a class="btn-secondary footer-api-link" href="/" data-i18n="app.title">Resultate</a>
+    </footer>
+</div>
+
+<script>window.SINTRO_TOKEN = "{{SESSION_TOKEN}}";</script>
+<script type="module" src="/browse.js"></script>
+</body>
+</html>

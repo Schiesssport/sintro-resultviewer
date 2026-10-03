@@ -13,7 +13,7 @@ const source = (file) => readFileSync(join(root, file), 'utf8');
 // Every key the markup and the DOM layer name literally; dynamic keys are listed by hand.
 const keysInUse = () => {
     const keys = new Set();
-    const files = ['app.js', 'docs.js', 'core/format.js', 'index.html', 'docs.html'];
+    const files = ['app.js', 'docs.js', 'browse.js', 'core/format.js', 'index.html', 'docs.html', 'browse.html'];
 
     for (const file of files) {
         const text = source(file);
@@ -82,11 +82,11 @@ describe('dictionaries', () => {
         }
     });
 
-    test('uses "Passe" vocabulary, not OpenRangeOffice\'s "Stich"', () => {
-        // A Stich is the competition a participant registers for, not one pass at the target.
+    test('a program is a "Stich" and a series a "Passe" in German', () => {
+        // Range vocabulary: the Stich is what a shooter shoots once, its series are Passen.
         const german = Object.values(TRANSLATIONS.de).join(' ');
+        assert.ok(/Stich/.test(german), 'expected the German UI to say "Stich"');
         assert.ok(german.includes('Passe'), 'expected the German UI to say "Passe"');
-        assert.ok(!/Stich/.test(german), 'the German UI must not say "Stich"');
     });
 
     test('every key the UI names exists, and every key that exists is named somewhere', () => {

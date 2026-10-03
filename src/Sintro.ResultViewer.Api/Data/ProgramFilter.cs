@@ -5,9 +5,11 @@ namespace Sintro.ResultViewer.Data;
 public sealed record ProgramFilter
 {
     public ProgramState? State { get; init; }
-    public int? TargetCode { get; init; }
+    public IReadOnlyList<int> TargetCodes { get; init; } = [];
     public string? TargetProgram { get; init; }
-    public string? License { get; init; }
+    // A pass matches when any real shot carries one of these codes; the device writes it per shot.
+    public IReadOnlyList<int> MatchCodes { get; init; } = [];
+    public IReadOnlyList<string> Licenses { get; init; } = [];
     public int? Lane { get; init; }
     public DateOnly? From { get; init; }
     public DateOnly? To { get; init; }

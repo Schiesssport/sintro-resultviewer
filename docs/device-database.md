@@ -31,14 +31,14 @@ a synonym for something already listed.
 
 | English (code & API) | German (UI) | In the device DB | Notes |
 |---|---|---|---|
-| program | Passe | `Programs` (one row) | One shooter shooting one program on one line, once |
+| program | Stich | `Programs` (one row) | One shooter shooting one program on one line, once |
 | program number | Programmnummer | `Programs.Number` | Operator-assigned; not a stable identifier. API: `targetCode`, with `Programs.Name` as `targetProgram` |
 | match code | Stich-Nummer | `Shots.ExternalNumber` | The event match the operator enters in contest mode; `0` = none. API: `matchCode` per shot |
 | line | Linie | `Lanes.Number`, `Programs.LaneNr` | A firing point. Count is site-specific |
 | shooter | Schütze | `Shooters` | Optional — most passes have none |
 | club | Verein | `Club` | Swiss club register, numbered `1.01.0.01.005` |
 | licence number | Lizenznummer | `Shooters.StartNr` | **Not** a start number, despite the column name |
-| series | Serie | `Shots.ShotGroup` | A block of shots that gets its own subtotal |
+| series | Passe | `Shots.ShotGroup` | A block of shots that gets its own subtotal |
 | sighting shot | Probeschuss | `Shots.ShotType = 0` | Never counts towards a total |
 | counting shot | Wertungsschuss | `Shots.ShotType = 1` | |
 | precision stage | Einzelfeuer (EF) | `Shots.FireMethod = 1` | See *Fire method*, unverified |

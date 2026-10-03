@@ -45,7 +45,10 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
     private const string ProgramWhere = """
         WHERE   (@from        IS NULL OR CONVERT(date, e.StartedAt) >= @from)
           AND   (@to          IS NULL OR CONVERT(date, e.StartedAt) <= @to)
-          AND   (@targetCode  IS NULL OR e.Number = @targetCode)
+          AND   (@anyTargetCode = 0 OR e.Number IN @targetCodes)
+          AND   (@anyMatchCode = 0 OR EXISTS (SELECT 1 FROM dbo.Shots s
+                                            WHERE s.ProgramID = e.ProgramID AND s.ShotNr <> 9999
+                                              AND s.ExternalNumber IN @matchCodes))
           AND   (@lane        IS NULL OR e.LaneNr = @lane)
           AND   (@targetProgram IS NULL OR e.Name LIKE @targetProgram ESCAPE '\')
           AND   (@activeOnly  = 0 OR e.IsActive = 1)
@@ -72,8 +75,8 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
     {
         await using var connection = Connect();
 
-        var licenses = filter.License is { Length: > 0 } ? await LicenseIndex.LoadAsync(connection, token) : null;
-        var shooterIds = licenses?.Resolve(filter.License) ?? [];
+        var licenses = filter.Licenses.Count > 0 ? await LicenseIndex.LoadAsync(connection, token) : null;
+        var shooterIds = filter.Licenses.SelectMany(license => licenses!.Resolve(license)).Distinct().ToList();
         // A licence matching nobody must return nothing; left to the SQL, @anyShooter = 0 would return everything.
         if (licenses is not null && shooterIds.Count == 0) return new CursorPage<ShootingProgram>([], null, false);
 
@@ -105,7 +108,10 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
         var parameters = new DynamicParameters();
         parameters.Add("from", filter.From?.ToDateTime(TimeOnly.MinValue).Date);
         parameters.Add("to", filter.To?.ToDateTime(TimeOnly.MinValue).Date);
-        parameters.Add("targetCode", filter.TargetCode);
+        parameters.Add("anyTargetCode", filter.TargetCodes.Count > 0 ? 1 : 0);
+        parameters.Add("targetCodes", filter.TargetCodes.Count > 0 ? filter.TargetCodes : [0]);
+        parameters.Add("anyMatchCode", filter.MatchCodes.Count > 0 ? 1 : 0);
+        parameters.Add("matchCodes", filter.MatchCodes.Count > 0 ? filter.MatchCodes : [0]);
         parameters.Add("lane", filter.Lane);
         parameters.Add("targetProgram", ContainsPattern(filter.TargetProgram));
         parameters.Add("activeOnly", filter.State == ProgramState.Active ? 1 : 0);
