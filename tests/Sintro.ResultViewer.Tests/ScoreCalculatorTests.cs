@@ -297,38 +297,6 @@ public class ScoreCalculatorTests
     }
 
     [Fact]
-    public void bestFineValueIsTheHighestTenthInTheSeries()
-    {
-        var shots = new[]
-        {
-            Shot(1, 1, 9, 1, secondary: 88),
-            Shot(2, 2, 10, 1, secondary: 97),
-            Shot(3, 3, 8, 1, secondary: 79),
-        };
-
-        var score = Calculate(shots, [Target(1, 10)]);
-        Assert.Equal(97, score.Series[0].BestFineValue);
-    }
-
-    [Fact]
-    public void missesDoNotWinBestFineValue()
-    {
-        // A miss reports a fine value of 0, which must not be treated as a score.
-        var score = Calculate(
-            [Shot(1, 1, 0, 1, secondary: 0), Shot(2, 2, 7, 1, secondary: 61)],
-            [Target(1, 10)]);
-
-        Assert.Equal(61, score.Series[0].BestFineValue);
-    }
-
-    [Fact]
-    public void aSeriesOfNothingButMissesHasNoBestFineValue()
-    {
-        var score = Calculate([Shot(1, 1, 0, 1, secondary: 0)], [Target(1, 10)]);
-        Assert.Null(score.Series[0].BestFineValue);
-    }
-
-    [Fact]
     public void seriesAreOrderedByGroupAndShotsByShotId()
     {
         // Rows arrive in arbitrary order; the device's ShotID is the firing order.
@@ -340,6 +308,6 @@ public class ScoreCalculatorTests
         var score = Calculate(shots, [Target(1, 10), Target(2, 10)]);
 
         Assert.Equal([8, 9, 6, 7], score.Series.SelectMany(series => series.Shots).Select(shot => shot.Value));
-        Assert.Equal([2, 2], score.Series.Select(series => series.FineValues.Count));
+        Assert.Equal([2, 2], score.Series.Select(series => series.Shots.Count));
     }
 }

@@ -36,8 +36,6 @@ public sealed record ShotSeries(
     string TargetType,
     int? Valuation,
     int Subtotal,
-    int? BestFineValue,
-    IReadOnlyList<int> FineValues,
     IReadOnlyList<Shot> Shots);
 
 /// <summary>The sum over every counting series of one target and ring scale; a pass that changes scale has several, never one number across scales.</summary>

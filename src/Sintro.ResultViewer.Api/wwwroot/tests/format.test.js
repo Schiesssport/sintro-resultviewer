@@ -223,8 +223,8 @@ describe('shotGroups', () => {
     test('one group per series, carrying code, shots and best fine value', () => {
         const groups = shotGroups(withSeries([
             {
-                valuation: 10, targetType: 'A10', subtotal: 19, bestFineValue: 96,
-                shots: [{ value: 9, innerTen: false }, { value: 10, innerTen: true }],
+                valuation: 10, targetType: 'A10', subtotal: 19,
+                shots: [{ value: 9, fineValue: 88, innerTen: false }, { value: 10, fineValue: 96, innerTen: true }],
             },
         ]));
 
@@ -277,8 +277,8 @@ describe('shotGroups', () => {
 
     test('a 100er series drops its fine values, which only repeat the ring value', () => {
         const groups = shotGroups(withSeries([
-            { valuation: 100, targetType: 'A100', subtotal: 97, bestFineValue: 97, shots: [{ value: 97, fineValue: 97 }] },
-            { valuation: 10, targetType: 'A10', subtotal: 9, bestFineValue: 94, shots: [{ value: 9, fineValue: 94 }] },
+            { valuation: 100, targetType: 'A100', subtotal: 97, shots: [{ value: 97, fineValue: 97 }] },
+            { valuation: 10, targetType: 'A10', subtotal: 9, shots: [{ value: 9, fineValue: 94 }] },
         ]));
         assert.equal(groups[0].bestFineValue, null);
         assert.equal(groups[0].lastFineValue, null);
@@ -286,11 +286,13 @@ describe('shotGroups', () => {
         assert.equal(groups[1].lastFineValue, 94);
     });
 
-    test('a missing best fine value stays null rather than rendering as 0', () => {
+    test('misses never win the best fine value, and only misses leave it null', () => {
         const groups = shotGroups(withSeries([
-            { targetType: 'A10', subtotal: 0, bestFineValue: null, shots: [{ value: 0 }] },
+            { targetType: 'A10', subtotal: 7, shots: [{ value: 0, fineValue: 0 }, { value: 7, fineValue: 61 }] },
+            { targetType: 'A10', subtotal: 0, shots: [{ value: 0, fineValue: 0 }] },
         ]));
-        assert.equal(groups[0].bestFineValue, null);
+        assert.equal(groups[0].bestFineValue, 61);
+        assert.equal(groups[1].bestFineValue, null);
     });
 });
 

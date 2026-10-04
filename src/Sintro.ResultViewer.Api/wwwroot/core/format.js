@@ -126,12 +126,18 @@ export const tickerEntry = (program, t) => {
 
 // An inner ten is not marked: on 5er and 4er targets a glyph in place of the single digit reads as a zero.
 // On a 100er target the fine value is the ring value itself, so showing it twice would only confuse.
+// A miss reports fine value 0 and must not count as "best".
+const bestFineValue = (shots) => {
+    const hits = shots.filter((shot) => shot.value > 0 && Number.isFinite(shot.fineValue));
+    return hits.length ? Math.max(...hits.map((shot) => shot.fineValue)) : null;
+};
+
 export const shotGroups = (program) => (program.series ?? []).map((series) => {
     const fineIsRing = series.valuation === 100;
     return {
         code: series.targetType ?? '',
         shots: (series.shots ?? []).map((shot) => ({ text: String(shot.value), sector: shot.hitSector ?? null, innerTen: shot.innerTen === true })),
-        bestFineValue: fineIsRing ? null : series.bestFineValue ?? null,
+        bestFineValue: fineIsRing ? null : bestFineValue(series.shots ?? []),
         lastFineValue: fineIsRing ? null : series.shots?.at(-1)?.fineValue ?? null,
         subtotal: series.subtotal,
     };

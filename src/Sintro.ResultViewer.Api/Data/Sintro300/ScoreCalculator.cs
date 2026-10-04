@@ -77,15 +77,10 @@ public static class ScoreCalculator
         var ordered = rows.OrderBy(row => row.ShotID).ToList();
         targets.TryGetValue(shotGroup, out var target);
 
-        // Misses report a fine value of 0, which would otherwise win "best".
-        var scoring = ordered.Where(row => row.PrimaryResult > 0).ToList();
-
         return new ShotSeries(
             TargetKind.Code(target.TargetType, target.Valuation),
             target.Valuation,
             ordered.Sum(row => row.PrimaryResult),
-            scoring.Count == 0 ? null : scoring.Max(row => row.SecondaryResult),
-            ordered.Select(row => row.SecondaryResult).ToList(),
             ordered.Select(row => ToShot(row, programStart, clock)).ToList());
     }
 

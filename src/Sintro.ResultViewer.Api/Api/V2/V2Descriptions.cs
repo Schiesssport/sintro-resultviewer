@@ -70,8 +70,8 @@ internal static class V2Descriptions
 
         totals carries one sum per target and ring scale with the fine values of its shots;
         an entry with valuation null means the device recorded no scale for those series.
-        The usual tie-breaker, the best fine value of a series, is each series' bestFineValue
-        (or the maximum over its shots). sighting lists the Probe series, one per stage the
+        A series is its target, scale, subtotal and shots; the usual tie-breaker, the best
+        fine value of a series, is the maximum fineValue over its shots. sighting lists the Probe series, one per stage the
         device recorded them in; they never count towards any total.
         """;
 
