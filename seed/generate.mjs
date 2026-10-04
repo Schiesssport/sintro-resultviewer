@@ -6,7 +6,7 @@
 // Device conventions reproduced here are the ones docs/device-database.md records. Where that
 // file says "unverified", so is this generator.
 
-import { TODAY, LANE_COUNT, CLUBS, SHOOTERS, PROGRAMS, SESSIONS } from './definitions.mjs';
+import { TODAY, LANE_COUNT, CLUBS, SHOOTERS, PROGRAMS, SESSIONS, FINE_VALUE_BANDS, parseStages } from './definitions.mjs';
 
 const TARGET_TYPE = { A: 0, B: 1, S: 3 };
 const FIRE_METHOD = { sighting: 0, EF: 1, SF: 2 };
@@ -25,12 +25,6 @@ const random = (() => {
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
 })();
-
-const gaussian = (mean, spread) => {
-    const u = 1 - random();
-    const v = random();
-    return mean + spread * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-};
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const quote = (text) => `'${String(text).replace(/'/g, "''")}'`;
@@ -51,9 +45,14 @@ const localDate = (day, time) => new Date(`${day}T${time}:00`);
 
 // -- Shots ---------------------------------------------------------------------
 
-// Fine value 0..100 from the shooter's skill; anonymous passes shoot like a club average.
-const fineValue = (shooter) =>
-    Math.round(clamp(gaussian(shooter?.skill ?? 80, shooter?.spread ?? 12), 0, 100));
+const BAND_TOTAL = FINE_VALUE_BANDS.reduce((sum, band) => sum + band.share, 0);
+
+// Fine value 0..100: pick a band by its share, then a value inside it.
+const fineValue = () => {
+    let draw = random() * BAND_TOTAL;
+    const band = FINE_VALUE_BANDS.find((candidate) => (draw -= candidate.share) < 0) ?? FINE_VALUE_BANDS.at(-1);
+    return band.min + Math.floor(random() * (band.max - band.min + 1));
+};
 
 // Ring value in the active valuation. On a 100er target the fine value is the ring value.
 const ringValue = (fine, valuation) => {
@@ -71,10 +70,9 @@ const hitGeometry = (fine) => {
     return { sector, x: Math.round(radius * Math.cos(angle)), y: Math.round(radius * Math.sin(angle)) };
 };
 
-const shotRow = ({ program, lane, shooter, stage, groupIndex, shotNr, at, isLastOfSeries, isLastOfProgram, matchCode, logEvent }) => {
-    const valuation = stage.valuation ?? program.valuation;
-    const fine = fineValue(shooter);
-    const ring = ringValue(fine, valuation);
+const shotRow = ({ lane, stage, groupIndex, shotNr, at, isLastOfSeries, isLastOfProgram, matchCode, logEvent }) => {
+    const fine = fineValue();
+    const ring = ringValue(fine, stage.valuation);
     const hit = hitGeometry(fine);
     const totalType = isLastOfProgram ? END_OF_PROGRAM : isLastOfSeries ? END_OF_SERIES : 0;
 
@@ -82,7 +80,7 @@ const shotRow = ({ program, lane, shooter, stage, groupIndex, shotNr, at, isLast
         0, lane, shotNr, ring, fine, hit.sector, stage.kind === 'sighting' ? 0 : 1, quote(shotTimeText(at)),
         hit.sector === 0 && fine >= 98 ? 1 : 0, hit.x, hit.y, 1, 0, totalType, groupIndex,
         FIRE_METHOD[stage.kind], logEvent, 3, quote(centisecondsSinceNewYear(at)), 1, 9,
-        quote(TARGET_TYPE[program.target]), matchCode, stage.kind === 'sighting' ? 1 : 0,
+        quote(TARGET_TYPE[stage.target]), matchCode, stage.kind === 'sighting' ? 1 : 0,
     ];
 };
 
@@ -105,19 +103,19 @@ const shooterId = (index) => index + 1;
 // session can interleave lanes the way the device does: ShotID order is wall-clock order.
 const buildPass = ({ session, pass, programId, startAt }) => {
     const program = PROGRAMS.find((entry) => entry.number === pass.program);
-    const shooter = pass.shooter === null ? null : SHOOTERS[pass.shooter];
+    const stages = parseStages(program.name);
     const state = pass.state ?? 'finished';
 
     const loaded = [
-        `INSERT INTO dbo.Programs (ProgramID, Number, Name, StartTime, LaneNr, ContestShooterName, ShooterID) VALUES (${programId}, ${program.number}, ${quote(program.name)}, ${quote(startTimeText(startAt))}, ${pass.lane}, '', ${shooter ? shooterId(pass.shooter) : 'NULL'});`,
-        ...program.stages.map((stage, groupIndex) =>
-            `INSERT INTO dbo.Targetinformation (TargetType, TargetValuation, ShotGroup, ProgramID) VALUES (${TARGET_TYPE[program.target]}, ${stage.valuation ?? program.valuation}, ${groupIndex}, ${programId});`),
+        `INSERT INTO dbo.Programs (ProgramID, Number, Name, StartTime, LaneNr, ContestShooterName, ShooterID) VALUES (${programId}, ${program.number}, ${quote(program.name)}, ${quote(startTimeText(startAt))}, ${pass.lane}, '', ${pass.shooter === null ? 'NULL' : shooterId(pass.shooter)});`,
+        ...stages.map((stage, groupIndex) =>
+            `INSERT INTO dbo.Targetinformation (TargetType, TargetValuation, ShotGroup, ProgramID) VALUES (${TARGET_TYPE[stage.target]}, ${stage.valuation}, ${groupIndex}, ${programId});`),
     ];
 
     let at = new Date(startAt.getTime() + 45_000);
     let logEvent = 0;
     const shots = [];
-    const shotsToFire = state === 'abandoned' ? [] : program.stages;
+    const shotsToFire = state === 'abandoned' ? [] : stages.slice(0, pass.stopAfter ?? stages.length);
     const lastStage = state === 'active' ? -1 : shotsToFire.length - 1;
 
     const insertShot = (row) => shots.push({ at, sql: `INSERT INTO dbo.Shots (${SHOT_COLUMNS}, ProgramID) VALUES (${row.join(', ')}, ${programId});` });
@@ -126,7 +124,7 @@ const buildPass = ({ session, pass, programId, startAt }) => {
         for (let shotNr = 1; shotNr <= stage.shots; shotNr++) {
             at = new Date(at.getTime() + (stage.kind === 'SF' ? 2_500 : 20_000) + random() * 8_000);
             insertShot(shotRow({
-                program, lane: pass.lane, shooter, stage, groupIndex, shotNr, at,
+                lane: pass.lane, stage, groupIndex, shotNr, at,
                 isLastOfSeries: shotNr === stage.shots,
                 isLastOfProgram: groupIndex === lastStage && shotNr === stage.shots,
                 matchCode: session.matchCode, logEvent: logEvent++,

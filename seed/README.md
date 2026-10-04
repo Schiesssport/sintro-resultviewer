@@ -19,12 +19,17 @@ SINTRO_DB=SintroSeed scripts/run.sh     # view it on http://localhost:8080
 
 ## What the draft contains
 
-- 3 clubs, 3 shooters each, with a skill level that drives their shot values.
-- 8 programs in the operator's own notation (`A10-EF6-SF4`, `Feldschiessen`, …), each a list of
-  stages: sighting (Probe), precision (EF), rapid fire (SF), with target letter and valuation.
-  One program changes valuation mid-pass so the API's "no grand total" rule has data.
-- 2 sessions: a training evening a week ago (no match code) and an event day on the reference
-  date `2026-07-08` (match code 12), with anonymous passes, an abandoned pass (marker only) and a
+- 3 clubs, 3 shooters each.
+- Shot values from a real shooter's distribution per 100 shots: 15 at 96 or better, 25 at 91–95,
+  40 at 81–90, 16 at 71–80, one 0 (wrong target), 3 anywhere from 1 to 70. Every shooter shoots
+  the same distribution for now.
+- 7 common programs in the operator's notation, one token per stage
+  (`A5P2 A5E2 A5S3 A5S3` = two sighting shots, two precision, two series of three), parsed by
+  `parseStages`: 227, 308, 307, 334, 059, 801 (changes target and valuation mid-pass, so the API
+  withholds its grand total) and the eight-series A100 program, which shooters stop after 4, 5
+  or all 8 series (`stopAfter` on the pass).
+- 2 sessions: a training evening a week before and an event day on the reference date
+  `2026-07-08` (match code 12), with anonymous passes, an abandoned pass (marker only) and a
   pass still active on a lane.
 
 ## Device conventions reproduced
@@ -52,7 +57,10 @@ device's rules, and those must not drift with the scenario.
 
 Open questions the draft guesses at:
 
-- Shot time spacing (20 s precision, 2.5 s rapid fire) and the 45 s pause before the first shot.
-- Score distribution: a Gaussian on the fine value per shooter. Real misses and real spreads per
-  position (liegend, kniend) are not modelled.
-- Whether the device numbers sighting groups first or last when a program has no sighting stage.
+- Sighting shots. They are marked by `ShotType 0` and nothing else, which is also what the API
+  keys on. Whether the device puts them in their own `ShotGroup` and how it numbers the groups
+  of a program without a sighting stage is unverified; a test on the device is planned.
+- Shot time spacing (20 s precision, 2.5 s rapid fire) and the 45 s pause before the first shot
+  look right but are not measured.
+- The ring value is `ceil(fine / (100 / valuation))`: 91–100 is a 10 on an A10 target, 81–100 a
+  5 on an A5. On a 100er target the fine value is the ring value.

@@ -13,67 +13,81 @@ export const CLUBS = [
     { number: '1.02.1.04.903', name: 'Sportschützen Probstetten' },
 ];
 
-// skill: the fine value (0..100) a shooter hits on average; spread: how much it varies.
-// licence: six digits, zero-padded, the number printed on the SSV licence.
+// licence: six digits, zero-padded, the number printed on the SSV licence; leading zeros are
+// real (000001 exists) and must survive every lookup. Keep clear of the
+// numbers the API documentation uses as examples (123456, 012345); a test checks the OpenAPI
+// document names no licence from the database.
 export const SHOOTERS = [
-    { club: 0, first: 'Hans',    last: 'Muster',    licence: '100101', skill: 88, spread: 9 },
-    { club: 0, first: 'Vreni',   last: 'Muster',    licence: '100102', skill: 92, spread: 6 },
-    { club: 0, first: 'Ueli',    last: 'Beispiel',  licence: '100103', skill: 74, spread: 14 },
-    { club: 1, first: 'Res',     last: 'Probst',    licence: '100201', skill: 84, spread: 10 },
-    { club: 1, first: 'Marie',   last: 'Exemple',   licence: '100202', skill: 95, spread: 4 },
-    { club: 1, first: 'Fritz',   last: 'Platzhalter', licence: '100203', skill: 68, spread: 16 },
-    { club: 2, first: 'Jean',    last: 'Dupont',    licence: '100301', skill: 80, spread: 11 },
-    { club: 2, first: 'Anna',    last: 'Modell',    licence: '100302', skill: 90, spread: 7 },
-    { club: 2, first: 'Peter',   last: 'Vorlage',   licence: '100303', skill: 77, spread: 12 },
+    { club: 0, first: 'Hans',  last: 'Muster',      licence: '000001' },
+    { club: 0, first: 'Vreni', last: 'Muster',      licence: '000002' },
+    { club: 0, first: 'Ueli',  last: 'Beispiel',    licence: '000003' },
+    { club: 1, first: 'Res',   last: 'Probst',      licence: '101001' },
+    { club: 1, first: 'Marie', last: 'Exemple',     licence: '101002' },
+    { club: 1, first: 'Fritz', last: 'Platzhalter', licence: '102003' },
+    { club: 2, first: 'Jean',  last: 'Dupont',      licence: '999001' },
+    { club: 2, first: 'Anna',  last: 'Modell',      licence: '999002' },
+    { club: 2, first: 'Peter', last: 'Vorlage',     licence: '999003' },
 ];
 
-// A program is what the operator loads on a lane. Stages are shot in order; each stage is one
-// ShotGroup. kind: 'sighting' (Probe, ShotType 0, never counts), 'EF' (Einzelfeuer, one shot at a
-// time), 'SF' (Serienfeuer, a burst). target: 'A' | 'B' | 'S'; valuation: 4, 5, 10 or 100.
-// Names follow what operators actually type: the stage notation, or a plain event name.
-export const PROGRAMS = [
-    { number: 31, name: 'A10-Probe', target: 'A', valuation: 10,
-      stages: [{ kind: 'sighting', shots: 3 }] },
-    { number: 32, name: 'A10-EF6-SF4', target: 'A', valuation: 10,
-      stages: [{ kind: 'sighting', shots: 3 }, { kind: 'EF', shots: 6 }, { kind: 'SF', shots: 4 }] },
-    { number: 36, name: 'A10-EF10', target: 'A', valuation: 10,
-      stages: [{ kind: 'EF', shots: 10 }] },
-    { number: 200, name: 'Obligatorisches Programm', target: 'A', valuation: 5,
-      stages: [{ kind: 'sighting', shots: 3 }, { kind: 'EF', shots: 4 }, { kind: 'SF', shots: 3 }, { kind: 'SF', shots: 3 }] },
-    { number: 141, name: 'Feldschiessen', target: 'B', valuation: 4,
-      stages: [{ kind: 'sighting', shots: 3 }, { kind: 'EF', shots: 6 }, { kind: 'SF', shots: 3 }, { kind: 'SF', shots: 3 }, { kind: 'SF', shots: 6 }] },
-    { number: 100, name: 'A100-EF8', target: 'A', valuation: 100,
-      stages: [{ kind: 'sighting', shots: 2 }, { kind: 'EF', shots: 8 }] },
-    { number: 42, name: 'Saustich', target: 'S', valuation: 10,
-      stages: [{ kind: 'sighting', shots: 2 }, { kind: 'EF', shots: 5 }] },
-    // Valuation changes mid-pass: the API must refuse a grand total for this one.
-    { number: 922, name: 'Wertungswechsel 5 10', target: 'A', valuation: 5,
-      stages: [{ kind: 'EF', shots: 3 }, { kind: 'EF', shots: 3, valuation: 10 }] },
+// How a real shooter's fine values (0..100) fall, per 100 shots. A 0 is a shot on the wrong
+// target; the last band is the occasional wild one.
+export const FINE_VALUE_BANDS = [
+    { share: 15, min: 96, max: 100 },
+    { share: 25, min: 91, max: 95 },
+    { share: 40, min: 81, max: 90 },
+    { share: 16, min: 71, max: 80 },
+    { share: 1,  min: 0,  max: 0 },
+    { share: 3,  min: 1,  max: 70 },
 ];
+
+// Programs in the operator's notation: one token per stage, <target><valuation><kind><shots>,
+// where the target is A, B or S, the kind P (Probe, sighting), E (Einzelfeuer, precision) or
+// S (Serienfeuer, rapid fire). The device stores number and name; the stages are what it
+// shoots. 801 changes target and valuation mid-pass, so the API withholds its grand total.
+export const PROGRAMS = [
+    { number: 227, name: 'A5P2 A5E2 A5S3 A5S3' },
+    { number: 308, name: 'A10P2 A10E10' },
+    { number: 307, name: 'A10P2 A10E6 A10E4' },
+    { number: 334, name: 'A10E10 A10E10 A10E10 A10E10 A10E10 A10E10' },
+    { number: 59,  name: 'B4E6 B4S3 B4S3 B4S6' },
+    { number: 801, name: 'A5E5 B4E5 B4S2 B4S3 B4S5' },
+    { number: 100, name: 'A100E2 A100E2 A100E2 A100E2 A100E2 A100E2 A100E2 A100E2' },
+];
+
+const STAGE_KIND = { P: 'sighting', E: 'EF', S: 'SF' };
+
+export const parseStages = (name) => name.split(/\s+/).map((token) => {
+    const match = /^([ABS])(\d+)([PES])(\d+)$/.exec(token);
+    if (!match) throw new Error(`cannot read stage "${token}" in program "${name}"`);
+    return { target: match[1], valuation: Number(match[2]), kind: STAGE_KIND[match[3]], shots: Number(match[4]) };
+});
 
 // A session is one block of shooting on one day. Each pass names a lane, a program and a shooter
-// (index into SHOOTERS, or null for an anonymous pass, which is the common case on a range).
+// (index into SHOOTERS, or null for an anonymous pass, the common case on a range).
 // matchCode is the Stich number the operator enters in contest mode (0 outside events).
-// state: 'finished' (default), 'active' (still on the lane, no end marker), 'abandoned' (loaded
-// and left: only the marker row, no shots).
+// stopAfter: the shooter ends the program after that many stages (the A100 program is often
+// stopped after 4 or 5 of its 8). state: 'finished' (default), 'active' (still on the lane, no
+// end marker), 'abandoned' (loaded and left: only the marker row, no shots).
 export const SESSIONS = [
     { day: '2026-07-01', start: '18:30', matchCode: 0, passes: [
-        { lane: 1, program: 36, shooter: 0 },
-        { lane: 2, program: 36, shooter: 1 },
-        { lane: 3, program: 200, shooter: null },
-        { lane: 4, program: 141, shooter: 6 },
-        { lane: 5, program: 100, shooter: 4 },
+        { lane: 1, program: 308, shooter: 0 },
+        { lane: 2, program: 308, shooter: 1 },
+        { lane: 3, program: 227, shooter: null },
+        { lane: 4, program: 59, shooter: 6 },
+        { lane: 5, program: 100, shooter: 4, stopAfter: 5 },
+        { lane: 6, program: 334, shooter: 3 },
     ] },
     { day: TODAY, start: '19:00', matchCode: 12, passes: [
-        { lane: 1, program: 31, shooter: 0 },
-        { lane: 1, program: 32, shooter: 0 },
-        { lane: 2, program: 32, shooter: 3 },
-        { lane: 3, program: 32, shooter: 7 },
-        { lane: 4, program: 200, shooter: null },
-        { lane: 5, program: 141, shooter: 2 },
-        { lane: 6, program: 42, shooter: 8 },
-        { lane: 2, program: 922, shooter: 5 },
-        { lane: 4, program: 36, shooter: null, state: 'abandoned' },
-        { lane: 6, program: 32, shooter: 1, state: 'active' },
+        { lane: 1, program: 307, shooter: 0 },
+        { lane: 1, program: 308, shooter: 0 },
+        { lane: 2, program: 307, shooter: 3 },
+        { lane: 3, program: 307, shooter: 7 },
+        { lane: 4, program: 227, shooter: null },
+        { lane: 5, program: 59, shooter: 2 },
+        { lane: 6, program: 100, shooter: 8, stopAfter: 4 },
+        { lane: 2, program: 801, shooter: 5 },
+        { lane: 5, program: 100, shooter: null, stopAfter: 8 },
+        { lane: 4, program: 308, shooter: null, state: 'abandoned' },
+        { lane: 6, program: 307, shooter: 1, state: 'active' },
     ] },
 ];
