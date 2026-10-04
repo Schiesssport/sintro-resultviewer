@@ -138,10 +138,9 @@ fail silently if broken:
 - **`TrustedProxies` is a list, not a switch** — `X-Forwarded-For` is unwound only through hops in
   it, stopping at the first stranger (`Security/ClientAddress.cs`).
 - **`UseWebSockets()` must stay before `UseTokenAuth()`** — `?token=` is accepted only on a genuine
-  upgrade (`IsWebSocketRequest`), which that middleware makes meaningful; a plain GET with `?token=`
-  is always 401. `LiveFeedTests` guards both.
+  upgrade (`IsWebSocketRequest`); a plain GET with `?token=` is always 401. `LiveFeedTests` guards both.
 - **A forwarded hop that does not parse resolves to *no* client**, and the gate refuses it. Falling
-  back to the proxy's own address would admit anyone behind a public proxy (`ClientAddressTests`).
+  back to the proxy's address would admit anyone behind a public proxy (`ClientAddressTests`).
 - **`/openapi/v2.json` is token-free** (schema, not data). Never put a real licence number or
   shooter name in an endpoint description — a test asserts neither appears.
 - **A null remote address counts as loopback** (in-process; no TCP client can forge it). Non-private
