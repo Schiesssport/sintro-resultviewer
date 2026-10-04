@@ -163,18 +163,20 @@ const shootersSql = () => SHOOTERS.map((shooter, index) =>
 const lanesSql = () =>
     Array.from({ length: LANE_COUNT }, (_, index) => `INSERT INTO dbo.Lanes (Number, ProgramID) VALUES (${index + 1}, NULL);`);
 
-// Passes on one lane follow each other; passes on different lanes overlap, and their shots are
-// written in the order they were fired across the whole line.
+// A pass takes the lane that comes free first (lowest number on a tie) and starts a minute after
+// it is free. Shots across lanes are written in the order they were fired. A pass still active
+// keeps its lane for the rest of the session.
 const sessionsSql = () => {
     const lines = [];
     let programId = FIRST_PROGRAM_ID;
     for (const session of SESSIONS) {
-        const laneFreeAt = new Map();
+        const laneFreeAt = new Map(Array.from({ length: LANE_COUNT }, (_, index) => [index + 1, 0]));
         const built = session.passes.map((pass) => {
+            const lane = [...laneFreeAt.entries()].sort((a, b) => a[1] - b[1] || a[0] - b[0])[0][0];
             const earliest = localDate(session.day, session.start);
-            const startAt = new Date(Math.max(earliest.getTime(), (laneFreeAt.get(pass.lane) ?? 0) + 60_000));
-            const result = buildPass({ session, pass, programId: programId++, startAt });
-            laneFreeAt.set(pass.lane, result.endedAt.getTime());
+            const startAt = new Date(Math.max(earliest.getTime(), laneFreeAt.get(lane) + 60_000));
+            const result = buildPass({ session, pass: { ...pass, lane }, programId: programId++, startAt });
+            laneFreeAt.set(lane, pass.state === 'active' ? Infinity : result.endedAt.getTime());
             return result;
         });
         lines.push(...built.flatMap((pass) => pass.loaded));

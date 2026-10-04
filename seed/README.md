@@ -29,10 +29,11 @@ SINTRO_DB=SintroSeed scripts/run.sh     # view it on http://localhost:8080
   07x B4, 09x special. 91 changes target and valuation mid-pass, so the API withholds its grand
   total; the eight-series A100 program (31) is stopped after 4, 5 or all 8 series (`stopAfter`
   on the pass).
-- 2 sessions: a training evening a week before and an event day on the reference date
-  `2026-07-08`. Event Stiche carry the program family with a leading 1 as match code (111, 121,
-  122, 131, 171, 191). Anonymous passes, an abandoned pass (marker only) and a pass still active
-  on a lane are included.
+- 5 sessions, about 60 Stiche in all, roughly one in ten anonymous, every program shot by at
+  least three different named shooters: four training evenings and an event day on the
+  reference date `2026-07-08`. Event Stiche carry the program family with a leading 1 as match
+  code (111, 121, 122, 131, 171, 191). The event day also holds an abandoned pass (marker only)
+  and a pass still active on a lane. Lanes are assigned by the generator, next free lane first.
 
 ## Device conventions reproduced
 

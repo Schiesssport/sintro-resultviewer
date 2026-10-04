@@ -63,33 +63,56 @@ export const parseStages = (name) => name.split(/\s+/).map((token) => {
     return { target: match[1], valuation: Number(match[2]), kind: STAGE_KIND[match[3]], shots: Number(match[4]) };
 });
 
-// A session is one block of shooting on one day. Each pass names a lane, a program and a shooter
-// (index into SHOOTERS, or null for an anonymous pass, the common case on a range).
-// matchCode is the Stich number the operator enters in contest mode (0 outside events); a pass
-// may override the session's. Event Stiche are the program family with a leading 1: 111, 121, …
+// A session is one block of shooting on one day. Each pass names a program and a shooter (index
+// into SHOOTERS, or null for an anonymous pass). Lanes are assigned by the generator: the next
+// lane to come free, so a long evening queues up the way a real one does. matchCode is the Stich
+// number the operator enters in contest mode (0 outside events); a pass may override the
+// session's. Event Stiche are the program family with a leading 1: 111, 121, …
 // stopAfter: the shooter ends the program after that many stages (the A100 program is often
 // stopped after 4 or 5 of its 8). state: 'finished' (default), 'active' (still on the lane, no
 // end marker), 'abandoned' (loaded and left: only the marker row, no shots).
+//
+// Aim: about 60 Stiche, roughly one in ten anonymous, every program shot by at least three
+// different named shooters.
+const each = (program, shooters, extra = {}) => shooters.map((shooter) => ({ program, shooter, ...extra }));
+const anonymous = (program, extra = {}) => ({ program, shooter: null, ...extra });
+
 export const SESSIONS = [
-    { day: '2026-07-01', start: '18:30', matchCode: 0, passes: [
-        { lane: 1, program: 21, shooter: 0 },
-        { lane: 2, program: 21, shooter: 1 },
-        { lane: 3, program: 11, shooter: null },
-        { lane: 4, program: 71, shooter: 6 },
-        { lane: 5, program: 31, shooter: 4, stopAfter: 5 },
-        { lane: 6, program: 23, shooter: 3 },
+    { day: '2026-06-17', start: '18:30', matchCode: 0, passes: [
+        ...each(21, [0, 1, 2, 3, 4]),
+        ...each(71, [6, 7, 8]),
+        anonymous(11),
     ] },
-    { day: TODAY, start: '19:00', matchCode: 121, passes: [
-        { lane: 1, program: 22, shooter: 0, matchCode: 122 },
-        { lane: 1, program: 21, shooter: 0 },
-        { lane: 2, program: 22, shooter: 3, matchCode: 122 },
-        { lane: 3, program: 22, shooter: 7, matchCode: 122 },
-        { lane: 4, program: 11, shooter: null, matchCode: 111 },
-        { lane: 5, program: 71, shooter: 2, matchCode: 171 },
-        { lane: 6, program: 31, shooter: 8, stopAfter: 4, matchCode: 131 },
-        { lane: 2, program: 91, shooter: 5, matchCode: 191 },
-        { lane: 5, program: 31, shooter: null, stopAfter: 8, matchCode: 131 },
-        { lane: 4, program: 21, shooter: null, state: 'abandoned' },
-        { lane: 6, program: 22, shooter: 1, state: 'active', matchCode: 122 },
+    { day: '2026-06-24', start: '18:30', matchCode: 0, passes: [
+        ...each(22, [0, 1, 5, 6, 7]),
+        ...each(23, [3, 4]),
+        ...each(31, [2], { stopAfter: 5 }),
+        anonymous(21),
+    ] },
+    { day: '2026-07-01', start: '18:30', matchCode: 0, passes: [
+        ...each(11, [0, 1, 2, 3]),
+        ...each(31, [4, 5], { stopAfter: 4 }),
+        ...each(31, [6]),
+        ...each(71, [0, 8]),
+        anonymous(71),
+    ] },
+    { day: '2026-07-04', start: '13:30', matchCode: 0, passes: [
+        ...each(23, [6, 7, 8, 1]),
+        ...each(91, [0, 3, 5]),
+        ...each(22, [2, 4, 8]),
+        anonymous(22),
+    ] },
+    { day: TODAY, start: '19:00', matchCode: 0, passes: [
+        ...each(22, [0, 3, 7, 1, 4, 5, 6], { matchCode: 122 }),
+        ...each(21, [0, 2, 8], { matchCode: 121 }),
+        ...each(11, [1, 5, 7], { matchCode: 111 }),
+        anonymous(11, { matchCode: 111 }),
+        ...each(71, [2, 6, 4], { matchCode: 171 }),
+        ...each(31, [8], { stopAfter: 4, matchCode: 131 }),
+        ...each(31, [3], { stopAfter: 5, matchCode: 131 }),
+        anonymous(31, { matchCode: 131 }),
+        ...each(91, [5, 1], { matchCode: 191 }),
+        anonymous(21, { state: 'abandoned' }),
+        ...each(22, [1], { state: 'active', matchCode: 122 }),
     ] },
 ];
