@@ -17,11 +17,13 @@ than confirmed, it says so.
 
 ```bash
 scripts/db-restore.sh                  # restore .bak exports placed in .db/ into a dev SQL Server
+scripts/db-seed.sh                     # or build the invented database from seed/ (see seed/README.md)
 scripts/sql.sh "SELECT TOP 10 * FROM Programs ORDER BY ProgramID DESC"
 ```
 
 `.db/` is gitignored and must stay that way: device exports contain shooters' real names and
-licence numbers.
+licence numbers. The seed reproduces every rule on this page with invented data; where the two
+disagree, the export is right and both the seed and this page need fixing.
 
 ## Glossary
 
@@ -46,12 +48,13 @@ a synonym for something already listed.
 | shot value | Trefferwert | `Shots.PrimaryResult` | Ring value in the active valuation |
 | fine value | Zehntelwert | `Shots.SecondaryResult` | 0–100, the decimal ring |
 | inner ten (`innerTen`) | Mouche | `Shots.Mouche` | Centre hit; whether the device marks it is a target-display setting |
-| hit sector | Trefferlage | `Shots.HitPosition` | Clock direction of the hit |
+| hit sector | Trefferlage | `Shots.HitPosition` | Clock direction of the hit; `0` is no direction. API: `hitSector` |
 | valuation | Wertung | `Targetinformation.TargetValuation` | Ring scale: 4, 5, 10 or 100 |
 | target | Scheibe | `Targetinformation.TargetType` | A, B or Sau silhouette |
 | target code | — | derived | `A10`, `B4`, `S10`: target letter + valuation |
-| total | Total / Resultat | derived | Sum of the counting shots |
-| subtotal | Zwischentotal | derived | Sum of one series |
+| totals | Total / Resultat | derived | One sum per target and ring scale, never across scales. API: `totals` |
+| subtotal | Zwischentotal | derived | Sum of one series. API: `series[].subtotal` |
+| program catalog | — | derived | The distinct program numbers shot, with how often (`timesShot`) |
 
 ## The two databases
 
@@ -197,8 +200,8 @@ Irrelevant to results, and unused here.
 | `ShotNr` | Counts from 1 across every counting series of the pass; the sighting shots have their own numbering from 1 (measured in one export: the first counting shot after three sighting shots is `ShotNr 1` again). Not a position inside a series. `9999` marks a synthetic row |
 | `PrimaryResult` | Ring value in the active valuation; `0` is a miss |
 | `SecondaryResult` | Fine value 0–100, bracketed by `PrimaryResult`. Measured on A10 passes: one fine point is 5 mm from the centre, fine 100 lies within 8 mm, fine 99 at 9–13 mm and so on; a miss is `0` at 500 mm or further |
-| `Mouche` | `1` = centre hit, always paired with `HitPosition = 0`; on A10 passes exactly the shots with a fine value of 96 or better |
-| `HitPosition` | Hit sector: `1`–`8` clockwise from twelve o'clock in 45° steps, `0` centre, `255` none reported. Derived from `X`/`Y`, whose mean angle per sector lands on 90°, 45°, 0°, −45°, −90°, −135°, 180°, 135° |
+| `Mouche` | `1` = inner ten, always paired with `HitPosition = 0`; on A10 passes exactly the shots with a fine value of 96 or better. Whether the device marks inner tens is a setting of the target display. Exposed as `innerTen` |
+| `HitPosition` | Hit sector: `1`–`8` clockwise from twelve o'clock in 45° steps, `0` no direction (every inner ten; whether a shot the device could not place also gets `0` is unconfirmed, so the viewer blackens the dial on `Mouche`, not on `0`), `255` none reported. Derived from `X`/`Y`, whose mean angle per sector lands on 90°, 45°, 0°, −45°, −90°, −135°, 180°, 135° |
 | `X`, `Y` | Hit coordinates in mm from the centre (a fine value of 90 sits about 55 mm out). `Y` positive is up |
 | `TotalType` | `0` ordinary shot, `1` last shot of a series, `7` end of pass — set on the last real shot **and** on the marker row that follows it |
 | `FireMethod` | The shooting stage. **Proposed, unverified:** `0` sighting stage, `1` precision stage (Einzelfeuer), `2` rapid-fire stage (Serienfeuer). This matters for display — program names encode it as `EF`/`SF` — so it is worth confirming. **TODO** |
@@ -261,3 +264,5 @@ Contributions very welcome — each of these needs someone with device access to
 - **`TotalType`.** `0`, `1` and `7` are understood. Are there other values on installations that use
   program types we have not seen?
 - **`GunType`.** Mostly one value with occasional outliers. Rifle class, or something else?
+- **`HitPosition = 0` on a miss.** Misses in the exports examined carried a sector (they land 500 mm
+  and further out, in a direction). Does the device ever write `0` for a shot it could not place?

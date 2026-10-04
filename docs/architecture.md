@@ -47,7 +47,7 @@ device. Its Sintro 300 implementation, `Data/Sintro300/SintroRepository*.cs` (on
 entity: programs, lanes, shooters and clubs, catalog), holds every SQL statement in the project; a
 query written anywhere else is a bug, because the schema's traps are documented and handled in
 exactly one place. Beside it sit the small pure helpers that carry most of the test weight:
-`ScoreCalculator` (series, valuations, totals), `SintroTime` (shot times combined with the program date) and
+`ScoreCalculator` (series, valuations, one total per target and scale), `SintroTime` (shot times combined with the program date) and
 `TargetKind`. Another device or schema version is a sibling folder implementing
 `ISintroRepository`; `LicenseNumber`, `Cursor`, `SintroClock` and the filters stay shared.
 
@@ -96,12 +96,21 @@ The consumer-facing guide is [`api.md`](api.md); this section is the reasoning b
 - **One error shape.** Every non-2xx answer, from the middlewares as well as the endpoints, is
   `{"error": "<stable code>", "detail": "<text>"}` (`ApiError` in `Api/`). The viewer has exactly
   one error parser.
-- **`sighting` is a list**, one series per `ShotGroup` the sighting shots were fired in. Merging
-  them would add a 5er group to a 10er one — the sum `totals` never makes.
+- **Every list is `{items, nextCursor, hasMore}`**, the program catalog included, so one client
+  helper reads them all. `/live` answers `{lanes}` on GET and pushes the same frame on the socket,
+  with no type tag: the URL already says what arrives.
+- **`totals` has one entry per target and ring scale**, each with its sum and the fine values of its
+  shots in firing order. A pass that changed scale has two entries rather than one number that adds
+  a 5er series to a 10er one. Shots carry `value` and `fineValue`; the ring follows from the fine
+  value, not the reverse, so compact lists are fine values.
+- **`sighting` is a list**, one series per `ShotGroup` the sighting shots were fired in, for the
+  same reason.
+- **`innerTen` is the device's flag**, not something derived from the fine value or from
+  `hitSector` 0; whether the device marks inner tens is a target-display setting.
 - **ISO 8601 everywhere**, with the range's UTC offset attached.
 - The OpenAPI document at `/openapi/v2.json` needs no token — it is schema, not data — and `/docs`
-  renders it as a browsable, try-it-here page, in German, French or English; the user pages are
-  German and French.
+  renders it as a browsable, try-it-here page. The page is English, like the API; only its intro
+  paragraph is offered in German and French as well. The user pages are German and French.
 
 ## The viewer
 
@@ -120,9 +129,13 @@ split as [OpenRangeOffice](https://github.com/Schiesssport/OpenRangeOffice):
 Anything that can be tested without a browser belongs in `core/`. That is where the interesting
 parts live:
 
-- `format.js`: labels and the shooter fallback chain.
+- `format.js`: labels, the shooter fallback chain, and the result a pass shows. It is derived from
+  `series[]`, never read from `totals`: 4er and 5er series add up to one number, any other mix
+  shows every scale labelled (`A10 87` beside `A100 173`), and a live lane shows only the scale
+  being shot right now.
 - `markup.js`: the HTML strings of every view.
-- `sectors.js`: the hit dial.
+- `sectors.js`: the hit dial. A wedge per sector; the ring turns black on `innerTen` only, a bare
+  sector 0 stays blank.
 - `lanes.js`: when a line frees up, and the 60-second hold that keeps a finished pass on its line
   after the device has already cleared the lane.
 - `display.js`: display settings and limits, and how fast the marquee runs.
@@ -133,13 +146,14 @@ parts live:
 - `reconnect.js`: the back-off for the live socket. A restarted server rejects the old session
   token, which the WebSocket API cannot report, so `api.js` probes with a plain GET and reloads
   the page on 401.
-- `i18n.js`: German and French for the user pages, plus English for `/docs` only. A test asserts
-  every key is used and every used key exists, so `data-i18n`, `data-i18n-title` and
-  `data-i18n-aria-label` in the HTML count.
+- `i18n.js`: German and French for the user pages; the few keys `/docs` uses exist in English as
+  well. A test asserts every key is used and every used key exists, so `data-i18n`, `data-i18n-title`
+  and `data-i18n-aria-label` in the HTML count.
 
 ### Views
 
-`/` is the office dashboard: lines on top, a scrollable result table below, controls visible.
+`/` is the office dashboard: lines on top, a result table of fixed height below that scrolls
+inside its box, controls visible. The box keeps its height when a search leaves few rows.
 
 The fullscreen picker is a list of *boards*: a mode plus `resultCount`, `tickerSkip`, `tickerSeconds`
 and `ticker=off`, seeded with one board per mode and kept in the browser's `localStorage`
@@ -187,11 +201,13 @@ already shot. There is no expiry to undo.
 
 Run everything with `scripts/test.sh`.
 
-**The .NET suite** is unit tests over the pure helpers plus integration tests against a restored
-device export. The integration tests assert **invariants, not counts**: exports differ per
-installation, so `Assert.Equal(1021, …)` would only ever be true for one club and would tell the
-next contributor their code is broken when it is not. Reference values — a licence, a club name, a
-line number — are read from the API at run time. Follow that pattern.
+**The .NET suite** is unit tests over the pure helpers plus integration tests against a database:
+the seeded one from [`seed/`](../seed/README.md), which CI builds on every push, or a restored
+device export on a developer machine. The integration tests are mandatory and assert
+**invariants, not counts**: databases differ per installation, so `Assert.Equal(1021, …)` would
+only ever be true for one of them and would tell the next contributor their code is broken when it
+is not. Reference values — a licence, a club name, a line number — are read from the API at run
+time. Follow that pattern.
 
 **The viewer suite** runs `node --test` over `wwwroot/core/` and needs nothing else.
 
