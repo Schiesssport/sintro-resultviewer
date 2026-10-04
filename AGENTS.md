@@ -19,7 +19,7 @@ A read-only HTTP API plus a plain-HTML viewer over the **Sintro 300 Hit Target D
 electronic 300m target system whose MSSQL Express schema the API hides from event software.
 
 **Read `docs/device-database.md` before touching a query**; `docs/architecture.md` orients you.
-`docs/api.md` is the consumer guide; a change to `Api/V2/` or `Domain/` updates it in the same commit.
+`docs/api.md` is the consumer guide; a change to `Api/V2/` or `Domain/` updates it too.
 
 ## Toolchain — all in Docker
 
@@ -163,5 +163,5 @@ fail silently if broken:
 Simplicity first, also over small optimisations. Comments are short to non-existent: names and
 structure explain *what*, a comment is one line for a *why* that cannot be inferred. Functions stay
 about 25 lines; split rather than comment sections.
-YAGNI: no speculative abstractions, options or helpers for one caller. Never cite one export's
-counts as schema facts. No emojis.
+YAGNI: no speculative abstractions or helpers for one caller. Never cite one export's counts as
+schema facts. No emojis.
