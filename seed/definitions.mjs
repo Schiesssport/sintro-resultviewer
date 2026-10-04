@@ -43,15 +43,16 @@ export const FINE_VALUE_BANDS = [
 // Programs in the operator's notation: one token per stage, <target><valuation><kind><shots>,
 // where the target is A, B or S, the kind P (Probe, sighting), E (Einzelfeuer, precision) or
 // S (Serienfeuer, rapid fire). The device stores number and name; the stages are what it
-// shoots. 801 changes target and valuation mid-pass, so the API withholds its grand total.
+// shoots. Numbers by family so they are easy to remember: 01x A5, 02x A10, 03x A100, 07x B4,
+// 09x special (91 changes target and valuation mid-pass, so the API withholds its grand total).
 export const PROGRAMS = [
-    { number: 227, name: 'A5P2 A5E2 A5S3 A5S3' },
-    { number: 308, name: 'A10P2 A10E10' },
-    { number: 307, name: 'A10P2 A10E6 A10E4' },
-    { number: 334, name: 'A10E10 A10E10 A10E10 A10E10 A10E10 A10E10' },
-    { number: 59,  name: 'B4E6 B4S3 B4S3 B4S6' },
-    { number: 801, name: 'A5E5 B4E5 B4S2 B4S3 B4S5' },
-    { number: 100, name: 'A100E2 A100E2 A100E2 A100E2 A100E2 A100E2 A100E2 A100E2' },
+    { number: 11, name: 'A5P2 A5E2 A5S3 A5S3' },
+    { number: 21, name: 'A10P2 A10E10' },
+    { number: 22, name: 'A10P2 A10E6 A10E4' },
+    { number: 23, name: 'A10E10 A10E10 A10E10 A10E10 A10E10 A10E10' },
+    { number: 31, name: 'A100E2 A100E2 A100E2 A100E2 A100E2 A100E2 A100E2 A100E2' },
+    { number: 71, name: 'B4E6 B4S3 B4S3 B4S6' },
+    { number: 91, name: 'A5E5 B4E5 B4S2 B4S3 B4S5' },
 ];
 
 const STAGE_KIND = { P: 'sighting', E: 'EF', S: 'SF' };
@@ -64,30 +65,31 @@ export const parseStages = (name) => name.split(/\s+/).map((token) => {
 
 // A session is one block of shooting on one day. Each pass names a lane, a program and a shooter
 // (index into SHOOTERS, or null for an anonymous pass, the common case on a range).
-// matchCode is the Stich number the operator enters in contest mode (0 outside events).
+// matchCode is the Stich number the operator enters in contest mode (0 outside events); a pass
+// may override the session's. Event Stiche are the program family with a leading 1: 111, 121, …
 // stopAfter: the shooter ends the program after that many stages (the A100 program is often
 // stopped after 4 or 5 of its 8). state: 'finished' (default), 'active' (still on the lane, no
 // end marker), 'abandoned' (loaded and left: only the marker row, no shots).
 export const SESSIONS = [
     { day: '2026-07-01', start: '18:30', matchCode: 0, passes: [
-        { lane: 1, program: 308, shooter: 0 },
-        { lane: 2, program: 308, shooter: 1 },
-        { lane: 3, program: 227, shooter: null },
-        { lane: 4, program: 59, shooter: 6 },
-        { lane: 5, program: 100, shooter: 4, stopAfter: 5 },
-        { lane: 6, program: 334, shooter: 3 },
+        { lane: 1, program: 21, shooter: 0 },
+        { lane: 2, program: 21, shooter: 1 },
+        { lane: 3, program: 11, shooter: null },
+        { lane: 4, program: 71, shooter: 6 },
+        { lane: 5, program: 31, shooter: 4, stopAfter: 5 },
+        { lane: 6, program: 23, shooter: 3 },
     ] },
-    { day: TODAY, start: '19:00', matchCode: 12, passes: [
-        { lane: 1, program: 307, shooter: 0 },
-        { lane: 1, program: 308, shooter: 0 },
-        { lane: 2, program: 307, shooter: 3 },
-        { lane: 3, program: 307, shooter: 7 },
-        { lane: 4, program: 227, shooter: null },
-        { lane: 5, program: 59, shooter: 2 },
-        { lane: 6, program: 100, shooter: 8, stopAfter: 4 },
-        { lane: 2, program: 801, shooter: 5 },
-        { lane: 5, program: 100, shooter: null, stopAfter: 8 },
-        { lane: 4, program: 308, shooter: null, state: 'abandoned' },
-        { lane: 6, program: 307, shooter: 1, state: 'active' },
+    { day: TODAY, start: '19:00', matchCode: 121, passes: [
+        { lane: 1, program: 22, shooter: 0, matchCode: 122 },
+        { lane: 1, program: 21, shooter: 0 },
+        { lane: 2, program: 22, shooter: 3, matchCode: 122 },
+        { lane: 3, program: 22, shooter: 7, matchCode: 122 },
+        { lane: 4, program: 11, shooter: null, matchCode: 111 },
+        { lane: 5, program: 71, shooter: 2, matchCode: 171 },
+        { lane: 6, program: 31, shooter: 8, stopAfter: 4, matchCode: 131 },
+        { lane: 2, program: 91, shooter: 5, matchCode: 191 },
+        { lane: 5, program: 31, shooter: null, stopAfter: 8, matchCode: 131 },
+        { lane: 4, program: 21, shooter: null, state: 'abandoned' },
+        { lane: 6, program: 22, shooter: 1, state: 'active', matchCode: 122 },
     ] },
 ];

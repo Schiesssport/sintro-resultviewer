@@ -23,14 +23,16 @@ SINTRO_DB=SintroSeed scripts/run.sh     # view it on http://localhost:8080
 - Shot values from a real shooter's distribution per 100 shots: 15 at 96 or better, 25 at 91–95,
   40 at 81–90, 16 at 71–80, one 0 (wrong target), 3 anywhere from 1 to 70. Every shooter shoots
   the same distribution for now.
-- 7 common programs in the operator's notation, one token per stage
+- The 7 programs below and no others, in the operator's notation, one token per stage
   (`A5P2 A5E2 A5S3 A5S3` = two sighting shots, two precision, two series of three), parsed by
-  `parseStages`: 227, 308, 307, 334, 059, 801 (changes target and valuation mid-pass, so the API
-  withholds its grand total) and the eight-series A100 program, which shooters stop after 4, 5
-  or all 8 series (`stopAfter` on the pass).
+  `parseStages`. Numbered by family so they are easy to remember: 01x A5, 02x A10, 03x A100,
+  07x B4, 09x special. 91 changes target and valuation mid-pass, so the API withholds its grand
+  total; the eight-series A100 program (31) is stopped after 4, 5 or all 8 series (`stopAfter`
+  on the pass).
 - 2 sessions: a training evening a week before and an event day on the reference date
-  `2026-07-08` (match code 12), with anonymous passes, an abandoned pass (marker only) and a
-  pass still active on a lane.
+  `2026-07-08`. Event Stiche carry the program family with a leading 1 as match code (111, 121,
+  122, 131, 171, 191). Anonymous passes, an abandoned pass (marker only) and a pass still active
+  on a lane are included.
 
 ## Device conventions reproduced
 

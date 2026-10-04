@@ -127,14 +127,14 @@ const buildPass = ({ session, pass, programId, startAt }) => {
                 lane: pass.lane, stage, groupIndex, shotNr, at,
                 isLastOfSeries: shotNr === stage.shots,
                 isLastOfProgram: groupIndex === lastStage && shotNr === stage.shots,
-                matchCode: session.matchCode, logEvent: logEvent++,
+                matchCode: pass.matchCode ?? session.matchCode, logEvent: logEvent++,
             }));
         }
     });
 
     if (state !== 'active') {
         at = new Date(at.getTime() + 5_000);
-        insertShot(markerRow({ lane: pass.lane, at, matchCode: session.matchCode }));
+        insertShot(markerRow({ lane: pass.lane, at, matchCode: pass.matchCode ?? session.matchCode }));
     }
 
     const after = state === 'active' ? [`UPDATE dbo.Lanes SET ProgramID = ${programId} WHERE Number = ${pass.lane};`] : [];
