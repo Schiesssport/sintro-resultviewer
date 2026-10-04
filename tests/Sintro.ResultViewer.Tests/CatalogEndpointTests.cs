@@ -247,7 +247,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
             $"/api/v2/programs?{ApiFixture.WholeRange}&withoutResult=true&limit=5000",
             SintroJson.Options))!;
 
-        Assert.Equal(everything.Items.Count, catalog.Sum(entry => entry.ProgramCount));
+        Assert.Equal(everything.Items.Count, catalog.Sum(entry => entry.TimesShot));
 
         // Operators rename programs, so one number can appear under several names.
         Assert.Equal(catalog.Count,

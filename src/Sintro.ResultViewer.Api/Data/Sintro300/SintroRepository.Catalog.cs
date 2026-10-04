@@ -14,7 +14,7 @@ public sealed partial class SintroRepository
         var rows = await connection.QueryAsync<CatalogRow>(new CommandDefinition($"""
             SELECT   pr.Number,
                      pr.Name,
-                     COUNT(*) AS ProgramCount,
+                     COUNT(*) AS TimesShot,
                      MAX({string.Format(StartedAtSql, "pr.StartTime")}) AS LastStartedAt
             FROM     dbo.Programs pr
             GROUP BY pr.Number, pr.Name
@@ -24,7 +24,7 @@ public sealed partial class SintroRepository
         return rows.Select(row => new ProgramCatalogEntry(
             row.Number,
             row.Name,
-            row.ProgramCount,
+            row.TimesShot,
             row.LastStartedAt is null ? null : clock.ToOffset(row.LastStartedAt.Value))).ToList();
     }
 

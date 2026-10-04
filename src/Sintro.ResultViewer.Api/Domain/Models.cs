@@ -58,4 +58,4 @@ public sealed record ShootingProgram(
 
 public sealed record LaneStatus(int Number, ShootingProgram? CurrentProgram);
 
-public sealed record ProgramCatalogEntry(int TargetCode, string TargetTitle, int ProgramCount, DateTimeOffset? LastStartedAt);
+public sealed record ProgramCatalogEntry(int TargetCode, string TargetTitle, int TimesShot, DateTimeOffset? LastStartedAt);

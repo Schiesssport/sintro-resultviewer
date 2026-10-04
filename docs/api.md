@@ -145,7 +145,7 @@ device prunes its oldest passes.
 | `GET /shooters?q=&club=&from=&to=` | Registered shooters, paged. `q` matches name or licence; `from`/`to` keeps only shooters with a pass in that window |
 | `GET /shooters/{license}` | Every shooter on that licence plus their passes (paged with `cursor`, `limit`, `order`) |
 | `GET /clubs?q=` | The Swiss club register as held by the device, paged |
-| `GET /program-catalog` | Distinct `(targetCode, targetTitle)` pairs with counts; operators rename programs freely |
+| `GET /program-catalog` | Distinct `(targetCode, targetTitle)` pairs with `timesShot` and `lastStartedAt`; operators rename programs freely |
 | `GET /live` | Every line with the pass currently on it, `currentProgram: null` when free |
 | `GET /health` | `{ databaseReachable, today, liveClients, publicExposure }`, no token needed |
 

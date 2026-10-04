@@ -50,4 +50,4 @@ public sealed record ClubRow(int ClubID, string? ClubNumber, string? ClubName);
 
 public sealed record LaneRow(int Number, int? ProgramID);
 
-public sealed record CatalogRow(int Number, string Name, int ProgramCount, DateTime? LastStartedAt);
+public sealed record CatalogRow(int Number, string Name, int TimesShot, DateTime? LastStartedAt);
