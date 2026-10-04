@@ -25,9 +25,15 @@ Für Fernseher und Beamer gibt es eigene Adressen ohne Bedienelemente, als Lesez
 | `/fullscreen/results` | nur die letzten Resultate |
 | `/fullscreen/live+results` | beides |
 
-Weil auf einem Fernseher nicht gescrollt werden kann, laufen die Resultate, die nicht mehr auf den
-Bildschirm passen, als Laufschrift durch. Beides – Lesezeit pro Eintrag und Anzahl – lässt sich im
-Vollbild-Dialog einstellen und ist in der kopierten Adresse enthalten.
+Weil auf einem Fernseher nicht gescrollt werden kann, laufen die letzten Resultate zusätzlich als
+Laufschrift durch. Im Vollbild-Dialog lassen sich beliebig viele Anzeigen einrichten – Ansicht,
+Anzahl Resultate, wie viele die Laufschrift überspringt, Lesezeit pro Eintrag, Laufschrift ein oder
+aus – und benennen; die Liste bleibt im Browser gespeichert, und jede Adresse enthält ihre
+Einstellungen.
+
+Unter **Resultauswertung** (`/browse`) lassen sich die Resultate eines Zeitraums nach Programmnummer,
+Wettkampfnummer und Lizenz filtern, pro Stich, Passe oder Schuss anzeigen, sortieren und als CSV
+oder in die Zwischenablage exportieren.
 
 Eine Linie gilt wieder als frei, wenn der Stich abgeschlossen ist oder eine Weile nicht mehr
 geschossen wurde. Wird nach einer Pause weitergeschossen, erscheint der Stich mit allen bisherigen
@@ -112,7 +118,7 @@ with [`docs/api.md`](docs/api.md): access setup, the results list field by field
 | `GET /live` | Every line and the pass currently on it. The same URL upgrades to a **WebSocket** pushing changes |
 | `GET /programs` | Passes, newest first. `state`, `targetCode`, `targetProgram`, `matchCode`, `license`, `lane`, `from`, `to`, `withoutResult`, `order`, `cursor`, `limit` |
 | `GET /programs/{id}` | One pass with all series and shots |
-| `GET /shooters`, `/shooters/{license}` | Registered shooters; licence lookup with their passes (also cursor-paged) |
+| `GET /shooters`, `/shooters/{license}` | Registered shooters, optionally only those with a pass in `from`/`to`; licence lookup with their passes (also cursor-paged) |
 | `GET /clubs` | The Swiss club register held by the device |
 | `GET /program-catalog` | Distinct `(targetCode, targetProgram)` pairs present, with counts |
 | `GET /health` | Database reachability (no token required) |

@@ -107,7 +107,8 @@ split as [OpenRangeOffice](https://github.com/Schiesssport/OpenRangeOffice):
 Anything that can be tested without a browser belongs in `core/`. That is where the interesting
 parts live: `format.js` (labels, shot rendering, the shooter fallback chain), `sectors.js` (the hit
 dial), `lanes.js` (when a line frees up, and the 60-second hold that keeps a finished pass on its line
-after the device has already cleared the lane), `ticker.js` (what scrolls, and how fast), `viewmode.js`
+after the device has already cleared the lane), `ticker.js` (display settings, and how fast the marquee runs), `boards.js` (the
+remembered display list), `browse.js` (rows, sorting and export text of the result browser), `viewmode.js`
 (which view a URL means), `openapi.js` (reading the spec for `/docs`, and which URLs the try box may
 call with the token), `i18n.js` (German and French — a test asserts every key is used and every
 used key exists, so `data-i18n`, `data-i18n-title` and `data-i18n-aria-label` in the HTML count).
@@ -125,8 +126,12 @@ read across a room. They are real routes so each can be bookmarked and pointed a
 server returns the same page for the three of them and the client reads `location.pathname`. Any
 other path under `/fullscreen/` is a 404.
 
-`/browse` is the result browser: a date window plus comma-separated programme number, match code and
-licence filters, one row per pass, series or shot, sortable in the browser. Its state lives in page
+`/browse` is the result browser (`browse.js` over `core/browse.js`). Every filter — date window,
+programme number, match code, licence — is an API query, so rows are always current; only the row
+shape (per pass, series or shot), the shot order, a result range and the column sort happen in the
+page. A shooter dialog lists the register, by default only shooters with a pass in the window
+(`GET /shooters?from&to`). An export dialog writes the visible rows as TSV to the clipboard or as a
+semicolon CSV, with the shots as one cell, one per series and/or one per shot. State lives in page
 memory only, so several tabs can hold different filters.
 
 Two consequences worth knowing before editing the HTML:

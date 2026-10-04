@@ -23,7 +23,7 @@ electronic 300m target system whose MSSQL Express schema the API hides from even
 
 ## Toolchain — all in Docker
 
-No .NET, SQL Server or Node on the host. Docker is the dev setup only; a range runs the published exe.
+No .NET, SQL Server or Node on the host. Docker is dev only; a range runs the published exe.
 
 | Command | Does |
 |---|---|
@@ -40,7 +40,7 @@ No .NET, SQL Server or Node on the host. Docker is the dev setup only; a range r
 (all under `scripts/`)
 
 `.container-home/` is the container's `HOME` and NuGet cache. **Solution file: `.slnx`** (.NET 10).
-Dev "today" is pinned with `Sintro__ReferenceDate=2026-07-08`, the backup's last shooting day.
+Dev "today" is pinned with `Sintro__ReferenceDate`.
 
 ## Architecture
 
@@ -55,16 +55,16 @@ src/Sintro.ResultViewer.Api/
   Live/             LaneWatcher (polls) → LiveHub (WebSocket fan-out)
   Api/V2/           VERSION-SPECIFIC: routes, tags, wire envelopes
   Viewer/           injects the session token into the HTML at serve time
-  wwwroot/          core/ = PURE logic (i18n, format, sectors, lanes, viewmode, ticker);
-                    app.js, docs.js = DOM; tests/
+  wwwroot/          core/ = PURE logic (i18n, format, sectors, lanes, viewmode, ticker, boards, browse);
+                    app.js, docs.js, browse.js = DOM; tests/
 tests/Sintro.ResultViewer.Tests/
 ```
 
 **Layering:** anything testable without a browser belongs in `wwwroot/core/` — `app.js` may touch
-the DOM, `core/` may not. Server-side the pure `Data/` classes carry the test weight.
+the DOM, `core/` may not. Server-side the pure `Data/` classes carry the weight.
 
 **API versioning.** `Api/V2/` owns routes, tags, descriptions and wire envelopes; everything else is
-shared, so v3 is a new folder plus one `app.MapV3()` line. **v1 is the legacy Grapevine service.**
+shared, so v3 is a new folder plus one `app.MapV3()` line. v1 is the legacy Grapevine service.
 
 ## Single sources of truth
 
@@ -116,14 +116,16 @@ The integration tests assert the resulting counts.
 | Broadcast by enqueueing, never awaiting a socket | One stalled display would block every other client and the watcher |
 
 The viewer's shooter fallback chain — name → licence → `contestShooterName` → `Linie N · HH:mm` —
-is in `core/format.js`; keep it. **The viewer** is documented in `docs/architecture.md`. Three rules
-that fail silently if broken:
+is in `core/format.js`; keep it. **The viewer** is documented in `docs/architecture.md`. Rules that
+fail silently if broken:
 
 - **Asset URLs must be absolute** (`/app.js`) — a relative one resolves under `/fullscreen/` and is not served.
 - **Column widths belong on `<colgroup>`** — `table-layout: fixed` reads the first row, often a
   colspan message row.
 - **Never rebuild the ticker DOM unless `tickerContentKey` changed** — a rebuild restarts the
   marquee, and results reload on every live message.
+- **`/browse` filters are API queries**; only row shape, sort and the result range live in the page.
+  Displays never scroll and never guess capacity: the table clips, the ticker always runs.
 
 ## Security model
 
@@ -132,7 +134,7 @@ that fail silently if broken:
 
 - **Tokens are arrays with scopes** (`ApiReadTokens` / `ApiWriteTokens`, write implies read).
   Configuring none is valid: the session token still covers the viewer. `Authorization: Bearer` is
-  the only accepted header — do not add a second. Tokens are compared as SHA-256 digests.
+  the only accepted header. Tokens are compared as SHA-256 digests.
 - **`TrustedProxies` is a list, not a switch** — `X-Forwarded-For` is unwound only through hops in
   it, stopping at the first stranger (`Security/ClientAddress.cs`).
 - **`UseWebSockets()` must stay before `UseTokenAuth()`** — `?token=` is accepted only on a genuine
@@ -140,26 +142,26 @@ that fail silently if broken:
   is always 401. `LiveFeedTests` guards both.
 - **A forwarded hop that does not parse resolves to *no* client**, and the gate refuses it. Falling
   back to the proxy's own address would admit anyone behind a public proxy (`ClientAddressTests`).
-- **`/openapi/v2.json` is token-free** (schema, not data), on the *web* surface. Never put a real
-  licence number or shooter name in an endpoint description — a test asserts neither appears.
-- **A null remote address counts as loopback** (in-process or Unix socket; no TCP client can forge
-  it). Non-private ranges are allowed but warned about at startup and via `health.publicExposure`.
+- **`/openapi/v2.json` is token-free** (schema, not data). Never put a real licence number or
+  shooter name in an endpoint description — a test asserts neither appears.
+- **A null remote address counts as loopback** (in-process; no TCP client can forge it). Non-private
+  ranges are allowed but warned about at startup and via `health.publicExposure`.
 - **The allowlists have no code default**; an empty list is refused at startup.
-  `NetworkOptions.PrivateSpace` defines what "private" *means* for the warning, never an allowlist.
+  `NetworkOptions.PrivateSpace` defines what "private" means for the warning, never an allowlist.
 
 ## After any change
 
 1. `scripts/test.sh` — stays fully green.
 2. Touched a query or mapping rule? Verify with `scripts/sql.sh`. Integration tests assert
    **invariants, not counts** — never hard-code a total, name or id from one export.
-3. Touched `wwwroot/`? `scripts/run.sh`; load `/`, each `/fullscreen/*`, `/docs`.
+3. Touched `wwwroot/`? `scripts/run.sh`; load `/`, each `/fullscreen/*`, `/browse`, `/docs`.
 4. New translation key? Add it to **both** `de` and `fr`.
 5. Learned something about the schema? Record it in `docs/device-database.md`.
 
 ## Style
 
-Simplicity first. Comments are short to non-existent: names and structure explain *what*, and a
-comment is one line for a *why* that cannot be inferred (a measured device fact, a security
-reason). Functions and methods stay readable, about 25 lines; split rather than comment sections.
+Simplicity first, also over small optimisations. Comments are short to non-existent: names and
+structure explain *what*, a comment is one line for a *why* that cannot be inferred. Functions stay
+about 25 lines; split rather than comment sections.
 YAGNI: no speculative abstractions, options or helpers for one caller. Never cite one export's
 counts as schema facts. No emojis.
