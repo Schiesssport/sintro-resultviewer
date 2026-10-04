@@ -37,7 +37,7 @@ a synonym for something already listed.
 | program number | Programmnummer | `Programs.Number` | Operator-assigned; not a stable identifier. API: `targetCode`, with `Programs.Name` as `targetTitle` |
 | match code | Stich-Nummer | `Shots.ExternalNumber` | The event match the operator enters in contest mode; `0` = none. API: `matchCode` per shot |
 | line | Linie | `Lanes.Number`, `Programs.LaneNr` | A firing point. Count is site-specific |
-| shooter | Schütze | `Shooters` | Optional — most passes have none |
+| shooter | Schütze | `Shooters` | Set only when the shooter logged in at the line; a pass without one is normal |
 | club | Verein | `Club` | Swiss club register, numbered `1.01.0.01.005` |
 | licence number | Lizenznummer | `Shooters.StartNr` | **Not** a start number, despite the column name |
 | series | Passe | `Shots.ShotGroup` | A block of shots that gets its own subtotal |
@@ -149,11 +149,13 @@ the pass's date plus that time — and a pass that runs past midnight needs the 
 The device stores local wall-clock time with no zone. The API attaches the configured range
 timezone (`Sintro:TimeZone`) and emits ISO 8601.
 
-### A pass usually has no shooter
+### A pass has a shooter only when one logged in
 
-Identifying yourself is optional, and a barcode can be misread, so `Programs.ShooterID` is null for
-the large majority of passes. This is normal operation, not corrupt data. A result must remain
-usable regardless: line number and start time always identify a pass.
+Logging in at the line (by licence barcode) is optional, and a barcode can be misread, so
+`Programs.ShooterID` is null whenever nobody did. How often that happens depends entirely on the
+range and the occasion: a training evening may be mostly anonymous, an event day mostly named.
+A null is normal operation, not corrupt data, and a result must remain usable regardless: line
+number and start time always identify a pass.
 
 `Shots.StartNr` looks like it would help and does not — see the column notes.
 
@@ -188,7 +190,7 @@ Irrelevant to results, and unused here.
 | `Number`, `Name` | The operator can rename a program freely, so the same number appears under several names and the same name under several numbers. Treat `(Number, Name)` as free text, never as a key |
 | `StartTime` | `varchar`, `dd.MM.yyyy-HH:mm:ss` |
 | `LaneNr` | The line the pass was shot on |
-| `ShooterID` | Null for most passes |
+| `ShooterID` | Null when nobody logged in at the line |
 | `ContestShooterName` | Free text. Empty in every export examined — **TODO:** the device has a *ContestMode*; check whether that is what fills this field, and whether the viewer should prefer it when set |
 
 ### `Shots`
@@ -244,8 +246,8 @@ removed from the dev database rather than modelled.
 
 ## Consequences for the API
 
-1. **The pass is the primary entity**, not the shooter. Most passes are anonymous, so a
-   shooter-keyed model would show almost nothing.
+1. **The pass is the primary entity**, not the shooter. A pass without a shooter is normal, so a
+   shooter-keyed model would lose results.
 2. **The device database is a rolling window.** `ProgramID` keeps climbing while old rows are
    pruned, so historical features need their own store — this API cannot promise yesterday's data
    still exists. `ProgramID` is nevertheless a sound paging key: it is an identity column and

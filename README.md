@@ -139,8 +139,8 @@ finished since — nothing to diff. See [`docs/api.md`](docs/api.md).
 A few things worth knowing before building against it:
 
 - **Lists default to today.** Pass `from`/`to` for anything else.
-- **`shooter` is `null` for most passes** — identifying yourself is optional — so `lane` and
-  `startedAt` are what always identify one.
+- **`shooter` is `null` when nobody logged in at the line** — identifying yourself is optional —
+  so `lane` and `startedAt` are what always identify a pass.
 - **A pass is `active`, `finished` or `abandoned`.** The third is real: started, never ended, and
   no longer on a line.
 - **`totals` lists one sum per target and ring scale.** A pass shot on one scale has one entry; a

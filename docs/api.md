@@ -91,7 +91,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 | Field | Meaning |
 |---|---|
-| `shooter` | `null` for most passes: registering is optional. `lane` + `startedAt` always identify a pass. `contestShooterName` is the device's free-text name field, if the operator typed one |
+| `shooter` | `null` when nobody logged in at the line; registering is optional. `lane` + `startedAt` always identify a pass. `contestShooterName` is the device's free-text name field, if the operator typed one |
 | `duplicateLicense` | The device has no unique constraint on licences; `true` means another shooter carries the same number |
 | `totals` | One entry per target and ring scale, in the order first shot: `value` is the sum of the counting shots on that scale, `fineValues` their fine values in firing order. A pass shot on one scale has exactly one entry; a pass that changed scale has several, never one number across scales. `valuation: null` means the device recorded no scale for those series |
 | `totals[].valuation` | Ring scale: `4`, `5`, `10`, `100` |

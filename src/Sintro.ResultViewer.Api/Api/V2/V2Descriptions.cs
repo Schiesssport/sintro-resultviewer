@@ -76,7 +76,7 @@ internal static class V2Descriptions
         """;
 
     public const string Shooters = $"""
-        Registering a shooter is optional, so most programs have none. q matches surname,
+        Registering a shooter is optional, so a program may have none. q matches surname,
         first name or licence number. With from and/or to (YYYY-MM-DD, inclusive) only
         shooters with a pass started inside that window are listed.
 

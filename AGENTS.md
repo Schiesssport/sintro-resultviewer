@@ -107,7 +107,7 @@ The integration tests assert these rules.
 | `Totals` has one entry per target/scale, never one sum across scales | 5er + 10er is meaningless |
 | Never join on `Shots.StartNr` — use `ProgramID → Programs.ShooterID` | Almost always zero |
 | `Shooters.StartNr` **is the licence number**, no length cap | Six digits, zero-padded; 7-9 digits planned |
-| `shooter: null` is normal | Most passes are anonymous |
+| `shooter: null` is normal | Only a logged-in shooter is recorded |
 | Parse `StartTime` as `dd.MM.yyyy-HH:mm:ss`, emit ISO 8601 | Day-first text; its order is meaningless |
 | `targetCode`/`targetTitle` = `Programs.Number`/`Name`, free text | Operators rename programs |
 | `matchCode` = `Shots.ExternalNumber`, `0` → `null` | The event Stich, per shot |
