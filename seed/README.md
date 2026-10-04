@@ -2,6 +2,8 @@
 
 A Sintro 300 database built from invented data, so development, the integration tests and CI
 do not depend on a real export (which holds real shooters' names and can never be committed).
+CI builds it on every push and runs the full suite against it; the integration tests are
+mandatory, there is no switch to skip them.
 
 ```
 seed/schema.sql        the six tables the viewer reads, as the device creates them

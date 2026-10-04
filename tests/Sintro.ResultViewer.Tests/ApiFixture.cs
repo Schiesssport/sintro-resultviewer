@@ -79,13 +79,3 @@ public sealed class ApiCollection : ICollectionFixture<ApiFixture>
 {
     public const string Name = "api";
 }
-
-/// <summary>Skips rather than fails without a database, so the pure unit tests still run outside compose.</summary>
-public sealed class RequiresDatabaseFactAttribute : FactAttribute
-{
-    public RequiresDatabaseFactAttribute()
-    {
-        if (Environment.GetEnvironmentVariable("SINTRO_SKIP_DB_TESTS") == "1")
-            Skip = "SINTRO_SKIP_DB_TESTS=1";
-    }
-}

@@ -38,7 +38,7 @@ public class SecurityTests(ApiFixture fixture)
         Assert.Equal(HttpStatusCode.Unauthorized, (await custom.GetAsync("/api/v2/live")).StatusCode);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task healthNeedsNoToken_soMonitoringCanReachIt()
     {
         var response = await fixture.CreateClient().GetAsync("/api/v2/health");
@@ -55,7 +55,7 @@ public class SecurityTests(ApiFixture fixture)
         Assert.False(string.IsNullOrWhiteSpace(body.Detail));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aNotFoundCarriesTheErrorEnvelopeToo()
     {
         var response = await fixture.CreateAuthorizedClient().GetAsync("/api/v2/programs/999999999");
@@ -160,7 +160,7 @@ public class SecurityTests(ApiFixture fixture)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theOpenApiDocumentExposesNoShooterData()
     {
         // Checked against the loaded export rather than a hard-coded name, so it protects whatever data a contributor has.
@@ -178,7 +178,7 @@ public class SecurityTests(ApiFixture fixture)
         }
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theLiveEndpointServesLaneStateOverPlainHttp()
     {
         var response = await fixture.CreateAuthorizedClient().GetAsync("/api/v2/live");

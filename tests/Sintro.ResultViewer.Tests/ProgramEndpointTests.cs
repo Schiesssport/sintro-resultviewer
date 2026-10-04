@@ -22,7 +22,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
     private Task<CursorPage<ShootingProgram>> AllProgramsAsync(string extra = "") =>
         ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&limit=5000{extra}");
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theDefaultListOnlyContainsPassesThatHaveAResult()
     {
         var withResult = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
@@ -31,7 +31,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         Assert.All(withResult.Items, program => Assert.True(program.ShotCount > 0));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task withoutResultAddsThePassesThatWereStartedAndAbandoned()
     {
         var withResult = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
@@ -47,7 +47,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
             program => Assert.Equal(0, program.ShotCount));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theThreeStateFiltersPartitionTheList()
     {
         // The third state exists because a pass off the line with no end total is neither active nor finished.
@@ -67,7 +67,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         Assert.Equal(everything.Items.Count, partitioned.Count);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task everyPassReportsAStateThatItsOwnFilterAgreesWith()
     {
         var everything = await AllProgramsAsync();
@@ -82,7 +82,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         }
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task activePassesAreExactlyThoseOnALine()
     {
         var active = await AllProgramsAsync("&state=active");
@@ -96,7 +96,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         Assert.Equal(onALine, active.Items.Select(program => program.Id).OrderBy(id => id));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theDefaultWindowIsASingleDay()
     {
         // No from/to means today only, and ReferenceDate pins today to the export's day.
@@ -107,7 +107,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         Assert.Single(days);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aTotalIsTheSumOfItsSeriesSubtotals()
     {
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
@@ -121,7 +121,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         });
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theFlatShotValuesMatchTheSeriesTheyCameFrom()
     {
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
@@ -136,7 +136,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         });
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task sightingShotsAreNeverCountedTowardsATotal()
     {
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
@@ -150,7 +150,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         });
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task markerRowsNeverAppearAsShots()
     {
         var page = await AllProgramsAsync();
@@ -162,7 +162,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         Assert.DoesNotContain(9999, everyShot.Select(shot => shot.Number));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aPassWithoutATotalAlwaysSaysWhy()
     {
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
@@ -180,7 +180,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
             Assert.True(program.Series.Select(series => series.Valuation).Distinct().Count() > 1));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task everySeriesCarriesAReadableTargetType()
     {
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
@@ -194,7 +194,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         });
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aMatchCodeIsNeverZeroAndDoesNotChangeWithinAPass()
     {
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
@@ -212,7 +212,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         });
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task hitSectorsStayInTheRangeTheDialCanDraw()
     {
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
@@ -227,7 +227,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         Assert.All(sectors, sector => Assert.InRange(sector!.Value, 0, 8));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aPassWithoutAShooterIsStillIdentifiable()
     {
         var page = await AllProgramsAsync();
@@ -241,7 +241,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         });
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task timestampsAreIso8601WithAnOffset()
     {
         var raw = await Client().GetStringAsync(
@@ -254,7 +254,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         Assert.Matches(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([.\d]*)?[+-]\d{2}:\d{2}$", startedAt);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task statesSerializeExactlyAsTheDocsPromiseThem()
     {
         // The wire carries "active", "finished" and "abandoned", not the C# enum spellings.
@@ -271,7 +271,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
             Assert.Contains(state, new[] { "active", "finished", "abandoned" }));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theLineFilterNarrowsToThatLine()
     {
         var any = await AllProgramsAsync();
@@ -283,14 +283,14 @@ public class ProgramEndpointTests(ApiFixture fixture)
         Assert.All(filtered.Items, program => Assert.Equal(line, program.Lane));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task anUnknownProgramIs404()
     {
         var response = await Client().GetAsync("/api/v2/programs/999999999");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task listFiltersUnionTheirValuesAndRefuseNonNumbers()
     {
         var all = await AllProgramsAsync();
@@ -308,7 +308,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theMatchCodeFilterKeepsOnlyPassesShotUnderThatCode()
     {
         var all = await AllProgramsAsync();
@@ -323,7 +323,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
             Assert.Contains(program.Series.Concat(program.Sighting).SelectMany(series => series.Shots), shot => shot.MatchCode == code));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theLicenceFilterIgnoresLeadingZerosAndRejectsTheUnknown()
     {
         var licence = await fixture.AnyLicenceAsync();

@@ -36,7 +36,7 @@ public class CursorPagingTests(ApiFixture fixture)
         return all;
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task walkingEveryPage_visitsEachProgramExactlyOnce()
     {
         var single = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&limit=2000");
@@ -50,7 +50,7 @@ public class CursorPagingTests(ApiFixture fixture)
         Assert.Equal(walked.Count, walked.Select(program => program.Id).Distinct().Count());
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theLastPageStillHandsBackACursorToResumeFrom()
     {
         // A sync client ends on this page and must have a position to store.
@@ -61,7 +61,7 @@ public class CursorPagingTests(ApiFixture fixture)
         Assert.NotNull(page.NextCursor);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task afullPageThatExactlyEmptiesTheSetStillTerminates()
     {
         // A limit equal to the remaining rows must not hand back a cursor to an empty page.
@@ -74,7 +74,7 @@ public class CursorPagingTests(ApiFixture fixture)
         Assert.False(exact.HasMore);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task defaultOrderIsNewestFirst()
     {
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&limit=50");
@@ -83,7 +83,7 @@ public class CursorPagingTests(ApiFixture fixture)
         Assert.Equal(ids.OrderByDescending(id => id), ids);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task ascendingOrderIsOldestFirst()
     {
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&order=asc&limit=50");
@@ -92,7 +92,7 @@ public class CursorPagingTests(ApiFixture fixture)
         Assert.Equal(ids.OrderBy(id => id), ids);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task ascendingCursorIsAnIncrementalSync()
     {
         var first = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&order=asc&limit=20");
@@ -106,7 +106,7 @@ public class CursorPagingTests(ApiFixture fixture)
         Assert.All(second.Items, program => Assert.True(program.Id > first.Items[^1].Id));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aCursorLiftsTheTodayOnlyDefault()
     {
         // A client syncing the morning after must not lose yesterday's late passes to the today window.
@@ -120,7 +120,7 @@ public class CursorPagingTests(ApiFixture fixture)
         Assert.Equal(windowed.Items.Select(program => program.Id), bare.Items.Select(program => program.Id));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task finishedPassesAreListedInFinishingOrder()
     {
         // A pass that ends late must arrive after a syncing client's cursor, whenever it started.
@@ -131,7 +131,7 @@ public class CursorPagingTests(ApiFixture fixture)
         Assert.Equal(finished.OrderBy(at => at), finished);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theSyncRecipeKeepsToTheEventDays()
     {
         // The documented recipe: state=finished, order=asc, a date window, and a stored cursor, all at once.
@@ -148,7 +148,7 @@ public class CursorPagingTests(ApiFixture fixture)
         Assert.DoesNotContain(first.Items[0].Id, rest.Select(program => program.Id));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aFinishedCursorIsRefusedWithoutTheStateFilter()
     {
         // The two listings are keyed differently; replaying one cursor under the other would return the wrong half.
@@ -163,7 +163,7 @@ public class CursorPagingTests(ApiFixture fixture)
         Assert.Contains("state=finished", body.Detail);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aGarbageCursorIs400RatherThanARestartFromPageOne()
     {
         var response = await Client().GetAsync(
@@ -174,7 +174,7 @@ public class CursorPagingTests(ApiFixture fixture)
         Assert.Equal("invalid_cursor", body!.Error);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aCursorIssuedForOneOrderIsRefusedForTheOther()
     {
         // Continuing an ascending walk with the default descending order would return everything older.
@@ -199,7 +199,7 @@ public class CursorPagingTests(ApiFixture fixture)
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task shootersPageAlphabeticallyWithoutRepeats()
     {
         var all = await WalkAsync<Shooter>("/api/v2/shooters?limit=25", stopAfter: 1000);
@@ -215,7 +215,7 @@ public class CursorPagingTests(ApiFixture fixture)
             all.Select(shooter => shooter.ShooterId));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task clubsPageThroughTheWholeRegister()
     {
         var all = await WalkAsync<Club>("/api/v2/clubs?limit=500", stopAfter: 5000);

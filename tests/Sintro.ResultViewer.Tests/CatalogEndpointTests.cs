@@ -12,7 +12,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
 {
     private HttpClient Client() => fixture.CreateAuthorizedClient();
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task everyLineIsListedInOrder()
     {
         var lanes = (await Client().GetFromJsonAsync<List<LaneStatus>>("/api/v2/live", SintroJson.Options))!;
@@ -23,7 +23,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         Assert.Equal(lanes.Count, lanes.Select(lane => lane.Number).Distinct().Count());
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aLineWithAPassOnItReportsThatPassAsActive()
     {
         var lanes = (await Client().GetFromJsonAsync<List<LaneStatus>>("/api/v2/live", SintroJson.Options))!;
@@ -32,7 +32,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
             lane => Assert.Equal(ProgramState.Active, lane.CurrentProgram!.State));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task idleLinesCarryAnExplicitNullRatherThanAMissingKey()
     {
         // Omitting the key would force every client to tell "absent" from "empty" and contradict the published schema.
@@ -46,7 +46,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         }
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task anonymousPassesCarryAnExplicitNullShooter()
     {
         var raw = await Client().GetStringAsync(
@@ -55,7 +55,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         Assert.Contains("\"shooter\":null", raw.Replace(" ", ""));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task everyShooterHasANormalisedLicence()
     {
         var page = (await Client().GetFromJsonAsync<CursorPage<Shooter>>(
@@ -68,7 +68,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         });
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task shooterSearchMatchesNameAndLicence()
     {
         var licence = await fixture.AnyLicenceAsync();
@@ -85,7 +85,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         Assert.Contains(byName.Items, shooter => shooter.LastName == surname);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aLicenceLookupReturnsTheShooterAndTheirPasses()
     {
         var licence = await fixture.AnyLicenceAsync();
@@ -100,7 +100,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         Assert.NotNull(detail.Programs);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aShootersPassesArePagedLikeEveryOtherCollection()
     {
         var licence = await fixture.AnyLicenceAsync();
@@ -127,7 +127,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         Assert.Equal(everything.Programs.Items.Select(program => program.Id), walked);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aMisspelledFilterIsRejectedRatherThanIgnored()
     {
         foreach (var query in new[] { "state=finishd", "order=ascending" })
@@ -141,14 +141,14 @@ public class CatalogEndpointTests(ApiFixture fixture)
         }
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task anEmptyFilterValueStillMeansNoFilter()
     {
         var response = await Client().GetAsync($"/api/v2/programs?state=&order=&{ApiFixture.WholeRange}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task everyValidStateAndOrderIsAccepted()
     {
         foreach (var value in new[] { "active", "finished", "abandoned", "ACTIVE", " finished " })
@@ -166,7 +166,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         }
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aLicenceLookupIgnoresLeadingZeros()
     {
         var licence = await fixture.AnyLicenceAsync();
@@ -180,7 +180,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         Assert.Equal(padded.Shooters[0].ShooterId, unpadded.Shooters[0].ShooterId);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aDateWindowKeepsOnlyShootersWithAPassInIt()
     {
         var programs = (await Client().GetFromJsonAsync<CursorPage<ShootingProgram>>(
@@ -198,14 +198,14 @@ public class CatalogEndpointTests(ApiFixture fixture)
         Assert.Equal(expected.OrderBy(id => id), shooters.Items.Select(shooter => shooter.ShooterId).OrderBy(id => id));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task anUnknownLicenceIs404()
     {
         var response = await Client().GetAsync("/api/v2/shooters/999999999");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task clubSearchNarrowsTheRegister()
     {
         var name = await fixture.AnyClubNameAsync();
@@ -221,7 +221,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
             Assert.Contains(term, club.Name, StringComparison.OrdinalIgnoreCase));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task clubNamesArriveWithoutTheRegistersStrayWhitespace()
     {
         // The register the device ships carries trailing CR characters in its names.
@@ -236,7 +236,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         });
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theProgramCatalogAccountsForEveryPass()
     {
         var catalog = (await Client().GetFromJsonAsync<List<ProgramCatalogEntry>>(
@@ -253,7 +253,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
             catalog.Select(entry => (entry.TargetCode, entry.TargetProgram)).Distinct().Count());
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task healthReportsReachabilityAndNoPublicExposureByDefault()
     {
         var health = (await Client().GetFromJsonAsync<HealthReport>("/api/v2/health", SintroJson.Options))!;

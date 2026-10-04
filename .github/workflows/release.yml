@@ -24,11 +24,16 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # Unit tests only: the integration suite needs a restored device export, which cannot
-      # be published. See ci.yml.
+      # The full suite, integration tests included, against the seeded database. See ci.yml.
+      - name: Seed the database
+        run: |
+          echo "TODAY=$(date -u +%F)" >> "$GITHUB_ENV"
+          SEED_TODAY="$(date -u +%F)" scripts/db-seed.sh SintroSeed
+
       - name: Test
         env:
-          SINTRO_SKIP_DB_TESTS: '1'
+          ConnectionStrings__Sintro: "Server=localhost,11433;Database=SintroSeed;User Id=sa;Password=Sintro_Dev_2026!;TrustServerCertificate=true;Encrypt=false"
+          Sintro__ReferenceDate: ${{ env.TODAY }}
         run: dotnet test Sintro.ResultViewer.slnx -c Release
 
       - name: Publish win-x64

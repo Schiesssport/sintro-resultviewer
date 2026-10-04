@@ -17,12 +17,18 @@ jobs:
 
       - run: dotnet build Sintro.ResultViewer.slnx -c Release
 
-      # The integration suite needs a restored device export, which contains real shooters'
-      # names and so can never live in the repository. Contributors run it locally with
-      # scripts/test.sh; CI covers the pure logic, which is where the scoring rules live.
-      - name: Unit tests
+      # The integration suite runs against the seeded database (seed/), the same way as on a
+      # developer machine. A device export can never be committed; the seed replaces it here.
+      # "Today" is pinned for both the seed and the API so a run near midnight cannot disagree.
+      - name: Seed the database
+        run: |
+          echo "TODAY=$(date -u +%F)" >> "$GITHUB_ENV"
+          SEED_TODAY="$(date -u +%F)" scripts/db-seed.sh SintroSeed
+
+      - name: Tests
         env:
-          SINTRO_SKIP_DB_TESTS: '1'
+          ConnectionStrings__Sintro: "Server=localhost,11433;Database=SintroSeed;User Id=sa;Password=Sintro_Dev_2026!;TrustServerCertificate=true;Encrypt=false"
+          Sintro__ReferenceDate: ${{ env.TODAY }}
         run: dotnet test Sintro.ResultViewer.slnx -c Release --no-build
 
       - name: Cross-publish the Windows deployment

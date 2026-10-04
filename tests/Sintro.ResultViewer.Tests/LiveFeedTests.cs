@@ -27,7 +27,7 @@ public class LiveFeedTests(ApiFixture fixture)
         return builder.ToString();
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theLiveFeedAcceptsTheTokenAsAQueryParameter()
     {
         // Guards the UseWebSockets-before-UseTokenAuth order: reversed, every handshake is 401.
@@ -50,7 +50,7 @@ public class LiveFeedTests(ApiFixture fixture)
         Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task theCurrentLaneStateIsPushedOnConnect()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -83,7 +83,7 @@ public class LiveFeedTests(ApiFixture fixture)
             occupied);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aHandshakeWithoutATokenIsRefused()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -94,7 +94,7 @@ public class LiveFeedTests(ApiFixture fixture)
         await Assert.ThrowsAnyAsync<Exception>(() => client.ConnectAsync(uri, cts.Token));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aHandshakeWithAWrongTokenIsRefused()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -105,7 +105,7 @@ public class LiveFeedTests(ApiFixture fixture)
         await Assert.ThrowsAnyAsync<Exception>(() => client.ConnectAsync(uri, cts.Token));
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task oneStalledClientDoesNotStopTheOthers()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -134,7 +134,7 @@ public class LiveFeedTests(ApiFixture fixture)
         Assert.Contains("lanes", payload);
     }
 
-    [RequiresDatabaseFact]
+    [Fact]
     public async Task aClientThatFallsBehindLosesFramesRatherThanMemory()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));

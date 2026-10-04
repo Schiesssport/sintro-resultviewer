@@ -104,9 +104,9 @@ scripts/run.sh                      # http://localhost:8080
 scripts/publish-win.sh              # -> bin/win-x64/
 ```
 
-Without a device export the integration tests skip (`SINTRO_SKIP_DB_TESTS=1`) and everything else
-still runs. That is what CI does today, since an export can never be committed; the seeded
-database in [`seed/`](seed/README.md) is the way to change that.
+The integration tests always run; they need a database, either a restored export or the seeded
+one from [`seed/`](seed/README.md). CI builds the seed and runs the full suite against it on
+every push, since an export can never be committed.
 
 ### API
 
