@@ -125,9 +125,10 @@ export class SintroApi {
                 },
                 onMessage,
                 // Reconnect for as long as the page is open; the server pushes current state on connect.
-                onClose: (ws) => {
+                onClose: async (ws) => {
                     if (ws !== socket) return;   // a late event from a superseded socket
                     onStateChange('offline');
+                    if (await this.tokenRejected()) return location.reload();
                     setTimeout(connect, retryDelay);
                     retryDelay = nextRetryDelay(retryDelay);
                 },
@@ -135,5 +136,16 @@ export class SintroApi {
         };
 
         connect();
+    }
+
+    // A restarted server mints a new session token and answers the old one with 401, which the
+    // WebSocket API hides; only a fresh page carries the new token. A server that is down throws
+    // here instead, and the feed keeps retrying.
+    async tokenRejected() {
+        try {
+            return (await fetch('/api/v2/live', { headers: this.headers })).status === 401;
+        } catch {
+            return false;
+        }
     }
 }

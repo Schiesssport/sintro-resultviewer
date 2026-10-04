@@ -130,7 +130,9 @@ parts live:
 - `browse.js`: rows, sorting and export text of the result browser.
 - `viewmode.js`: which view a URL means.
 - `openapi.js`: reading the spec for `/docs`, and which URLs the try box may call with the token.
-- `reconnect.js`: the back-off for the live socket.
+- `reconnect.js`: the back-off for the live socket. A restarted server rejects the old session
+  token, which the WebSocket API cannot report, so `api.js` probes with a plain GET and reloads
+  the page on 401.
 - `i18n.js`: German and French for the user pages, plus English for `/docs` only. A test asserts
   every key is used and every used key exists, so `data-i18n`, `data-i18n-title` and
   `data-i18n-aria-label` in the HTML count.
