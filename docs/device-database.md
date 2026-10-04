@@ -196,10 +196,10 @@ Irrelevant to results, and unused here.
 | `ShotGroup` | Series index. See the rule above — not a reliable sighting marker |
 | `ShotNr` | Counts from 1 across every counting series of the pass; the sighting shots have their own numbering from 1 (measured in one export: the first counting shot after three sighting shots is `ShotNr 1` again). Not a position inside a series. `9999` marks a synthetic row |
 | `PrimaryResult` | Ring value in the active valuation; `0` is a miss |
-| `SecondaryResult` | Fine value 0–100, bracketed by `PrimaryResult` |
-| `Mouche` | `1` = centre hit, always paired with `HitPosition = 0` |
+| `SecondaryResult` | Fine value 0–100, bracketed by `PrimaryResult`. Measured on A10 passes: one fine point is 5 mm from the centre, fine 100 lies within 8 mm, fine 99 at 9–13 mm and so on; a miss is `0` at 500 mm or further |
+| `Mouche` | `1` = centre hit, always paired with `HitPosition = 0`; on A10 passes exactly the shots with a fine value of 96 or better |
 | `HitPosition` | Hit sector: `1`–`8` clockwise from twelve o'clock in 45° steps, `0` centre, `255` none reported. Derived from `X`/`Y`, whose mean angle per sector lands on 90°, 45°, 0°, −45°, −90°, −135°, 180°, 135° |
-| `X`, `Y` | Hit coordinates in 1/100 mm from the centre. `Y` positive is up |
+| `X`, `Y` | Hit coordinates in mm from the centre (a fine value of 90 sits about 55 mm out). `Y` positive is up |
 | `TotalType` | `0` ordinary shot, `1` last shot of a series, `7` end of pass — set on the last real shot **and** on the marker row that follows it |
 | `FireMethod` | The shooting stage. **Proposed, unverified:** `0` sighting stage, `1` precision stage (Einzelfeuer), `2` rapid-fire stage (Serienfeuer). This matters for display — program names encode it as `EF`/`SF` — so it is worth confirming. **TODO** |
 | `BreakMode` | `1` means open fire: free shooting outside any match, e.g. while sighting in. Irrelevant to results and not used by the viewer |

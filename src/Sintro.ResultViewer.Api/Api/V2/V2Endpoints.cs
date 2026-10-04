@@ -32,6 +32,7 @@ public static class V2Endpoints
 
     private static void MapLive(RouteGroupBuilder api) =>
         api.MapGet("/live", Live)
+           .Produces<LanesFrame>()
            .WithMetadata(new QueryTokenOnUpgrade())
            .WithTags(TagLive)
            .WithSummary("Lane state now — and the WebSocket for push updates")

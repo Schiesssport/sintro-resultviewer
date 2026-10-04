@@ -67,13 +67,26 @@ const ringValue = (fine, valuation) => {
     return clamp(Math.ceil(fine / (100 / valuation)), 1, valuation);
 };
 
-// Sector 1 is twelve o'clock, clockwise; 0 is a centre hit. X/Y in 1/100 mm, Y up.
+// Measured on an A10 export: X/Y are mm from the centre, Y up; a fine point is 5 mm, fine 100 lies within
+// 8 mm, a miss (fine 0) lands 500 mm or further out. 96 and better is a mouche, HitPosition 0.
+const distanceFor = (fine) => {
+    if (fine === 0) return 500 + random() * 380;
+    if (fine === 100) return random() * 8;
+    return 5 * (100 - fine) + 4 + random() * 4;
+};
+
+// Sector 1 is twelve o'clock, clockwise in 45 degree steps, read off the stored coordinates.
+const sectorOf = (x, y) => {
+    const bearing = (450 - Math.atan2(y, x) * 180 / Math.PI) % 360;
+    return 1 + Math.floor(((bearing + 22.5) % 360) / 45);
+};
+
 const hitGeometry = (fine) => {
-    if (fine >= 96) return { sector: 0, x: 0, y: 0 };
-    const sector = 1 + Math.floor(random() * 8);
-    const angle = (90 - (sector - 1) * 45) * Math.PI / 180;
-    const radius = (100 - fine) * 12;
-    return { sector, x: Math.round(radius * Math.cos(angle)), y: Math.round(radius * Math.sin(angle)) };
+    const radians = random() * 2 * Math.PI;
+    const distance = distanceFor(fine);
+    const x = Math.round(distance * Math.cos(radians));
+    const y = Math.round(distance * Math.sin(radians));
+    return { sector: fine >= 96 ? 0 : sectorOf(x, y), x, y };
 };
 
 const shotRow = ({ lane, stage, groupIndex, shotNr, at, isLastOfSeries, isLastOfProgram, matchCode, logEvent }) => {
@@ -84,7 +97,7 @@ const shotRow = ({ lane, stage, groupIndex, shotNr, at, isLastOfSeries, isLastOf
 
     return [
         0, lane, shotNr, ring, fine, hit.sector, stage.kind === 'sighting' ? 0 : 1, quote(shotTimeText(at)),
-        hit.sector === 0 && fine >= 98 ? 1 : 0, hit.x, hit.y, 1, 0, totalType, groupIndex,
+        hit.sector === 0 ? 1 : 0, hit.x, hit.y, 1, 0, totalType, groupIndex,
         FIRE_METHOD[stage.kind], logEvent, 3, quote(centisecondsSinceNewYear(at)), 1, 9,
         quote(TARGET_TYPE[stage.target]), matchCode, stage.kind === 'sighting' ? 1 : 0,
     ];

@@ -53,7 +53,9 @@ From `docs/device-database.md`; where that file says "unverified", so is the gen
 - Sighting shots: `ShotType 0`, `BreakMode 1`, `FireMethod 0`; counting shots `ShotType 1`.
 - `TotalType`: `1` on the last shot of a series, `7` on the last real shot **and** on the marker.
 - Marker row: `ShotNr 9999`, `HitPosition 255`, zero values.
-- `HitPosition` 1–8 clockwise from twelve o'clock, `0` centre; `X`/`Y` placed on that sector.
+- `X`/`Y` in mm at the distance the fine value implies (5 mm per point, fine 100 within 8 mm, a miss
+  beyond 500 mm) in a random direction; `HitPosition` is the sector of that direction, `0` and
+  `Mouche` for fine 96 and better.
 - `ExternalNumber` is the session's match code on every shot, `0` on training days.
 - `Shots.StartNr` is always `0`, `GunType 1`, `ShotPosition 9`, `LogType 3`, `InTime 1`,
   `InsDel 0`, as in the exports examined.

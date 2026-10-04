@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,9 +14,9 @@
 <div id="ui-wrapper">
     <header class="app-header">
         <img src="/icon.svg" alt="">
-        <h1 data-i18n="docs.title">API-Dokumentation</h1>
+        <h1>API documentation</h1>
         <div class="header-right">
-            <a class="header-link" href="/openapi/v2.json" data-i18n="docs.specLink">OpenAPI</a>
+            <a class="header-link" href="/openapi/v2.json">OpenAPI specification</a>
             <select id="language-select" data-i18n-aria-label="aria.language" aria-label="Sprache">
                 <option value="de" selected>DE</option>
                 <option value="fr">FR</option>
@@ -29,8 +29,12 @@
         <p class="docs-intro" data-i18n="docs.intro"></p>
 
         <section class="docs-panel">
-            <h3 class="docs-panel-title" data-i18n="docs.pagingTitle"></h3>
-            <p class="docs-panel-body" data-i18n="docs.pagingBody"></p>
+            <h3 class="docs-panel-title">Collections, paging and sync</h3>
+            <p class="docs-panel-body">Lists are paged by cursor, not by offset: the installation keeps writing new
+                records and prunes old ones, so an offset would skip or repeat entries. Pass nextCursor back as
+                cursor; hasMore says whether there is more. To sync with event software: request
+                state=finished&amp;order=asc with from/to set to the shooting days, store the last nextCursor and
+                pass it again next time, which returns exactly the passes of those days finished since.</p>
         </section>
 
         <div id="endpoints"></div>
@@ -38,7 +42,7 @@
 
     <footer class="app-footer">
         <span data-i18n="footer.note"></span>
-        <a class="btn-secondary footer-api-link" href="/" data-i18n="app.title">Resultate</a>
+        <a class="btn-secondary footer-api-link" href="/" data-i18n="nav.live">Übersicht</a>
     </footer>
 </div>
 

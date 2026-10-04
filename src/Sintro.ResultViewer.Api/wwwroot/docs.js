@@ -12,19 +12,19 @@ const t = (key, params) => translate(TRANSLATIONS[language], key, params);
 const openedBlobs = [];
 
 const parameterTable = (parameters) => {
-    if (!parameters?.length) return `<p class="endpoint-note">${t('docs.noParameters')}</p>`;
+    if (!parameters?.length) return '<p class="endpoint-note">No parameters.</p>';
 
     const rows = parameters.map((parameter) => `
         <tr>
             <td class="mono">${escapeHtml(parameter.name)}</td>
             <td class="mono">${escapeHtml(typeOf(parameter.schema))}</td>
-            <td>${parameter.in === 'path' ? t('docs.inPath') : ''}</td>
+            <td>${parameter.in === 'path' ? 'in path' : ''}</td>
             <td>${escapeHtml(parameter.description ?? '')}</td>
         </tr>`).join('');
 
     return `
         <table class="param-table">
-            <thead><tr><th>${t('docs.name')}</th><th>${t('docs.type')}</th><th></th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>Type</th><th></th><th></th></tr></thead>
             <tbody>${rows}</tbody>
         </table>`;
 };
@@ -43,16 +43,16 @@ const endpointCard = (path, method, operation, index) => `
             ${operation.description
                 ? `<p class="endpoint-description">${escapeHtml(operation.description)}</p>`
                 : ''}
-            <h4 class="endpoint-heading">${t('docs.parameters')}</h4>
+            <h4 class="endpoint-heading">Parameters</h4>
             ${parameterTable(operation.parameters)}
-            <h4 class="endpoint-heading">${t('docs.try')}</h4>
+            <h4 class="endpoint-heading">Try it</h4>
             ${hasPathParameter(path)
-                ? `<p class="endpoint-note">${escapeHtml(t('docs.replacePlaceholder'))}</p>`
+                ? '<p class="endpoint-note">Replace the placeholder in curly braces with a real value before sending, e.g. /api/v2/programs/2000 or /api/v2/shooters/123456.</p>'
                 : ''}
             <div class="try-row">
                 <input type="text" data-url="${index}" value="${escapeHtml(path)}" spellcheck="false">
-                <button class="btn-action" data-send="${index}">${t('docs.send')}</button>
-                <button class="btn-secondary hidden" data-open="${index}">${t('docs.openInBrowser')}</button>
+                <button class="btn-action" data-send="${index}">Send</button>
+                <button class="btn-secondary hidden" data-open="${index}">Open in browser</button>
             </div>
             <div class="response-status hidden" data-status="${index}"></div>
             <pre class="response hidden" data-response="${index}"></pre>
@@ -118,8 +118,7 @@ const render = () => {
 };
 
 const renderStaticText = () => {
-    document.documentElement.lang = language;
-    document.title = `${t('docs.title')} — ${t('app.title')}`;
+    document.title = `API — ${t('app.title')}`;
     applyTranslations(t);
 };
 
@@ -143,7 +142,7 @@ const start = async () => {
         render();
     } catch (error) {
         document.getElementById('endpoints').innerHTML =
-            `<p class="message">${escapeHtml(t('docs.loadFailed', { detail: error.message }))}</p>`;
+            `<p class="message">Could not load the specification: ${escapeHtml(error.message)}</p>`;
     }
 };
 
