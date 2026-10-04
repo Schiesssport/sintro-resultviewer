@@ -1,10 +1,10 @@
 # AGENTS.md
 
-Keep in sync; max 10 000 chars.
+Blueprint for coding agents. Keep in sync; max 10 000 chars.
 
 ## Rules
 
-1. **Always read a file before editing it**.
+1. **Always read a file before editing it** — never edit from memory.
 2. **No real personal data anywhere.** `.db/` is gitignored and stays so; device exports hold real
    shooters' names and licences. Fixtures, tests and docs use invented ones (`Hans Muster`).
 3. **This API is read-only.** No endpoint or query may write to the device database.
@@ -13,84 +13,89 @@ Keep in sync; max 10 000 chars.
 
 ## What this is
 
-A read-only HTTP API plus a plain-HTML viewer over the **Sintro 300 Hit Target Display**, an
-electronic 300m target system whose MSSQL Express schema the API hides from event software.
+A read-only HTTP API and plain-HTML viewer over the **Sintro 300 Hit Target Display** (300m
+targets, MSSQL Express), hiding its schema from event software.
 
-**Read `docs/device-database.md` before touching a query**; `docs/architecture.md` orients you.
-`docs/api.md` is the consumer guide; a change to `Api/V2/` or `Domain/` updates it too.
+**Read `docs/device-database.md` before touching a query**; `docs/architecture.md` orients.
+`docs/api.md` is the consumer guide; changing `Api/V2/` or `Domain/` updates it.
 
-## Toolchain — all in Docker
+## Toolchain: all in Docker
 
-No .NET, SQL Server or Node on the host. Docker is dev only.
+No .NET, SQL Server or Node on the host; Docker is dev only.
 
 | Command | Does |
 |---|---|
 | `db-up.sh` | Dev SQL Server (`localhost:11433`, `sa` / `Sintro_Dev_2026!`) |
-| `db-restore.sh` | Restore the `.bak` exports from `.db/` |
-| `db-demo-data.sh` | DEV ONLY: adds tens and mouches |
+| `db-restore.sh` | Restore `.db/` `.bak` exports |
+| `db-demo-data.sh` | DEV ONLY: adds tens, mouches |
 | `sql.sh "SELECT …"` | Ad-hoc query |
-| `test.sh` | Full suite: .NET (unit + integration) and viewer |
-| `test-web.sh` | Viewer only (`node --test`) |
-| `run.sh` | Build and run on <http://localhost:8080> |
-| `dotnet.sh <args>` | Any `dotnet` command in the SDK container |
-| `publish-win.sh` | Self-contained `win-x64` exe → `bin/win-x64/` |
+| `test.sh` | Full suite |
+| `test-web.sh` | Viewer only |
+| `run.sh` | Run on <http://localhost:8080> |
+| `dotnet.sh <args>` | Any `dotnet` command |
+| `publish-win.sh` | `win-x64` exe → `bin/` |
 
-(all under `scripts/`)
-
-`.container-home/` is the container HOME and NuGet cache. **Solution file: `.slnx`** (.NET 10).
-Dev "today" is set by `Sintro__ReferenceDate`.
+All under `scripts/`. `.container-home/` is HOME and NuGet cache. **Solution:
+`.slnx`** (.NET 10). Dev "today": `Sintro__ReferenceDate`.
 
 ## Architecture
 
 ```
 src/Sintro.ResultViewer.Api/
   Program.cs        composition root
-  StartupChecks.cs  refuses to start on a weak token; warns on public exposure
-  StartupBanner.cs  display URLs after binding
+  OperatorSettings.cs  loads appsettings.jsonc
+  StartupChecks.cs  refuses a weak token; warns on public exposure
+  StartupBanner.cs  display URLs
   Domain/           the device-derived model
-  Data/             ISintroRepository, SintroClock, LicenseNumber, Cursor, filters
-    Sintro300/      EVERYTHING device-schema-aware; one file per entity:
-                    SintroRepository* (ALL SQL), ScoreCalculator, SintroTime, TargetKind
-  Security/         NetworkGate (CIDR) → TokenAuth (bearer) → SessionToken
-  Live/             LaneWatcher (polls) → LiveHub (WebSocket fan-out)
-  Api/V2/           VERSION-SPECIFIC: routes, tags, wire envelopes
-  Viewer/           page routes, session token injected
-  wwwroot/          core/ = PURE logic (i18n, format, sectors, lanes, viewmode, display, markup, boards, browse);
-                    app.js, docs.js, browse.js = DOM; tests/
+  Api/ApiError.cs   the one error shape
+  Api/V2/           VERSION-SPECIFIC: V2Endpoints (routes, tags), V2Descriptions, V2Query,
+                    V2Contracts (wire envelopes)
+  Data/             ISintroRepository, filters, Cursor, LicenseNumber, SintroClock
+    Sintro300/      EVERYTHING that knows the device schema; one partial file per entity.
+                    Another device: sibling folder implementing ISintroRepository
+  Security/         NetworkGate (CIDR) → TokenAuth (bearer) → SessionToken; QueryTokenOnUpgrade
+  Live/             LaneWatcher (polls) → LiveHub (WebSocket fan-out); LanesFrame
+  Viewer/           ViewerPage (injects session token), ViewerEndpoints
+  wwwroot/          core/ = PURE: i18n, format, markup, sectors, lanes, viewmode, display,
+                    boards, browse, openapi, reconnect. DOM: app.js, boards-dialog.js,
+                    browse.js, docs.js, dom.js, api.js; tests/
 tests/Sintro.ResultViewer.Tests/
 ```
 
-**Layering:** anything testable without a browser belongs in `wwwroot/core/` — `app.js` may touch
-the DOM, `core/` may not. Another device or schema is a new folder implementing `ISintroRepository`.
+**Layering:** whatever is testable without a browser belongs in `wwwroot/core/`; only the DOM
+layer touches the DOM.
 
-**API versioning.** `Api/V2/` owns routes, tags, descriptions and wire envelopes; everything else is
-shared: v3 is a new folder plus one `app.MapV3()` line.
+**API versioning.** Only `Api/V2/` is version-specific: v3 is a new folder plus `app.MapV3()`.
 
 ## Single sources of truth
 
-- **SQL** → `Data/Sintro300/SintroRepository*.cs`. A query anywhere else is a bug.
+- **SQL** → `Data/Sintro300/SintroRepository*.cs`; a query elsewhere is a bug.
 - **Scoring** → `Data/Sintro300/ScoreCalculator.cs`. **Hit sectors** → `wwwroot/core/sectors.js`.
-- **Translations** → `wwwroot/core/i18n.js` (`de` default, `fr`). `data-i18n[-title|-aria-label]` in
-  HTML, `t('key', {params})` in JS. Tests assert identical keys in both languages and that every key
-  is used and every used key exists.
+- **Translations** → `wwwroot/core/i18n.js` (`de` default, `fr`, `en` for the docs page
+  only). `data-i18n[-title|-aria-label]` in HTML, `t('key', {params})` in JS. Tests assert identical
+  `de`/`fr` keys, every key used, every used key existing.
 - **Colours** → `wwwroot/tokens.css`, from the
-  [design system](https://github.com/Schiesssport/design-system) plus a marked local block at its
-  end. Never hard-code a hex in `styles.css`; derive tints with `color-mix()` on a token.
-- **JSON options** → `SintroJson.Options`, shared by the endpoints, the live hub and the tests.
+  [design system](https://github.com/Schiesssport/design-system) plus a marked local
+  block at the end. Never hard-code a hex in `styles.css`; derive tints via `color-mix()`.
+- **JSON options** → `SintroJson.Options`, shared by endpoints, live hub and tests.
 - **Config** → `SintroOptions.cs` + `appsettings.jsonc` (operator-facing, every setting explained
-  inline; registered by hand in `Program.cs`, ordered so environment variables still win).
+  inline; registered by hand in `OperatorSettings.cs`, inserted among the JSON sources so
+  environment variables still win).
 - **Target letters** → `Data/Sintro300/TargetKind.cs` (`0=A`, `1=B`, `3=S`).
-- **Docs ordering** → numbered OpenAPI tags in `Api/V2/V2Endpoints.cs`; the docs page sorts numerically.
+- **Display settings and limits** → `wwwroot/core/display.js`.
+- **Docs ordering** → numbered OpenAPI tags in `Api/V2/V2Endpoints.cs`, sorted numerically.
 
 ## Vocabulary
 
-Code is **English**; UI strings are **German** (default) and French.
+Code is **English**; UI strings **German** (default) and French.
 
-A row of `dbo.Programs` is one shooter's pass at the target: a **`program`** in code and API, a
-**"Stich"** in the German UI (French "cible"); a **series** is a **"Passe"**. The C# type is
-`ShootingProgram` since `Program` is the entry point. **Never call it a `match`.**
+A row of `dbo.Programs` is one shooter's pass at the target: a **`program`** in code and API,
+**"Stich"** in German UI (French "cible"); a **series** is a **"Passe"**. The C# type is
+`ShootingProgram` (`Program` is the entry point). **Never call it a `match`.**
 
 ## Mapping rules you must not undo
+
+The integration tests assert these rules.
 
 | Rule | Why |
 |---|---|
@@ -114,16 +119,16 @@ A row of `dbo.Programs` is one shooter's pass at the target: a **`program`** in 
 | Broadcast by enqueueing, never awaiting a socket | One stalled display would block every other client and the watcher |
 
 The viewer's shooter fallback chain — name → licence → `contestShooterName` → `Linie N · HH:mm` —
-is in `core/format.js`; keep it. **The viewer** is documented in `docs/architecture.md`. Rules that
-fail silently if broken:
+is in `core/format.js`; keep it. Viewer rules that fail silently if broken (see
+`docs/architecture.md`):
 
-- **Asset URLs must be absolute** (`/app.js`) — a relative one resolves under `/fullscreen/` and is not served.
-- **Column widths belong on `<colgroup>`** — `table-layout: fixed` reads the first row, often a
+- **Asset URLs must be absolute** (`/app.js`): a relative one resolves under `/fullscreen/`, unserved.
+- **Column widths belong on `<colgroup>`**: `table-layout: fixed` reads the first row, often a
   colspan message row.
-- **Never rebuild the ticker DOM unless `tickerContentKey` changed** — a rebuild restarts the
+- **Never rebuild the ticker DOM unless `tickerContentKey` changed**: a rebuild restarts the
   marquee, and results reload on every live message.
-- **`/browse` filters are API queries**; only row shape, sort and the result range live in the page.
-  Displays never scroll and never guess capacity: the table clips, the ticker always runs.
+- **`/browse` filters are API queries**; only row shape, sort and result range live in the page.
+  Displays never scroll or guess capacity: the table clips, the ticker always runs.
 
 ## Security model
 
@@ -131,34 +136,36 @@ fail silently if broken:
 `SessionToken` (per start, in memory, for the viewer):
 
 - **Tokens are arrays with scopes** (`ApiReadTokens` / `ApiWriteTokens`, write implies read).
-  None configured is valid; the session token covers the viewer. `Authorization: Bearer` is
-  the only accepted header. Tokens are compared as SHA-256 digests.
-- **`TrustedProxies` is a list, not a switch** — `X-Forwarded-For` is unwound only through hops in
+  None configured is valid; the session token covers the viewer. `Authorization: Bearer` is the
+  only accepted header. Tokens are compared as SHA-256 digests.
+- **`TrustedProxies` is a list, not a switch**: `X-Forwarded-For` is unwound only through hops in
   it, stopping at the first stranger.
-- **`UseWebSockets()` must stay before `UseTokenAuth()`** — `?token=` is accepted only on a genuine
-  upgrade to an endpoint carrying `QueryTokenOnUpgrade`; a plain GET with `?token=` is always 401
-  (`LiveFeedTests` guards both). `/health` is open via `.AllowAnonymous()`.
+- **`TokenAuth` reads endpoint metadata:** `/health` carries `AllowAnonymous`, `/live` carries
+  `QueryTokenOnUpgrade`. `UseWebSockets()` must stay before `UseTokenAuth()`: `?token=` is accepted
+  only on a genuine upgrade to `/live`; a plain GET with `?token=` is always 401 (`LiveFeedTests`
+  guards both).
 - **A forwarded hop that does not parse resolves to *no* client**, and the gate refuses it. Falling
-  back to the proxy's address would admit anyone behind a public proxy (`ClientAddressTests`).
+  back to the proxy would admit anyone behind a public proxy (`ClientAddressTests`).
 - **`/openapi/v2.json` is token-free** (schema, not data). Never put a real licence number or
-  shooter name in an endpoint description — a test asserts neither appears.
-- **A null remote address counts as loopback** (in-process; no TCP client can forge it). Non-private
-  ranges are allowed but warned about at startup and via `health.publicExposure`.
+  shooter name in an endpoint description; a test asserts neither appears.
+- **A null remote address counts as loopback** (in-process; TCP cannot forge it). Non-private
+  ranges are allowed, warned about at startup and in `health.publicExposure`.
 - **The allowlists have no code default**; an empty list is refused at startup.
-  `NetworkOptions.PrivateSpace` defines what "private" means for the warning, never an allowlist.
+  `NetworkOptions.PrivateSpace` defines "private" for the warning, never an allowlist.
 
 ## After any change
 
-1. `scripts/test.sh` — stays fully green.
-2. Touched a query or mapping rule? Verify with `scripts/sql.sh`. Integration tests assert
-   **invariants, not counts** — never hard-code a total, name or id from one export, nor cite one as a schema fact.
-3. Touched `wwwroot/`? `scripts/run.sh`; load `/`, each `/fullscreen/*`, `/browse`, `/docs`.
+1. `scripts/test.sh` stays fully green.
+2. Touched a query or mapping rule? Check with `scripts/sql.sh`. Integration tests assert
+   **invariants, not counts**: never hard-code a total, name or id from one export, nor cite one as a
+   schema fact.
+3. Touched `wwwroot/`? `scripts/run.sh`, load `/`, each `/fullscreen/*`, `/browse`, `/docs`.
 4. New translation key? Add it to **both** `de` and `fr`.
 5. Learned something about the schema? Record it in `docs/device-database.md`.
 
 ## Style
 
-Simplicity first, also over small optimisations. Comments are short to non-existent: names and
-structure explain *what*, a comment is one line for a *why* that cannot be inferred. Functions stay
+Simplicity first, also over small optimisations. Comments are short to non-existent: names explain
+*what*, a comment is one line for a *why* that cannot be inferred. Functions stay
 about 25 lines; split rather than comment sections. YAGNI: no speculative abstractions or helpers
 for one caller. No emojis.

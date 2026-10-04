@@ -1,4 +1,4 @@
-/* Sintro Result Viewer — styles on the Schiesssport design system tokens. Never hard-code a colour here. */
+/* Never hard-code a colour here: every one comes from the design system tokens. */
 
 @import "tokens.css";
 
@@ -58,7 +58,6 @@ body {
 
 .header-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
 
-/* Live indicator — pulses only while the socket is actually open. */
 .live-dot {
     display: inline-flex;
     align-items: center;
@@ -168,7 +167,7 @@ button:focus-visible { outline: 2px solid var(--emerald); outline-offset: 2px; }
 .btn-secondary { background: var(--surface); color: var(--emerald); border-color: var(--emerald); }
 .btn-secondary:hover { background: var(--row-focus); }
 
-/* Square icon buttons; the name is the tooltip. */
+/* The name is the tooltip. */
 .icon-button {
     width: var(--btn-height);
     height: var(--btn-height);
@@ -290,7 +289,6 @@ table.results tbody tr:hover td { background: var(--row-hover); }
 
 .col-program, .col-shooter, .col-club { overflow-wrap: anywhere; }
 
-/* Club and the folded-in time/line are supporting detail, not the result. */
 .col-club { color: var(--ink-soft); }
 .col-program { color: var(--ink-soft); }
 .value-none { color: var(--disabled); }
@@ -335,7 +333,6 @@ table.results tbody tr:hover td { background: var(--row-hover); }
     background: var(--paper);
 }
 
-/* Context: which target and ring scale. Present but never competing with the scores. */
 .shot-group-code {
     flex: 0 0 var(--shot-code-width);
     width: var(--shot-code-width);
@@ -345,7 +342,6 @@ table.results tbody tr:hover td { background: var(--row-hover); }
     letter-spacing: 0.02em;
 }
 
-/* The content. Highest contrast in the row. */
 .shot-group-values {
     display: inline-flex;
     flex-wrap: wrap;
@@ -358,7 +354,6 @@ table.results tbody tr:hover td { background: var(--row-hover); }
     color: var(--ink);
 }
 
-/* A shot is the number; the direction ring sits around it and never replaces it. */
 .shot {
     position: relative;
     display: inline-flex;
@@ -398,7 +393,6 @@ table.results tbody tr:hover td { background: var(--row-hover); }
 /* A centre hit has no direction, so the whole ring is filled rather than one wedge. */
 .shot-ring.is-centre .ring-wedge { fill: var(--ink); stroke: var(--ink); }
 
-/* Trailing tenth-values: the last shot (live only) above the best; the best is context, so dim. */
 .shot-group-fine {
     flex: 0 0 var(--shot-fine-width);
     width: var(--shot-fine-width);
@@ -452,7 +446,6 @@ table.lanes td {
 }
 table.lanes tr:last-child td { border-bottom: 0; }
 
-/* Line view columns, same reasoning as above. */
 .cg-line         { width: 64px; }
 .cg-lane-shooter { width: 22%; }
 .cg-lane-total   { width: 96px; }
@@ -509,7 +502,6 @@ body:not(.is-fullscreen) #results-scroll {
 
 /* -- Fullscreen -------------------------------------------------------------- */
 
-/* Nothing scrolls on a wall display: the card owns the viewport and results take what the lines leave. */
 /* Fullscreen is read from across a room, so the dial and its value scale up together. */
 /* The ticker strip height is reserved so the result box has a stable height. */
 body.is-fullscreen {
@@ -519,6 +511,8 @@ body.is-fullscreen {
     padding: 0;
 }
 body.is-fullscreen [data-chrome] { display: none !important; }
+
+/* Nothing scrolls on a wall display: the card owns the viewport and results take what the lines leave. */
 body.is-fullscreen #ui-wrapper {
     max-width: none;
     height: 100vh;
@@ -655,8 +649,8 @@ body.is-fullscreen.is-ticker-hidden #ui-wrapper { padding-bottom: 0; }
     to { transform: translateX(-50%); }
 }
 
+/* Reduced motion is the one case the ticker stands still; the strip scrolls by hand. */
 @media (prefers-reduced-motion: reduce) {
-    /* Motion off: the entries stay put and the row simply shows what fits. */
     .ticker-track { animation: none; }
     .ticker-viewport { overflow-x: auto; }
 }
@@ -895,7 +889,6 @@ th.sortable.is-sorted[aria-sort="descending"]::after { content: ' \25BC'; }
 }
 .docs-panel-body { margin: 0; font-size: 12px; line-height: 1.65; color: var(--ink-soft); max-width: 90ch; }
 
-/* The status line is separated from the body so it reads as an outcome, not as data. */
 .response-status {
     display: inline-block;
     margin-top: 12px;

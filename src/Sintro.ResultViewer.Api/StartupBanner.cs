@@ -7,7 +7,6 @@ namespace Sintro.ResultViewer;
 
 public static class StartupBanner
 {
-    /// <summary>Prints the addresses a display can be pointed at, once the server has bound.</summary>
     public static void LogReachableAddresses(ILogger logger, IEnumerable<string> serverAddresses)
     {
         var displayUrls = new List<(string Label, string Url)>();

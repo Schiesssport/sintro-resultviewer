@@ -1,6 +1,3 @@
-// Reading the generated OpenAPI document for the docs page. Pure — no DOM.
-
-// A short type label for a parameter schema: "integer", "string date", "Shot[]", "Club".
 export const typeOf = (schema) => {
     if (!schema) return '';
     if (schema.type === 'array') return `${typeOf(schema.items)}[]`;

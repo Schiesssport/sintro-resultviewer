@@ -1,5 +1,3 @@
-// Thin API client shared by the viewer and the docs page. The token comes from the page.
-
 import { INITIAL_RETRY_MS, nextRetryDelay } from './core/reconnect.js';
 import { isProbeAllowed } from './core/openapi.js';
 
@@ -22,7 +20,7 @@ const prettyJson = (text) => {
     try {
         return JSON.stringify(JSON.parse(text), null, 2);
     } catch {
-        return text;   // not JSON (an error page, say)
+        return text;
     }
 };
 
@@ -62,7 +60,6 @@ export class SintroApi {
             if (parsed?.detail) return `${status} — ${parsed.detail}`;
             if (parsed?.error) return `${status} — ${parsed.error}`;
         } catch {
-            // Not an ApiError body; fall through to the bare status.
         }
         return `HTTP ${status}`;
     }
@@ -78,7 +75,6 @@ export class SintroApi {
         return this.get(`/api/v2/programs?${query}`);
     }
 
-    // Every item matching the filters, following the cursor to the end.
     async allPages(path, filters = {}) {
         const items = [];
         let cursor = null;

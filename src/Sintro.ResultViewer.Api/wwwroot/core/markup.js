@@ -1,5 +1,3 @@
-// HTML strings for the result views; escaping happens here, translation arrives as `t`.
-
 import { escapeHtml, formatTime, formatDateTime, totalDisplay, shotGroups, tickerEntry, shooterLabel } from './format.js';
 import { shotDial } from './sectors.js';
 
@@ -26,7 +24,6 @@ export const clubCell = (program) => {
     return name ? escapeHtml(name) : '<span class="value-none">–</span>';
 };
 
-// Eight wedges around the ring value with the reported sector filled; the number stays readable.
 export const shotRing = (sector) => {
     const dial = shotDial({ hitSector: sector });
     const { cx, cy } = dial.geometry;
@@ -61,7 +58,6 @@ const shotGroupChip = (group, t, { withRings, withLast }) => `
             ${fineValues(group, withLast, t)}
         </span>`;
 
-// One chip per series: [A10 | 7 6 0 6 | 96]. Live only, the series being shot also shows its last shot's fine value.
 export const shotGroupsCell = (program, t, { live = false } = {}) => {
     const groups = shotGroups(program);
     if (groups.length === 0) return '';

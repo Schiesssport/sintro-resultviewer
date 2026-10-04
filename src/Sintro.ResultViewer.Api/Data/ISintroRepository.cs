@@ -2,7 +2,7 @@ using Sintro.ResultViewer.Domain;
 
 namespace Sintro.ResultViewer.Data;
 
-/// <summary>Read-only access to one device database. Implementations live in a folder named after the device schema (Sintro300); every result is in the shared Domain model, so a client cannot tell them apart.</summary>
+/// <summary>Read-only. Implementations live in a folder named after the device schema (Sintro300).</summary>
 public interface ISintroRepository
 {
     Task<CursorPage<ShootingProgram>> ListProgramsAsync(ProgramFilter filter, CancellationToken token);

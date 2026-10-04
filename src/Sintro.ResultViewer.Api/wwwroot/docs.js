@@ -1,5 +1,3 @@
-// API browser: renders the OpenAPI spec and calls endpoints in place, with no vendored spec viewer.
-
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
 import { escapeHtml } from './core/format.js';
 import { typeOf, groupByTag } from './core/openapi.js';
@@ -11,7 +9,7 @@ let language = DEFAULT_LANGUAGE;
 let spec = null;
 const t = (key, params) => translate(TRANSLATIONS[language], key, params);
 
-const openedBlobs = [];   // revoked when the page goes away
+const openedBlobs = [];
 
 const parameterTable = (parameters) => {
     if (!parameters?.length) return `<p class="endpoint-note">${t('docs.noParameters')}</p>`;
@@ -77,7 +75,6 @@ const showResponse = (index, result) => {
     openButton.dataset.payload = result.body;
 };
 
-// Hands the response to the browser's own JSON viewer in a new tab.
 const openInBrowser = (payload) => {
     const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
     openedBlobs.push(url);

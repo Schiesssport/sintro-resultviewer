@@ -3,7 +3,7 @@ using Sintro.ResultViewer.Domain;
 
 namespace Sintro.ResultViewer.Api.V2;
 
-/// <summary>Query-string parsing. A parser returns the 400 body for an unrecognised value and null when accepted: a misspelled filter is rejected, never ignored, because ?state=finishd returning everything is the opposite of what was asked for.</summary>
+/// <summary>Each Parse* returns the 400 body for an unrecognised value and null when accepted: ?state=finishd returning everything would be the opposite of what was asked for.</summary>
 internal static class V2Query
 {
     public static int ClampLimit(int? limit, SintroOptions settings) =>

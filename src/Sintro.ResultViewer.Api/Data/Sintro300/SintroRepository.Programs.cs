@@ -147,7 +147,6 @@ public sealed partial class SintroRepository
         return (await HydrateAsync(connection, rows, null, token)).ToDictionary(program => program.Id);
     }
 
-    /// <summary>Loads shots, target info and shooters for a page of programs in set-based queries, then scores each one.</summary>
     private async Task<List<ShootingProgram>> HydrateAsync(
         SqlConnection connection, List<ProgramRow> rows, LicenseIndex? licenses, CancellationToken token)
     {
@@ -240,6 +239,7 @@ public sealed partial class SintroRepository
             ? clock.ToOffset(end)
             : null;
 
+    // Not on a line and no end total: dropped, or displaced when the operator reassigned the line.
     private static ProgramState StateOf(ProgramRow row) =>
         row.IsActive == 1 ? ProgramState.Active
         : row.EndShotId is not null ? ProgramState.Finished

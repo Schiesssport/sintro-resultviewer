@@ -4,7 +4,6 @@ using Sintro.ResultViewer.Security;
 
 namespace Sintro.ResultViewer;
 
-/// <summary>Refuses to start on a configuration that would fail silently later; warns on public exposure.</summary>
 public static class StartupChecks
 {
     public static void Run(ILogger logger, SintroOptions settings, SessionToken sessionToken)

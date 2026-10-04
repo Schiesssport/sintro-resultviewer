@@ -3,7 +3,7 @@ using Sintro.ResultViewer.Data;
 
 namespace Sintro.ResultViewer.Live;
 
-/// <summary>Polls the lane state and broadcasts it when it changes. Polling because the range PC's SQL Express has no Service Broker or CDC.</summary>
+/// <summary>Polls because the range PC's SQL Express has no Service Broker or CDC.</summary>
 public sealed class LaneWatcher(
     ISintroRepository repository,
     LiveHub hub,

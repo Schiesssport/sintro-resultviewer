@@ -1,5 +1,3 @@
-// UI strings: German (default) and French. Code and keys are English.
-
 export const TRANSLATIONS = {
     de: {
         'app.title':                'Sintro Resultate',

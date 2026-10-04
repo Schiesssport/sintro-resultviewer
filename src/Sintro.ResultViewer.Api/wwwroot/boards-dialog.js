@@ -1,6 +1,3 @@
-// DOM layer of the fullscreen picker: boards (a mode plus its settings) are remembered per browser so a
-// display's configuration can be looked up again. Seeded with one board per mode; the operator edits, adds and removes.
-
 import { escapeHtml } from './core/format.js';
 import { FULLSCREEN_MODES } from './core/viewmode.js';
 import { MAX_RESULT_COUNT } from './core/display.js';
@@ -72,7 +69,7 @@ export const createBoardsDialog = ({ t, onShow }) => {
             <button type="button" class="btn-secondary" id="add-board">${escapeHtml(t('fullscreen.addBoard'))}</button>`;
     };
 
-    // Reads one board's fields, stores them and refreshes only its name and URL, so typing is not interrupted.
+    // Refreshes only the board's name and URL, so typing is not interrupted.
     const onBoardInput = (event) => {
         const index = Number(event.target.dataset.index);
         if (!Number.isInteger(index) || !boards[index]) return;

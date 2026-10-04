@@ -2,9 +2,6 @@ using Sintro.ResultViewer.Domain;
 
 namespace Sintro.ResultViewer.Api.V2;
 
-// Wire envelopes owned by v2. Data/ and Domain/ are version-agnostic; v2 serialises the domain records directly.
-
-/// <summary>All shooters on one licence plus the programs attributed to it.</summary>
 public sealed record ShooterDetail(
     string License,
     IReadOnlyList<Shooter> Shooters,

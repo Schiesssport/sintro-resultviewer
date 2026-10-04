@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging.Console;
 
 namespace Sintro.ResultViewer;
 
-/// <summary>Console lines for the person running the event: time, severity when it matters, message. No category or event id.</summary>
+/// <summary>No category or event id: the person running the event needs only time, severity and message.</summary>
 public sealed class OperatorConsoleFormatter() : ConsoleFormatter(FormatterName)
 {
     public const string FormatterName = "operator";

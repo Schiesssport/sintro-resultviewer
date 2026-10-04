@@ -13,7 +13,6 @@ public static class TargetKind
         _ => null,
     };
 
-    /// <summary>The compact code shown next to a series' shots, e.g. "A10", "B4", "?10".</summary>
     public static string Code(int? targetType, int? valuation) =>
         $"{Letter(targetType) ?? UnknownLetter}{(valuation?.ToString() ?? UnknownLetter)}";
 }

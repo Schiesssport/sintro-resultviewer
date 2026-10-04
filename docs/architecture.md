@@ -1,8 +1,8 @@
 # How the result viewer is put together
 
 Orientation for someone about to change something. Pairs with
-[`device-database.md`](device-database.md), which explains the device schema this all sits on, and with
-[`AGENTS.md`](../AGENTS.md) in the repository root, which is the short operational contract.
+[`device-database.md`](device-database.md), which explains the device schema this all sits on, and
+with [`AGENTS.md`](../AGENTS.md) in the repository root, which is the short operational contract.
 
 ## The shape of it
 
@@ -25,18 +25,21 @@ Two audiences, both first-class:
 
 ```
 src/Sintro.ResultViewer.Api/
-  Program.cs        composition root: DI, middleware order, routes
-  StartupChecks.cs  refuses to start on a weak token; warns about public exposure
-  SintroOptions.cs  every configurable value
-  Domain/           the model derived from the device data
-  Data/             ISintroRepository and the schema-independent helpers
-    Sintro300/      everything that knows the device schema, one file per entity
-  Security/         NetworkGate (CIDR) → TokenAuth (bearer) → SessionToken
-  Live/             LaneWatcher polls the device; LiveHub fans out over WebSocket
-  Api/V2/           everything version-specific: routes, tags, wire envelopes
-  Viewer/           serves the viewer HTML with a per-process token substituted in
-  wwwroot/          the viewer itself
-tests/              the .NET suite
+  Program.cs          composition root: DI, middleware order, routes
+  OperatorSettings.cs registers appsettings.jsonc among the configuration sources
+  StartupChecks.cs    refuses to start on a weak token; warns about public exposure
+  StartupBanner.cs    prints the display URLs once the port is bound
+  SintroOptions.cs    every configurable value
+  Domain/             the model derived from the device data
+  Data/               ISintroRepository and the schema-independent helpers
+    Sintro300/        everything that knows the device schema, one partial file per entity
+  Security/           NetworkGate (CIDR) -> TokenAuth (bearer) -> SessionToken
+  Live/               LaneWatcher polls the device; LiveHub fans out over WebSocket
+  Api/ApiError.cs     the one error shape, shared by endpoints and middlewares
+  Api/V2/             everything version-specific: routes, descriptions, query parsing, envelopes
+  Viewer/             serves the viewer HTML with a per-process token substituted in
+  wwwroot/            the viewer itself
+tests/                the .NET suite
 ```
 
 **`Data/` is the boundary.** `ISintroRepository` is the only way the rest of the code reads the
@@ -45,13 +48,14 @@ entity: programs, lanes, shooters and clubs, catalog), holds every SQL statement
 query written anywhere else is a bug, because the schema's traps are documented and handled in
 exactly one place. Beside it sit the small pure helpers that carry most of the test weight:
 `ScoreCalculator` (series, valuations, totals), `SintroTime` (the device's text dates) and
-`TargetKind`. Another device or schema version is a sibling folder implementing `ISintroRepository`;
-`LicenseNumber`, `Cursor` and the filters stay shared.
+`TargetKind`. Another device or schema version is a sibling folder implementing
+`ISintroRepository`; `LicenseNumber`, `Cursor`, `SintroClock` and the filters stay shared.
 
-**`Api/V2/` is the only version-aware folder.** Routes, OpenAPI descriptions and the wire envelopes
-live there; `Domain/`, `Data/`, `Security/`, `Live/` and `Viewer/` are shared. Adding a v3 means
-adding `Api/V3/` and one `app.MapV3()` line — nothing else moves. The implementation starts at
-**v2** because v1 is a legacy Grapevine service that predates this repository.
+**`Api/V2/` is the only version-aware folder.** `V2Endpoints` holds the routes, `V2Descriptions` the
+OpenAPI text, `V2Query` the query parsing and `V2Contracts` the wire envelopes. `Domain/`, `Data/`,
+`Security/`, `Live/` and `Viewer/` are shared. Adding a v3 means adding `Api/V3/` and one
+`app.MapV3()` line, and nothing else moves. The implementation starts at **v2** because v1 is a
+legacy Grapevine service that predates this repository.
 
 ## A request, end to end
 
@@ -60,12 +64,14 @@ adding `Api/V3/` and one `app.MapV3()` line — nothing else moves. The implemen
    operator's decision and a hidden default is one they cannot review. It runs *before*
    authentication, so a blocked network never gets to guess tokens.
 2. **`TokenAuth`** checks the bearer token in constant time — `Authorization: Bearer` and nothing
-   else, so there is one documented way in. `/health` is exempt so monitoring works; `/live` also
-   accepts the token as a query parameter, because a browser cannot set headers on a WebSocket
-   handshake. Tokens are arrays with scopes (`ApiReadTokens` / `ApiWriteTokens`, write implies
-   read); no endpoint writes yet.
+   else, so there is one documented way in. Endpoint metadata decides the exceptions: `/health` is
+   `AllowAnonymous` so monitoring works, and `/live` carries `QueryTokenOnUpgrade`, which accepts the
+   token as a query parameter on a genuine WebSocket upgrade only, because a browser cannot set
+   headers on that handshake. Tokens are arrays with scopes (`ApiReadTokens` / `ApiWriteTokens`,
+   write implies read); no endpoint writes yet.
 3. **The endpoint** in `Api/V2/` parses query parameters and calls the repository.
-4. **`SintroRepository`** (via `ISintroRepository`) runs the SQL, then hands raw rows to `ScoreCalculator`.
+4. **`SintroRepository`** (via `ISintroRepository`) runs the SQL, then hands raw rows to
+   `ScoreCalculator`.
 5. The result is serialised. **Nulls are written, never omitted** — `shooter: null` and
    `currentProgram: null` are documented states, and dropping the keys would make clients guess.
 
@@ -88,13 +94,14 @@ The consumer-facing guide is [`api.md`](api.md); this section is the reasoning b
   for a cursor this API did not issue, or one issued for the other sort order: `400 invalid_cursor`
   rather than a silent restart from page one.
 - **One error shape.** Every non-2xx answer, from the middlewares as well as the endpoints, is
-  `{"error": "<stable code>", "detail": "<text>"}` (`ApiError` in `Api/V2/`). The viewer has exactly
+  `{"error": "<stable code>", "detail": "<text>"}` (`ApiError` in `Api/`). The viewer has exactly
   one error parser.
 - **`sighting` is a list**, one series per `ShotGroup` the sighting shots were fired in. Merging
   them would add a 5er group to a 10er one — the sum `total` refuses to make.
 - **ISO 8601 everywhere**, with the range's UTC offset attached.
 - The OpenAPI document at `/openapi/v2.json` needs no token — it is schema, not data — and `/docs`
-  renders it as a browsable, try-it-here page.
+  renders it as a browsable, try-it-here page, in German, French or English; the user pages are
+  German and French.
 
 ## The viewer
 
@@ -104,18 +111,29 @@ split as [OpenRangeOffice](https://github.com/Schiesssport/OpenRangeOffice):
 | | |
 |---|---|
 | `wwwroot/core/` | **Pure logic.** No DOM, no `fetch`, no globals. Unit-tested under `node --test` |
-| `wwwroot/app.js`, `boards-dialog.js`, `browse.js`, `docs.js`, `dom.js` | The DOM layer. Owns the DOM, and only it may |
+| `wwwroot/app.js`, `boards-dialog.js`, `browse.js`, `docs.js` | The DOM layer, one file per page or dialog. Only it touches the DOM |
+| `wwwroot/dom.js` | DOM helpers shared by those pages |
 | `wwwroot/api.js` | `fetch` and WebSocket client |
+| `wwwroot/styles.css` | All styling, ordered by section |
 | `wwwroot/tokens.css` | Vendored from the shared [design system](https://github.com/Schiesssport/design-system), plus a clearly marked block of project-local tokens at the end. Never hard-code a colour in `styles.css`; derived tints use `color-mix()` on a token |
 
 Anything that can be tested without a browser belongs in `core/`. That is where the interesting
-parts live: `format.js` (labels, the shooter fallback chain), `markup.js` (the HTML strings of every view), `sectors.js` (the hit
-dial), `lanes.js` (when a line frees up, and the 60-second hold that keeps a finished pass on its line
-after the device has already cleared the lane), `display.js` (display settings, and how fast the marquee runs), `boards.js` (the
-remembered display list), `browse.js` (rows, sorting and export text of the result browser), `viewmode.js`
-(which view a URL means), `openapi.js` (reading the spec for `/docs`, and which URLs the try box may
-call with the token), `i18n.js` (German and French — a test asserts every key is used and every
-used key exists, so `data-i18n`, `data-i18n-title` and `data-i18n-aria-label` in the HTML count).
+parts live:
+
+- `format.js`: labels and the shooter fallback chain.
+- `markup.js`: the HTML strings of every view.
+- `sectors.js`: the hit dial.
+- `lanes.js`: when a line frees up, and the 60-second hold that keeps a finished pass on its line
+  after the device has already cleared the lane.
+- `display.js`: display settings and limits, and how fast the marquee runs.
+- `boards.js`: the remembered display list.
+- `browse.js`: rows, sorting and export text of the result browser.
+- `viewmode.js`: which view a URL means.
+- `openapi.js`: reading the spec for `/docs`, and which URLs the try box may call with the token.
+- `reconnect.js`: the back-off for the live socket.
+- `i18n.js`: German and French for the user pages, plus English for `/docs` only. A test asserts
+  every key is used and every used key exists, so `data-i18n`, `data-i18n-title` and
+  `data-i18n-aria-label` in the HTML count.
 
 ### Views
 
@@ -186,7 +204,7 @@ the person editing it is standing at a range with no documentation to hand. .NET
 skips comments and tolerates trailing commas by design, so it parses this happily; the `.jsonc`
 extension is what tells the *operator's editor* the same, which a `.json` file cannot.
 
-It is registered by hand in `Program.cs` (the framework only auto-loads `appsettings.json`), and
+It is registered by hand in `OperatorSettings.cs` (the framework only auto-loads `appsettings.json`), and
 deliberately inserted among the framework's own JSON sources rather than appended — appending
 would place it after the environment variables and let the file silently beat an explicit
 override. `AppSettingsTests` proves the shipped file parses, binds, and is actually loaded by the

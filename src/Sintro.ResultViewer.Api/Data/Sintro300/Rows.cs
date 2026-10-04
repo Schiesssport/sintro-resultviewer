@@ -1,6 +1,6 @@
 namespace Sintro.ResultViewer.Data.Sintro300;
 
-// Raw device rows, column names spelled exactly as the tables do (including Targeinformation's missing "t").
+// Column names spelled exactly as the tables do, including Targeinformation's missing "t".
 
 public sealed record ProgramRow(
     int ProgramID,

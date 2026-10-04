@@ -1,6 +1,3 @@
-// Display boards: a named fullscreen mode plus its ticker settings. Seeded with one board per mode,
-// then edited, extended and removed by the operator; the list is stored per browser. Pure.
-
 import { FULLSCREEN_MODES, pathForMode } from './viewmode.js';
 import { normaliseDisplaySettings, displayQuery } from './display.js';
 
@@ -14,7 +11,6 @@ export const normaliseBoard = (raw) => ({
 
 export const defaultBoards = () => FULLSCREEN_MODES.map((mode) => normaliseBoard({ mode }));
 
-// Stored text → boards; anything unreadable or empty falls back to the defaults.
 export const parseBoards = (text) => {
     try {
         const parsed = JSON.parse(text ?? 'null');

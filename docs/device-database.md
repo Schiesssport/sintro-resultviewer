@@ -2,8 +2,8 @@
 
 A working reference for contributors: what the Sintro 300 hit-target display stores, what the
 columns actually mean, and which of them lie. **Read this before writing or changing a query** —
-almost every rule in `Data/Sintro300/SintroRepository*.cs` and `Data/Sintro300/ScoreCalculator.cs` exists because of
-something on this page.
+almost every rule in `Data/Sintro300/SintroRepository*.cs` and `Data/Sintro300/ScoreCalculator.cs`
+exists because of something on this page.
 
 The schema is the device manufacturer's, not ours. It is undocumented, so everything here was
 derived by reading exported databases from real installations. Where a meaning is inferred rather
@@ -90,9 +90,9 @@ All of these relationships are enforced by foreign keys.
 
 ## Reading a pass
 
-This is the part that matters. Each rule below is implemented in `Data/Sintro300/ScoreCalculator.cs` or
-`Data/Sintro300/SintroRepository*.cs`; changing one without reading its justification will produce results
-that look plausible and are wrong.
+This is the part that matters. Each rule below is implemented in `Data/Sintro300/ScoreCalculator.cs`
+or `Data/Sintro300/SintroRepository*.cs`; changing one without reading its justification will produce
+results that look plausible and are wrong.
 
 ### Not every row in `Shots` is a shot
 
@@ -135,8 +135,9 @@ agree; where they do not, **the highest `TargeinformationID` is current**.
 ### Dates are text, in day-first format
 
 `Programs.StartTime` is a `varchar` shaped `dd.MM.yyyy-HH:mm:ss`. It sorts meaninglessly as text and
-must be parsed.
-The SQL `TRY_CONVERT(…, 104)` is the only parser: a `StartTime` it cannot convert leaves the program out of every date window and reports its start as the Unix epoch when fetched by id.
+must be parsed. The SQL `TRY_CONVERT(…, 104)` is the only parser: a `StartTime` it cannot convert
+leaves the program out of every date window and reports its start as the Unix epoch when fetched by
+id.
 `Shots.ShotTime` is a bare time of day with no date, so a shot's real timestamp is
 the pass's date plus that time — and a pass that runs past midnight needs the rollover handled.
 

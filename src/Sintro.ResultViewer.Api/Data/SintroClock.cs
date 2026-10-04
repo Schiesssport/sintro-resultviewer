@@ -5,10 +5,8 @@ namespace Sintro.ResultViewer.Data;
 
 public interface ISintroClock
 {
-    /// <summary>The date the today-only default resolves to.</summary>
     DateOnly Today { get; }
 
-    /// <summary>Attaches the range's UTC offset to a naive device timestamp.</summary>
     DateTimeOffset ToOffset(DateTime naiveLocalTime);
 }
 

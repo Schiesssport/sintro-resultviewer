@@ -1,5 +1,3 @@
-// Per-display settings, result-count limits and marquee timing. Pure.
-
 const DEFAULT_TICKER_SECONDS = 20;
 export const DEFAULT_RESULT_COUNT = 50;
 const MAX_TICKER_SECONDS = 120;
@@ -20,7 +18,6 @@ export const normaliseDisplaySettings = ({ seconds, results, skip, hidden }) => 
     hidden: hidden === true,
 });
 
-// Per-display settings from the query string: /fullscreen/results?resultCount=40&tickerSkip=6&tickerSeconds=8&ticker=off
 export const parseDisplayQuery = (search) => {
     const params = new URLSearchParams(search ?? '');
 

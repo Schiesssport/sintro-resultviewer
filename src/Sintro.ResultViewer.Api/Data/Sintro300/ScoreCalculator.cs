@@ -2,7 +2,6 @@ using Sintro.ResultViewer.Domain;
 
 namespace Sintro.ResultViewer.Data.Sintro300;
 
-/// <summary>Turns raw device rows into scored series. Pure, so every scoring rule is testable in isolation; the measured facts behind the rules are in docs/device-database.md.</summary>
 public static class ScoreCalculator
 {
     private const int MarkerShotNumber = 9999;

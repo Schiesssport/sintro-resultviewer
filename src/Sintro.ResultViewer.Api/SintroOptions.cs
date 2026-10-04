@@ -1,6 +1,5 @@
 namespace Sintro.ResultViewer;
 
-/// <summary>Everything configurable, bound from the "Sintro" section; appsettings.jsonc explains each setting.</summary>
 public sealed class SintroOptions
 {
     public const string SectionName = "Sintro";
@@ -41,14 +40,14 @@ public sealed class NetworkOptions
     /// <summary>What "private" means for the public-exposure warning. Never used as an allowlist.</summary>
     public static readonly string[] PrivateSpace =
     [
-        "127.0.0.0/8",     // loopback
-        "10.0.0.0/8",      // RFC1918
-        "172.16.0.0/12",   // RFC1918 (includes Docker's default bridge)
-        "192.168.0.0/16",  // RFC1918
-        "169.254.0.0/16",  // link-local
-        "::1/128",         // IPv6 loopback
-        "fc00::/7",        // IPv6 unique-local
-        "fe80::/10",       // IPv6 link-local
+        "127.0.0.0/8",
+        "10.0.0.0/8",
+        "172.16.0.0/12",   // includes Docker's default bridge
+        "192.168.0.0/16",
+        "169.254.0.0/16",
+        "::1/128",
+        "fc00::/7",
+        "fe80::/10",
     ];
 }
 

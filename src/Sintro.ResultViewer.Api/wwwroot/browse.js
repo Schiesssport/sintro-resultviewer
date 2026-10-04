@@ -1,5 +1,4 @@
-// Result browser. Every filter is an API query, so the rows are always current; only the row shape
-// (per pass, series or shot) and the column sort are decided here. State lives in this tab's memory.
+// Every filter is an API query, so the rows are always current; only the row shape and the column sort are decided here.
 
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
 import { escapeHtml } from './core/format.js';
@@ -17,7 +16,7 @@ let language = DEFAULT_LANGUAGE;
 const t = (key, params) => translate(TRANSLATIONS[language], key, params);
 
 let programs = [];
-// Newest first, the same order as the live view's result list.
+// The same order as the live view's result list.
 let sort = { column: 'at', direction: 'desc' };
 let currentRows = [];
 let loadSequence = 0;
@@ -80,9 +79,6 @@ const load = async () => {
     }
 };
 
-// -- Shooter dialog -------------------------------------------------------------
-// The selection replaces the licence list on apply.
-
 const SHOOTER_LIST_LIMIT = 200;
 
 let shooters = [];
@@ -141,7 +137,6 @@ const applyShooterSelection = () => {
     load();
 };
 
-// -- Export dialog ---------------------------------------------------------------
 // Exports exactly the rows on screen: current filters, grouping, order and column sort.
 
 const exportColumnLabels = () => ({

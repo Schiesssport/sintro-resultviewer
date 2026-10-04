@@ -1,6 +1,5 @@
 namespace Sintro.ResultViewer.Api.V2;
 
-/// <summary>The OpenAPI descriptions of the v2 endpoints, kept apart from the routes they describe.</summary>
 internal static class V2Descriptions
 {
     public const string CollectionHelp = """

@@ -1,6 +1,6 @@
 namespace Sintro.ResultViewer.Data.Sintro300;
 
-/// <summary>Every licence in dbo.Shooters, normalised; matching in C# keeps the normalisation rule in one place.</summary>
+/// <summary>Matching in C#, not SQL, keeps the licence normalisation rule in one place.</summary>
 internal sealed class LicenseIndex(Dictionary<string, List<int>> shootersByLicense)
 {
     public static LicenseIndex From(IEnumerable<(int ShooterID, string? StartNr)> rows) =>

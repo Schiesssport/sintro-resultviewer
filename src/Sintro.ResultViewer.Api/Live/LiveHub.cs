@@ -31,7 +31,6 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
             SingleReader = true,
         });
 
-    /// <summary>Registers the socket, sends it <paramref name="initialPayload"/>, and returns when the client goes away.</summary>
     public async Task AcceptAsync<T>(WebSocket socket, T initialPayload, CancellationToken token)
     {
         var id = Guid.NewGuid();
@@ -48,7 +47,6 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
         }
         catch (OperationCanceledException)
         {
-            // Shutting down: a display that never answers a close handshake would hold the process open until Kestrel's timeout.
             Abort(client);
         }
         catch (WebSocketException)
@@ -62,7 +60,6 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
         }
     }
 
-    // Nothing is expected from the client; this parks until it goes away.
     private static async Task WaitUntilClosedAsync(WebSocket socket, CancellationToken token)
     {
         var buffer = new byte[256];
@@ -114,7 +111,6 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
         }
         catch (OperationCanceledException)
         {
-            // Shutting down.
         }
         catch (Exception ex) when (ex is WebSocketException or ObjectDisposedException or InvalidOperationException)
         {
@@ -141,7 +137,8 @@ public sealed class LiveHub(ILogger<LiveHub> logger)
         logger.LogInformation("Live client {Id} disconnected ({Count} remaining)", id, _clients.Count);
     }
 
-    // Abort, not CloseAsync: a client that is not draining will not complete a close handshake either.
+    // Abort, not CloseAsync: a client that is not draining will not complete a close handshake either, and at
+    // shutdown a display that never answers one would hold the process open until Kestrel's timeout.
     private static void Abort(Client client)
     {
         try { client.Socket.Abort(); } catch (ObjectDisposedException) { }

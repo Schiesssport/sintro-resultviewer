@@ -1,4 +1,3 @@
-// DOM helpers shared by the three pages. Nothing here is pure; core/ stays DOM-free.
 import { localIsoDate } from './core/format.js';
 
 const ATTRIBUTE_TARGETS = [

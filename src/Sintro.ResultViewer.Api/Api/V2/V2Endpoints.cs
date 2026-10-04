@@ -8,7 +8,7 @@ using Sintro.ResultViewer.Security;
 
 namespace Sintro.ResultViewer.Api.V2;
 
-/// <summary>API v2 routes. v1 is the legacy Grapevine service, so the version is always explicit in the path.</summary>
+/// <summary>v1 is the legacy Grapevine service, so the version is always explicit in the path.</summary>
 public static class V2Endpoints
 {
     public const string Version = "v2";

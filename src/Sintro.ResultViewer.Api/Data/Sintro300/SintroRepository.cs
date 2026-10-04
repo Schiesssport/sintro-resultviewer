@@ -14,7 +14,6 @@ public sealed partial class SintroRepository(string connectionString, ISintroClo
     // Epoch when SQL could not parse StartTime, so bad data is visibly wrong rather than missing.
     public static DateTime StartOf(ProgramRow row) => row.StartedAt ?? DateTime.UnixEpoch;
 
-    /// <summary>Runs an ordered query fetching one row beyond <paramref name="limit"/>: the look-ahead row says whether a next page exists and is then dropped.</summary>
     private static async Task<(List<TRow> Rows, string? NextCursor, bool HasMore)> QueryPageAsync<TRow>(
         SqlConnection connection, string orderedSql, DynamicParameters parameters, int limit,
         Func<TRow, string> encodeCursor, CancellationToken token)

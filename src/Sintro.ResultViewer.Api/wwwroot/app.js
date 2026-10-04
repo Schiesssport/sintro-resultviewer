@@ -1,5 +1,3 @@
-// DOM layer of the viewer; all pure logic lives in core/. No framework, no build step.
-
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
 import { escapeHtml, shooterLabel, matchesFilter, programLabel, laneContext, localIsoDate } from './core/format.js';
 import {
@@ -32,7 +30,7 @@ let tickerItems = [];
 let tickerKey = null;
 let liveStatus = 'connecting';
 let health = null;
-let resultsRequest = 0;
+let latestResultsRequest = 0;
 
 const t = (key, params) => translate(TRANSLATIONS[language], key, params);
 const el = (id) => document.getElementById(id);
@@ -117,8 +115,7 @@ const messageRowHere = (text) => messageRow(text, resultColumns());
 const visibleResults = () => programs.filter(
     (program) => matchesFilter(program, filterText, shooterLabel(program, t).text));
 
-// Fullscreen only. The box clips what does not fit (overflow hidden), so nothing is measured or guessed.
-// The ticker, when enabled, carries the same results minus the first tickerSkip, which the table already shows.
+// The box clips what does not fit (overflow hidden), so nothing is measured or guessed.
 const renderFullscreenResults = (body, visible) => {
     body.innerHTML = visible.map(programRow).join('');
     return display.hidden ? [] : visible.slice(display.skip);
@@ -193,9 +190,8 @@ const renderAll = () => {
     renderResults();
 };
 
-// Requests overlap on every live message; only the latest may render, or a stale list lands last.
 const loadResults = async () => {
-    const request = ++resultsRequest;
+    const request = ++latestResultsRequest;
 
     try {
         // Finished only: a running pass shows on its line, never twice. The API sends newest first.
@@ -205,12 +201,12 @@ const loadResults = async () => {
             limit: layoutFor(mode).fullscreen ? display.results : DEFAULT_RESULT_COUNT,
             state: 'finished',
         });
-        if (request !== resultsRequest) return;
+        if (request !== latestResultsRequest) return;
 
         programs = page.items;
         renderResults();
     } catch (error) {
-        if (request !== resultsRequest) return;
+        if (request !== latestResultsRequest) return;
 
         programs = [];
         tickerItems = [];
