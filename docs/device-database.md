@@ -194,7 +194,7 @@ Irrelevant to results, and unused here.
 |---|---|
 | `ShotType` | `0` sighting, `1` counting. **The authority for that distinction** |
 | `ShotGroup` | Series index. See the rule above — not a reliable sighting marker |
-| `ShotNr` | Sequential within the pass. `9999` marks a synthetic row |
+| `ShotNr` | Counts from 1 across every counting series of the pass; the sighting shots have their own numbering from 1 (measured in one export: the first counting shot after three sighting shots is `ShotNr 1` again). Not a position inside a series. `9999` marks a synthetic row |
 | `PrimaryResult` | Ring value in the active valuation; `0` is a miss |
 | `SecondaryResult` | Fine value 0–100, bracketed by `PrimaryResult` |
 | `Mouche` | `1` = centre hit, always paired with `HitPosition = 0` |

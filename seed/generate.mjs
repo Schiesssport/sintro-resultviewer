@@ -126,13 +126,17 @@ const buildPass = ({ session, pass, programId, startAt }) => {
 
     const insertShot = (row) => shots.push({ at, sql: `INSERT INTO dbo.Shots (${SHOT_COLUMNS}, ProgramID) VALUES (${row.join(', ')}, ${programId});` });
 
+    // The device numbers counting shots across every series of the pass and sighting shots separately.
+    const nextShotNr = { sighting: 0, counting: 0 };
+
     shotsToFire.forEach((stage, groupIndex) => {
-        for (let shotNr = 1; shotNr <= stage.shots; shotNr++) {
+        for (let shotInStage = 1; shotInStage <= stage.shots; shotInStage++) {
             at = new Date(at.getTime() + (stage.kind === 'SF' ? 2_500 : 20_000) + random() * 8_000);
+            const shotNr = ++nextShotNr[stage.kind === 'sighting' ? 'sighting' : 'counting'];
             insertShot(shotRow({
                 lane: pass.lane, stage, groupIndex, shotNr, at,
-                isLastOfSeries: shotNr === stage.shots,
-                isLastOfProgram: groupIndex === lastStage && shotNr === stage.shots,
+                isLastOfSeries: shotInStage === stage.shots,
+                isLastOfProgram: groupIndex === lastStage && shotInStage === stage.shots,
                 matchCode: pass.matchCode ?? session.matchCode, logEvent: logEvent++,
             }));
         }
