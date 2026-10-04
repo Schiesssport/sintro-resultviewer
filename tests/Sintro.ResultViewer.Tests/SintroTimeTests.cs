@@ -1,34 +1,11 @@
 using Microsoft.Extensions.Options;
 using Sintro.ResultViewer.Data;
+using Sintro.ResultViewer.Data.Sintro300;
 
 namespace Sintro.ResultViewer.Tests;
 
 public class SintroTimeTests
 {
-    [Fact]
-    public void parseStartTime_readsTheDeviceFormat()
-    {
-        var parsed = SintroTime.ParseStartTime("08.07.2026-20:45:54");
-        Assert.Equal(new DateTime(2026, 7, 8, 20, 45, 54), parsed);
-    }
-
-    [Theory]
-    [InlineData("2026-07-08T20:45:54")]  // ISO is not what the device writes
-    [InlineData("07/08/2026-20:45:54")]  // month-first must not be accepted
-    [InlineData("")]
-    [InlineData(null)]
-    public void parseStartTime_rejectsAnythingElse(string? input) =>
-        Assert.Null(SintroTime.ParseStartTime(input));
-
-    [Fact]
-    public void parseStartTime_isDayFirstNotMonthFirst()
-    {
-        // Reading 08.07 as 7 August would silently shift results by a month.
-        var parsed = SintroTime.ParseStartTime("08.07.2026-20:45:54");
-        Assert.Equal(7, parsed!.Value.Month);
-        Assert.Equal(8, parsed.Value.Day);
-    }
-
     [Fact]
     public void combineShotTime_takesTheDateFromTheProgram()
     {

@@ -1,6 +1,6 @@
-// Result browser logic: flatten passes to rows per program, series or shot, and sort them. Filtering is the API's job.
+import { formatDateTime } from './format.js';
 
-// "41, 44" → ['41', '44']; licences lose their leading zeros so 012345 and 12345 agree.
+// Licences lose their leading zeros so 012345 and 12345 agree.
 export const parseList = (text, { numeric = false } = {}) =>
     String(text ?? '')
         .split(',')
@@ -10,12 +10,11 @@ export const parseList = (text, { numeric = false } = {}) =>
 
 const countingShots = (program) => (program.series ?? []).flatMap((series) => series.shots ?? []);
 
-// Best first: ring value, then fine value as the tie-break.
 const byValueDesc = (a, b) => (b.value - a.value) || ((b.fineValue ?? 0) - (a.fineValue ?? 0));
 
 const orderShots = (shots, order) => (order === 'value' ? [...shots].sort(byValueDesc) : [...shots]);
 
-// Best series first by subtotal; equal subtotals keep their shooting order.
+// Equal subtotals keep their shooting order.
 const orderSeries = (series, order) =>
     (order === 'value' ? [...series].sort((a, b) => (b.subtotal ?? 0) - (a.subtotal ?? 0)) : [...series]);
 
@@ -25,12 +24,6 @@ const seriesGroup = (series, detail, order) => ({
     code: series.targetType ?? '',
     values: orderShots(series.shots ?? [], order).map((shot) => shotText(shot, detail)),
 });
-
-// "19.09. 17:52:08" read off the ISO text, so a tablet in another timezone cannot shift range times.
-export const formatDateTime = (iso) => {
-    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2}:\d{2})/.exec(String(iso ?? ''));
-    return match ? `${match[3]}.${match[2]}. ${match[4]}` : '';
-};
 
 const lastShotAt = (shots) => shots.at(-1)?.at ?? null;
 
@@ -74,8 +67,6 @@ const shotRows = (program) => (program.series ?? []).flatMap((series) => (series
     breakdown: [{ code: series.targetType ?? '', values: [String(shot.fineValue ?? '')] }],
 })));
 
-// One row per program, series or shot. In shot mode the total is the ring value and the breakdown its fine value.
-// A row's time is its last shot: when the pass or series was completed.
 export const buildRows = (programs, { groupBy = 'program', detail = 'value', seriesOrder = 'time', shotOrder = 'time' } = {}) =>
     programs.flatMap((program) => {
         if (groupBy === 'shot') return shotRows(program);
@@ -118,7 +109,6 @@ export const sortRows = (rows, column, direction = 'asc') => {
 const shooterText = (shooter) =>
     [shooter.lastName, shooter.firstName, shooter.license, shooter.club?.name].filter(Boolean).join(' ').toLowerCase();
 
-// Every whitespace-separated term must appear in name, licence or club; sorted by name for the dialog.
 export const filterShooters = (shooters, query) => {
     const terms = String(query ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean);
     return shooters
@@ -133,7 +123,6 @@ export const summarize = (programs) => ({
     shots: programs.reduce((sum, program) => sum + countingShots(program).length, 0),
 });
 
-// Inclusive bounds on a row's total; either side may be open. Rows without a total never pass a bound.
 export const filterByTotal = (rows, { min = null, max = null } = {}) => {
     if (min === null && max === null) return rows;
     return rows.filter((row) => row.total !== null && (min === null || row.total >= min) && (max === null || row.total <= max));
@@ -157,8 +146,6 @@ const exportCell = (row, column) => {
     }
 };
 
-// Three shot columns can be combined: all shots in one cell, one cell per series, one cell per shot.
-// Cells hold digits and spaces only, so no delimiter can ever hide inside one. The widest row sets the count.
 const SHOT_LAYOUTS = { shots: 'single', shotsBySeries: 'series', shotsByShot: 'shot' };
 
 const shotCells = (row, layout, width) => {
@@ -185,7 +172,6 @@ const shotHeaders = (headers, layout, width) => {
 const quote = (text, delimiter) =>
     /["\r\n]/.test(text) || text.includes(delimiter) ? `"${text.replace(/"/g, '""')}"` : text;
 
-// Header row plus one line per row; headers are the translated labels in column order.
 export const exportText = (rows, columns, headers, delimiter) => {
     const widths = Object.fromEntries(Object.entries(SHOT_LAYOUTS).map(([column, layout]) => [column, shotWidth(rows, layout)]));
     const cells = (row) => columns.flatMap((column) =>
@@ -196,7 +182,6 @@ export const exportText = (rows, columns, headers, delimiter) => {
     return [line(head)].concat(rows.map((row) => line(cells(row)))).join('\r\n');
 };
 
-// "2026-10-04-13-30-12_32_43.csv": export time, then the match code and target code filters, "alle" when a filter is empty.
 export const exportFileName = (now, matchCodes, targetCodes) => {
     const pad = (value) => String(value).padStart(2, '0');
     const stamp = [now.getFullYear(), pad(now.getMonth() + 1), pad(now.getDate()), pad(now.getHours()), pad(now.getMinutes()), pad(now.getSeconds())].join('-');

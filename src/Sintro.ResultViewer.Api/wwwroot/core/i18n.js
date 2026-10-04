@@ -1,5 +1,3 @@
-// UI strings: German (default) and French. Code and keys are English.
-
 export const TRANSLATIONS = {
     de: {
         'app.title':                'Sintro Resultate',
@@ -249,9 +247,32 @@ export const TRANSLATIONS = {
         'docs.pagingBody':          'Les listes se parcourent par curseur et non par décalage : l’installation ajoute des enregistrements en continu et supprime les anciens, un décalage sauterait donc des entrées ou les livrerait en double. Renvoyez nextCursor comme cursor ; hasMore indique s’il reste des pages. Pour synchroniser avec un logiciel de concours : utilisez state=finished&order=asc avec from/to sur les jours de tir, conservez le dernier nextCursor et renvoyez-le plus tard – vous recevrez exactement les cibles de ces jours terminées depuis.',
         'docs.loadFailed':          'Impossible de charger la spécification : {detail}',
     },
+
+    // The API docs page is the only one offered in English; it needs just these keys.
+    en: {
+        'app.title':                'Sintro Results',
+        'aria.language':            'Language',
+        'footer.note':              'Read-only view of the Sintro installation. Times are the installation’s local time.',
+        'docs.title':               'API documentation',
+        'docs.intro':               'All endpoints are read-only. Data requests need the API token; the OpenAPI specification and this page do not. By default only today is returned; use from/to to widen the period. This page uses the internal session token so you can try requests directly.',
+        'docs.parameters':          'Parameters',
+        'docs.try':                 'Try it',
+        'docs.send':                'Send',
+        'docs.noParameters':        'No parameters.',
+        'docs.specLink':            'OpenAPI specification',
+        'docs.inPath':              'in path',
+        'docs.type':                'Type',
+        'docs.name':                'Name',
+        'docs.replacePlaceholder':  'Replace the placeholder in curly braces with a real value before sending, e.g. /api/v2/programs/2000 or /api/v2/shooters/123456.',
+        'docs.openInBrowser':       'Open in browser',
+        'docs.pagingTitle':         'Collections, paging and sync',
+        'docs.pagingBody':          'Lists are paged by cursor, not by offset: the installation keeps writing new records and deleting old ones, so an offset would skip entries or return them twice. Send nextCursor back as cursor; hasMore says whether there is more. To sync with event software: set state=finished&order=asc with from/to on the shooting days, store the last nextCursor and send it again next time – you get exactly the programs finished on those days since then.',
+        'docs.loadFailed':          'Could not load the specification: {detail}',
+    },
 };
 
 export const DEFAULT_LANGUAGE = 'de';
+export const DOCS_LANGUAGES = ['de', 'fr', 'en'];
 
 export const translate = (dictionary, key, params = {}) => {
     const template = dictionary[key] ?? key;

@@ -20,9 +20,7 @@ public sealed record ProgramFilter
     /// <summary>Page size, already clamped by the caller; required so no second default can drift from SintroOptions.</summary>
     public required int Limit { get; init; }
 
-    /// <summary>Opaque keyset cursor from a previous page's <c>nextCursor</c>.</summary>
     public string? Cursor { get; init; }
 
-    /// <summary>Oldest-first, the sync direction; the default is newest-first.</summary>
     public bool Ascending { get; init; }
 }

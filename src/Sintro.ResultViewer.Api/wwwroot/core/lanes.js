@@ -1,5 +1,3 @@
-// When a line stops counting as occupied. Pure — takes "now" as an argument.
-
 export const IDLE_AFTER_FINISH_MS = 5 * 60 * 1000;
 // The device does not always write an end total, so the last shot is the fallback signal.
 export const IDLE_AFTER_LAST_SHOT_MS = 6 * 60 * 1000;

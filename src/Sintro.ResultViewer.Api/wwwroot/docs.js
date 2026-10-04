@@ -1,15 +1,15 @@
-// API browser: renders the OpenAPI spec and calls endpoints in place, with no vendored spec viewer.
-
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
 import { escapeHtml } from './core/format.js';
 import { typeOf, groupByTag } from './core/openapi.js';
+import { applyTranslations } from './dom.js';
 import { SintroApi } from './api.js';
 
 const api = new SintroApi(window.SINTRO_TOKEN);
-const language = DEFAULT_LANGUAGE;
+let language = DEFAULT_LANGUAGE;
+let spec = null;
 const t = (key, params) => translate(TRANSLATIONS[language], key, params);
 
-const openedBlobs = [];   // revoked when the page goes away
+const openedBlobs = [];
 
 const parameterTable = (parameters) => {
     if (!parameters?.length) return `<p class="endpoint-note">${t('docs.noParameters')}</p>`;
@@ -75,7 +75,6 @@ const showResponse = (index, result) => {
     openButton.dataset.payload = result.body;
 };
 
-// Hands the response to the browser's own JSON viewer in a new tab.
 const openInBrowser = (payload) => {
     const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
     openedBlobs.push(url);
@@ -106,7 +105,7 @@ const onEndpointClick = (event) => {
     if (send) sendProbe(send.dataset.send);
 };
 
-const render = (spec) => {
+const render = () => {
     const container = document.getElementById('endpoints');
     let index = 0;
 
@@ -116,22 +115,32 @@ const render = (spec) => {
             ${operations.map(({ path, method, operation }) =>
                 endpointCard(path, method, operation, index++)).join('')}
         </section>`).join('');
+};
 
-    container.addEventListener('click', onEndpointClick);
+const renderStaticText = () => {
+    document.documentElement.lang = language;
+    document.title = `${t('docs.title')} — ${t('app.title')}`;
+    applyTranslations(t);
+};
+
+const onLanguageChange = (event) => {
+    language = event.target.value;
+    renderStaticText();
+    if (spec) render();
 };
 
 const start = async () => {
-    document.title = `${t('docs.title')} — ${t('app.title')}`;
-    for (const node of document.querySelectorAll('[data-i18n]')) {
-        node.textContent = t(node.dataset.i18n);
-    }
+    renderStaticText();
+    document.getElementById('language-select').addEventListener('change', onLanguageChange);
+    document.getElementById('endpoints').addEventListener('click', onEndpointClick);
 
     window.addEventListener('pagehide', () => {
         for (const url of openedBlobs) URL.revokeObjectURL(url);
     });
 
     try {
-        render(await api.get('/openapi/v2.json'));
+        spec = await api.get('/openapi/v2.json');
+        render();
     } catch (error) {
         document.getElementById('endpoints').innerHTML =
             `<p class="message">${escapeHtml(t('docs.loadFailed', { detail: error.message }))}</p>`;

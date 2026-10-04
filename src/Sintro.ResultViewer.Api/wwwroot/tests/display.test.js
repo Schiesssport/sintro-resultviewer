@@ -2,45 +2,54 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-    tickerConfig, tickerDurationSeconds,
-    tickerContentKey, tickerQuery, normaliseTickerSettings,
-} from '../core/ticker.js';
+    parseDisplayQuery, tickerDurationSeconds,
+    tickerContentKey, displayQuery, normaliseDisplaySettings,
+} from '../core/display.js';
 
 const items = (count) => Array.from({ length: count }, (_, index) => ({ id: index + 1 }));
 
-describe('tickerConfig', () => {
+describe('parseDisplayQuery', () => {
     test('defaults to the documented values', () => {
-        assert.deepEqual(tickerConfig(''), { seconds: 20, results: 50, skip: 0, hidden: false });
+        assert.deepEqual(parseDisplayQuery(''), { seconds: 20, results: 50, skip: 0, hidden: false });
     });
 
     test('reads every parameter', () => {
-        assert.deepEqual(tickerConfig('?tickerSeconds=8&resultCount=40&tickerSkip=6&ticker=off'),
+        assert.deepEqual(parseDisplayQuery('?tickerSeconds=8&resultCount=40&tickerSkip=6&ticker=off'),
             { seconds: 8, results: 40, skip: 6, hidden: true });
     });
 
+    test('ticker=off hides the ticker', () => {
+        assert.equal(parseDisplayQuery('?ticker=off').hidden, true);
+    });
+
     test('nonsense falls back to the defaults', () => {
-        assert.deepEqual(tickerConfig('?tickerSeconds=abc&resultCount=&tickerSkip=x&ticker=on'),
+        assert.deepEqual(parseDisplayQuery('?tickerSeconds=abc&resultCount=&tickerSkip=x&ticker=on'),
             { seconds: 20, results: 50, skip: 0, hidden: false });
     });
 
     test('values are clamped to a readable range', () => {
-        assert.equal(tickerConfig('?tickerSeconds=0').seconds, 1);
-        assert.equal(tickerConfig('?tickerSeconds=9999').seconds, 120);
-        assert.equal(tickerConfig('?resultCount=0').results, 1);
-        assert.equal(tickerConfig('?resultCount=99999').results, 500);
-        assert.equal(tickerConfig('?tickerSkip=-3').skip, 0);
+        assert.equal(parseDisplayQuery('?tickerSeconds=0').seconds, 1);
+        assert.equal(parseDisplayQuery('?tickerSeconds=9999').seconds, 120);
+        assert.equal(parseDisplayQuery('?resultCount=0').results, 1);
+        assert.equal(parseDisplayQuery('?resultCount=99999').results, 500);
+        assert.equal(parseDisplayQuery('?tickerSkip=-3').skip, 0);
     });
 });
 
-describe('normaliseTickerSettings', () => {
+describe('normaliseDisplaySettings', () => {
     test('a cleared box keeps the default rather than becoming zero', () => {
         // Number('') is 0; the URL must not end up saying resultCount=0.
-        const settings = normaliseTickerSettings({ seconds: '', results: '', skip: '' });
+        const settings = normaliseDisplaySettings({ seconds: '', results: '', skip: '' });
         assert.deepEqual(settings, { seconds: 20, results: 50, skip: 0, hidden: false });
     });
 
+    test('hidden is a boolean; the string off is not interpreted here', () => {
+        assert.equal(normaliseDisplaySettings({ hidden: 'off' }).hidden, false);
+        assert.equal(normaliseDisplaySettings({ hidden: true }).hidden, true);
+    });
+
     test('whole numbers only', () => {
-        assert.equal(normaliseTickerSettings({ seconds: '7.9' }).seconds, 7);
+        assert.equal(normaliseDisplaySettings({ seconds: '7.9' }).seconds, 7);
     });
 });
 
@@ -95,15 +104,15 @@ describe('tickerContentKey', () => {
     });
 });
 
-describe('tickerQuery', () => {
-    test('round-trips through tickerConfig', () => {
+describe('displayQuery', () => {
+    test('round-trips through parseDisplayQuery', () => {
         const config = { seconds: 8, results: 40, skip: 6, hidden: false };
-        assert.deepEqual(tickerConfig(tickerQuery(config)), config);
+        assert.deepEqual(parseDisplayQuery(displayQuery(config)), config);
     });
 
     test('a hidden ticker travels as ticker=off, and the query normalises too', () => {
-        assert.equal(tickerQuery({ seconds: 8, results: 40, skip: 6, hidden: true }),
+        assert.equal(displayQuery({ seconds: 8, results: 40, skip: 6, hidden: true }),
             '?resultCount=40&tickerSkip=6&tickerSeconds=8&ticker=off');
-        assert.equal(tickerQuery({ seconds: 'abc', results: -4 }), '?resultCount=1&tickerSkip=0&tickerSeconds=20');
+        assert.equal(displayQuery({ seconds: 'abc', results: -4 }), '?resultCount=1&tickerSkip=0&tickerSeconds=20');
     });
 });

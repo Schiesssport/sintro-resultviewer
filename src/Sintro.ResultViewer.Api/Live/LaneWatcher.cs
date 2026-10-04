@@ -3,9 +3,9 @@ using Sintro.ResultViewer.Data;
 
 namespace Sintro.ResultViewer.Live;
 
-/// <summary>Polls the lane state and broadcasts it when it changes. Polling because the range PC's SQL Express has no Service Broker or CDC.</summary>
+/// <summary>Polls because the range PC's SQL Express has no Service Broker or CDC.</summary>
 public sealed class LaneWatcher(
-    SintroRepository repository,
+    ISintroRepository repository,
     LiveHub hub,
     IOptions<SintroOptions> options,
     ILogger<LaneWatcher> logger) : BackgroundService
@@ -14,7 +14,7 @@ public sealed class LaneWatcher(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var interval = TimeSpan.FromMilliseconds(Math.Max(250, options.Value.Live.PollMilliseconds));
+        var interval = TimeSpan.FromMilliseconds(options.Value.Live.PollMilliseconds);
         using var timer = new PeriodicTimer(interval);
 
         while (await SafeWaitAsync(timer, stoppingToken))
@@ -48,7 +48,7 @@ public sealed class LaneWatcher(
         if (fingerprint == _lastFingerprint) return;
 
         _lastFingerprint = fingerprint;
-        hub.Broadcast(new { type = "lanes", lanes = await repository.ListLanesAsync(token) });
+        hub.Broadcast(new LanesFrame(await repository.ListLanesAsync(token)));
     }
 
     private static async Task<bool> SafeWaitAsync(PeriodicTimer timer, CancellationToken token)

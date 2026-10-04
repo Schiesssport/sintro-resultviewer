@@ -2,23 +2,15 @@ namespace Sintro.ResultViewer.Domain;
 
 public enum ProgramState
 {
-    /// <summary>Loaded on a line and not yet ended.</summary>
     Active,
-
-    /// <summary>The device wrote an end-of-program total (TotalType 7).</summary>
     Finished,
-
-    /// <summary>No end total and no longer on a line: started and dropped, or displaced when the line was reassigned.</summary>
     Abandoned,
 }
 
 /// <summary>Why <see cref="ShootingProgram.Total"/> is null, so a missing total is debuggable.</summary>
 public enum TotalUnavailableReason
 {
-    /// <summary>Series use different ring scales; adding them would be meaningless.</summary>
     MixedValuation,
-
-    /// <summary>At least one series has no Targetinformation row, so its scale is unknown.</summary>
     UnknownValuation,
 }
 
@@ -34,7 +26,6 @@ public sealed record Shooter(
 
 public sealed record Shot(
     int Number,
-    // Shots.ExternalNumber: the event match (Stich) the operator entered for the pass; 0 on the device means none.
     int? MatchCode,
     int Value,
     int FineValue,
@@ -48,11 +39,9 @@ public sealed record Shot(
 public sealed record ShotSeries(
     int Index,
     int? Valuation,
-    // Target letter plus ring scale, e.g. "A10" or "B4", the notation used in program names.
     string TargetType,
     int ShotCount,
     int Subtotal,
-    // Highest fine value (SecondaryResult, tenths) among the hits; misses report 0 and are excluded so they cannot win it.
     int? BestFineValue,
     IReadOnlyList<Shot> Shots);
 
@@ -61,7 +50,6 @@ public sealed record ProgramTotal(int Value, int Valuation);
 /// <summary>One row of dbo.Programs, a "Stich" in the UI; named ShootingProgram because <c>Program</c> is the entry point, exposed as the <c>program</c> resource.</summary>
 public sealed record ShootingProgram(
     int Id,
-    // Programs.Number and Programs.Name: operator-assigned free text, not a key.
     int TargetCode,
     string TargetProgram,
     int Lane,
@@ -73,10 +61,8 @@ public sealed record ShootingProgram(
     ProgramTotal? Total,
     TotalUnavailableReason? TotalUnavailable,
     int ShotCount,
-    // Counting-shot ring values in firing order.
     IReadOnlyList<int> ShotValues,
     IReadOnlyList<ShotSeries> Series,
-    // Sighting shots (Probe), one series per ShotGroup and never counted towards Total; kept per group because ring scales can differ between groups.
     IReadOnlyList<ShotSeries> Sighting);
 
 public sealed record LaneStatus(int Number, ShootingProgram? CurrentProgram);

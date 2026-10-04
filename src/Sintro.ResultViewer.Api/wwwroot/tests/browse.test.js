@@ -1,7 +1,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseList, buildRows, sortRows, formatDateTime, filterShooters, summarize, filterByTotal, parseBound, exportText, exportFileName, EXPORT_COLUMNS, DEFAULT_EXPORT_COLUMNS } from '../core/browse.js';
+import { parseList, buildRows, sortRows, filterShooters, summarize, filterByTotal, parseBound, exportText, exportFileName, EXPORT_COLUMNS, DEFAULT_EXPORT_COLUMNS } from '../core/browse.js';
+import { formatDateTime } from '../core/format.js';
 
 const shot = (number, value, fineValue, matchCode = 11) =>
     ({ number, value, fineValue, matchCode, at: `2026-07-08T20:46:0${number}+02:00` });

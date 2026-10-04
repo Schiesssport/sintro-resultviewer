@@ -14,7 +14,6 @@ public static class Cursor
         WebEncoders.Base64UrlEncode(
             Encoding.UTF8.GetBytes(JsonSerializer.Serialize(parts.Select(part => part?.ToString()))));
 
-    /// <summary>The encoded parts, or null when no cursor was passed; throws <see cref="InvalidCursorException"/> for anything else.</summary>
     public static string?[]? Decode(string? cursor, int expectedParts)
     {
         if (string.IsNullOrWhiteSpace(cursor)) return null;

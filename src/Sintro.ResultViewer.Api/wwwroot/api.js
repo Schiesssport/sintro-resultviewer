@@ -1,5 +1,3 @@
-// Thin API client shared by the viewer and the docs page. The token comes from the page.
-
 import { INITIAL_RETRY_MS, nextRetryDelay } from './core/reconnect.js';
 import { isProbeAllowed } from './core/openapi.js';
 
@@ -22,7 +20,7 @@ const prettyJson = (text) => {
     try {
         return JSON.stringify(JSON.parse(text), null, 2);
     } catch {
-        return text;   // not JSON (an error page, say)
+        return text;
     }
 };
 
@@ -62,7 +60,6 @@ export class SintroApi {
             if (parsed?.detail) return `${status} — ${parsed.detail}`;
             if (parsed?.error) return `${status} — ${parsed.error}`;
         } catch {
-            // Not an ApiError body; fall through to the bare status.
         }
         return `HTTP ${status}`;
     }
@@ -78,33 +75,26 @@ export class SintroApi {
         return this.get(`/api/v2/programs?${query}`);
     }
 
-    // Every pass matching the filters, following the cursor to the end.
-    async allPrograms(filters) {
+    async allPages(path, filters = {}) {
         const items = [];
         let cursor = null;
         do {
             const query = new URLSearchParams({ limit: '2000' });
             for (const [key, value] of Object.entries(filters)) if (value) query.set(key, value);
             if (cursor) query.set('cursor', cursor);
-            const page = await this.get(`/api/v2/programs?${query}`);
+            const page = await this.get(`${path}?${query}`);
             items.push(...page.items);
             cursor = page.hasMore ? page.nextCursor : null;
         } while (cursor);
         return items;
     }
 
-    async allShooters(filters = {}) {
-        const items = [];
-        let cursor = null;
-        do {
-            const query = new URLSearchParams({ limit: '2000' });
-            for (const [key, value] of Object.entries(filters)) if (value) query.set(key, value);
-            if (cursor) query.set('cursor', cursor);
-            const page = await this.get(`/api/v2/shooters?${query}`);
-            items.push(...page.items);
-            cursor = page.hasMore ? page.nextCursor : null;
-        } while (cursor);
-        return items;
+    allPrograms(filters) {
+        return this.allPages('/api/v2/programs', filters);
+    }
+
+    allShooters(filters = {}) {
+        return this.allPages('/api/v2/shooters', filters);
     }
 
     program(id) {

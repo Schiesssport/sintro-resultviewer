@@ -1,4 +1,4 @@
-// Fullscreen variants are real routes so a wall display can be pointed straight at one. Pure.
+// Fullscreen variants are real routes so a wall display can be pointed straight at one.
 
 export const MODES = {
     dashboard: { fullscreen: false, lanes: true, results: true },

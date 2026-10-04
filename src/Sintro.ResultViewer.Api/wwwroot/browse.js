@@ -1,9 +1,10 @@
-// Result browser. Every filter is an API query, so the rows are always current; only the row shape
-// (per pass, series or shot) and the column sort are decided here. State lives in this tab's memory.
+// Every filter is an API query, so the rows are always current; only the row shape and the column sort are decided here.
 
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
-import { escapeHtml, formatTime } from './core/format.js';
-import { parseList, buildRows, sortRows, formatDateTime, filterShooters, summarize, filterByTotal, parseBound, exportText, exportFileName, EXPORT_COLUMNS, DEFAULT_EXPORT_COLUMNS } from './core/browse.js';
+import { escapeHtml } from './core/format.js';
+import { messageRow, browseRowHtml } from './core/markup.js';
+import { parseList, buildRows, sortRows, filterShooters, summarize, filterByTotal, parseBound, exportText, exportFileName, EXPORT_COLUMNS, DEFAULT_EXPORT_COLUMNS } from './core/browse.js';
+import { applyTranslations, readToday } from './dom.js';
 import { SintroApi } from './api.js';
 
 const RELOAD_DEBOUNCE_MS = 400;
@@ -15,7 +16,7 @@ let language = DEFAULT_LANGUAGE;
 const t = (key, params) => translate(TRANSLATIONS[language], key, params);
 
 let programs = [];
-// Newest first, the same order as the live view's result list.
+// The same order as the live view's result list.
 let sort = { column: 'at', direction: 'desc' };
 let currentRows = [];
 let loadSequence = 0;
@@ -24,10 +25,7 @@ let reloadTimer = null;
 const renderStaticText = () => {
     document.documentElement.lang = language;
     document.title = t('browse.title');
-
-    for (const node of document.querySelectorAll('[data-i18n]')) node.textContent = t(node.dataset.i18n);
-    for (const node of document.querySelectorAll('[data-i18n-placeholder]')) node.placeholder = t(node.dataset.i18nPlaceholder);
-    for (const node of document.querySelectorAll('[data-i18n-aria-label]')) node.setAttribute('aria-label', t(node.dataset.i18nAriaLabel));
+    applyTranslations(t);
 };
 
 const query = () => ({
@@ -44,26 +42,7 @@ const options = () => {
     return { groupBy: el('group-select').value, detail: el('detail-select').value, seriesOrder, shotOrder };
 };
 
-const groupHtml = (group) => `
-        <span class="shot-group">
-            <span class="shot-group-code">${escapeHtml(group.code)}</span>
-            <span class="shot-group-values">${group.values.map((value) => `<span class="shot">${escapeHtml(value)}</span>`).join('')}</span>
-        </span>`;
-
-// Program name and start time ride along as a tooltip: in series and shot mode many rows share a shooter.
-const rowHtml = (row) => `
-    <tr title="${escapeHtml(`${row.program} ${formatTime(row.startedAt)}`.trim())}">
-        <td class="col-time">${formatDateTime(row.at)}</td>
-        <td class="col-license">${escapeHtml(row.license)}</td>
-        <td class="col-shooter">${escapeHtml(`${row.lastName} ${row.firstName}`.trim())}</td>
-        <td class="col-club">${escapeHtml(row.club)}</td>
-        <td class="col-code">${row.targetCode ?? ''}</td>
-        <td class="col-code">${escapeHtml(row.matchCode)}</td>
-        <td class="col-total">${row.total === null ? '<span class="value-none">–</span>' : row.total}</td>
-        <td class="col-shots"><div class="shot-groups">${row.breakdown.map(groupHtml).join('')}</div></td>
-    </tr>`;
-
-const message = (text) => `<tr><td colspan="8" class="message">${escapeHtml(text)}</td></tr>`;
+const browseMessage = (text) => messageRow(text, document.querySelectorAll('table.browse colgroup col').length);
 
 const renderSortMarkers = () => {
     for (const th of document.querySelectorAll('th[data-sort]')) {
@@ -80,7 +59,7 @@ const render = () => {
 
     const bounded = bounds.min !== null || bounds.max !== null;
     el('result-count').textContent = t('browse.count', summarize(programs)) + (bounded ? ` · ${t('browse.rowCount', { rows: rows.length })}` : '');
-    el('results-body').innerHTML = rows.length ? rows.map(rowHtml).join('') : message(t('browse.empty'));
+    el('results-body').innerHTML = rows.length ? rows.map(browseRowHtml).join('') : browseMessage(t('browse.empty'));
     renderSortMarkers();
 };
 
@@ -96,12 +75,9 @@ const load = async () => {
     } catch (error) {
         if (sequence !== loadSequence) return;
         programs = [];
-        el('results-body').innerHTML = message(t('msg.error', { detail: error.message }));
+        el('results-body').innerHTML = browseMessage(t('msg.error', { detail: error.message }));
     }
 };
-
-// -- Shooter dialog -------------------------------------------------------------
-// The selection replaces the licence list on apply.
 
 const SHOOTER_LIST_LIMIT = 200;
 
@@ -161,7 +137,6 @@ const applyShooterSelection = () => {
     load();
 };
 
-// -- Export dialog ---------------------------------------------------------------
 // Exports exactly the rows on screen: current filters, grouping, order and column sort.
 
 const exportColumnLabels = () => ({
@@ -271,12 +246,7 @@ const init = async () => {
         render();
     });
 
-    let today;
-    try {
-        today = (await api.health()).today;
-    } catch {
-        today = new Date().toISOString().slice(0, 10);
-    }
+    const today = await readToday(api);
     el('from-input').value = today;
     el('to-input').value = today;
     load();

@@ -1,25 +1,35 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from '../core/i18n.js';
+import { TRANSLATIONS, DEFAULT_LANGUAGE, DOCS_LANGUAGES, translate } from '../core/i18n.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const source = (file) => readFileSync(join(root, file), 'utf8');
 
 // Every key the markup and the DOM layer name literally; dynamic keys are listed by hand.
-const keysInUse = () => {
+const keysInFiles = (files) => {
     const keys = new Set();
-    const files = ['app.js', 'docs.js', 'browse.js', 'core/format.js', 'index.html', 'docs.html', 'browse.html'];
 
     for (const file of files) {
         const text = source(file);
         for (const match of text.matchAll(/\bt\('([a-zA-Z0-9_.+-]+)'/g)) keys.add(match[1]);
         for (const match of text.matchAll(/data-i18n(?:-[a-z-]+)?="([a-zA-Z0-9_.+-]+)"/g)) keys.add(match[1]);
     }
+
+    return keys;
+};
+
+const pageFiles = () => [
+    ...readdirSync(root).filter((f) => /\.(js|html)$/.test(f)),
+    ...readdirSync(join(root, 'core')).map((f) => `core/${f}`),
+];
+
+const keysInUse = () => {
+    const keys = keysInFiles(pageFiles());
 
     // Built from state: t(`live.${state}`), t(display.reasonKey), t(`fullscreen.mode.${target}`).
     for (const key of [
@@ -64,6 +74,12 @@ describe('dictionaries', () => {
         assert.deepEqual(fr, de);
     });
 
+    test('English covers exactly the keys the docs page uses', () => {
+        const docsKeys = [...keysInFiles(['docs.html', 'docs.js'])].sort();
+        assert.deepEqual(Object.keys(TRANSLATIONS.en).sort(), docsKeys);
+        assert.deepEqual(DOCS_LANGUAGES, ['de', 'fr', 'en']);
+    });
+
     test('no translation is left empty', () => {
         for (const [language, dictionary] of Object.entries(TRANSLATIONS)) {
             for (const [key, value] of Object.entries(dictionary)) {
@@ -76,9 +92,12 @@ describe('dictionaries', () => {
         const placeholders = (text) => (text.match(/\{(\w+)\}/g) ?? []).sort();
 
         for (const [key, german] of Object.entries(TRANSLATIONS.de)) {
-            assert.deepEqual(
-                placeholders(TRANSLATIONS.fr[key]), placeholders(german),
-                `placeholders differ for ${key}`);
+            for (const language of ['fr', 'en']) {
+                if (!(key in TRANSLATIONS[language])) continue;
+                assert.deepEqual(
+                    placeholders(TRANSLATIONS[language][key]), placeholders(german),
+                    `placeholders differ for ${language}.${key}`);
+            }
         }
     });
 
@@ -96,5 +115,24 @@ describe('dictionaries', () => {
 
         assert.deepEqual([...used].filter((key) => !defined.has(key)), [], 'used but not defined');
         assert.deepEqual([...defined].filter((key) => !used.has(key)), [], 'defined but never used');
+    });
+});
+
+describe('translation attributes', () => {
+    const ATTRIBUTES = ['data-i18n', 'data-i18n-placeholder', 'data-i18n-title', 'data-i18n-aria-label'];
+
+    test('every page applies translations through the shared helper', () => {
+        for (const file of ['app.js', 'browse.js', 'docs.js']) {
+            assert.match(source(file), /import \{[^}]*\bapplyTranslations\b[^}]*\} from '\.\/dom\.js'/, `${file} must use dom.js`);
+            assert.doesNotMatch(source(file), /data-i18n/, `${file} must not walk data-i18n itself`);
+        }
+    });
+
+    test('the markup uses only attributes the helper handles', () => {
+        for (const file of ['index.html', 'browse.html', 'docs.html']) {
+            for (const [attribute] of source(file).matchAll(/data-i18n(?:-[a-z-]+)?(?==)/g)) {
+                assert.ok(ATTRIBUTES.includes(attribute), `${file}: ${attribute}`);
+            }
+        }
     });
 });

@@ -1,5 +1,3 @@
-// Pure presentation logic — no DOM, no fetch, no globals.
-
 export const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 }[char]));
@@ -8,6 +6,17 @@ export const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (ch
 export const formatTime = (iso) => {
     const match = /T(\d{2}):(\d{2})/.exec(String(iso ?? ''));
     return match ? `${match[1]}:${match[2]}` : '';
+};
+
+const pad = (n) => String(n).padStart(2, '0');
+
+// Local day: toISOString is UTC, which is behind local time, so it names the previous day shortly after midnight.
+export const localIsoDate = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+// "19.09. 17:52:08", read off the ISO text.
+export const formatDateTime = (iso) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2}:\d{2})/.exec(String(iso ?? ''));
+    return match ? `${match[3]}.${match[2]}. ${match[4]}` : '';
 };
 
 // Most passes are anonymous; the chain name → licence → free text → line + time never fails.
@@ -45,7 +54,6 @@ export const totalDisplay = (program) => {
     return { hasTotal: false, value: null, reasonKey };
 };
 
-// Every whitespace-separated term must appear somewhere in the row.
 export const matchesFilter = (program, query, labelText = '') => {
     const terms = String(query ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (terms.length === 0) return true;
@@ -63,25 +71,23 @@ export const matchesFilter = (program, query, labelText = '') => {
     return terms.every((term) => haystack.includes(term));
 };
 
-// "20:45/L6" — "L" is for Linie / ligne, the device's term.
+// "L" is for Linie / ligne, the device's term.
 const whenAndWhere = (program) => {
     const time = formatTime(program?.startedAt);
     const line = program?.lane === null || program?.lane === undefined ? '' : `L${program.lane}`;
     return [time, line].filter(Boolean).join('/');
 };
 
-// "Obligatorisches Programm (20:45/L6)": time and line ride along instead of taking columns.
+// Time and line ride along instead of taking columns.
 export const programLabel = (program) => {
     const name = program?.targetProgram ?? '';
     const context = whenAndWhere(program);
     return context ? `${name} (${context})` : name;
 };
 
-// "SG Muster · Obligatorisches Programm" under a shooter's name on a line.
 export const laneContext = (program) =>
     [program?.shooter?.club?.name, program?.targetProgram].filter(Boolean).join(' · ');
 
-// "Hans Muster: 31 (Obligatorisches Programm, 20:45/L6)" — who, how much, and where.
 export const tickerEntry = (program, t) => {
     const name = shooterLabel(program, t).text;
     const total = program?.total ? String(program.total.value) : '–';

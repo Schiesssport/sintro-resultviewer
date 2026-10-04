@@ -1,6 +1,8 @@
-/* Sintro Result Viewer — styles on the Schiesssport design system tokens. Never hard-code a colour here. */
+/* Never hard-code a colour here: every one comes from the design system tokens. */
 
 @import "tokens.css";
+
+/* -- Root variables and reset ------------------------------------------------ */
 
 :root {
     --content-max-width: 1600px;
@@ -32,7 +34,7 @@ body {
 
 #ui-wrapper { width: 100%; max-width: var(--content-max-width); }
 
-/* -- Header ---------------------------------------------------------------- */
+/* -- Header ------------------------------------------------------------------ */
 
 .app-header {
     display: flex;
@@ -56,7 +58,6 @@ body {
 
 .header-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
 
-/* Live indicator — pulses only while the socket is actually open. */
 .live-dot {
     display: inline-flex;
     align-items: center;
@@ -80,7 +81,27 @@ body {
     .live-dot.is-live::before { animation: none; }
 }
 
-/* -- Cards & toolbar ------------------------------------------------------- */
+.header-link {
+    color: color-mix(in srgb, var(--on-dark) 85%, transparent);
+    font-size: 12px;
+    text-decoration: none;
+    border: 1px solid color-mix(in srgb, var(--on-dark) 35%, transparent);
+    border-radius: var(--radius);
+    padding: 5px 12px;
+}
+.header-link:hover { background: color-mix(in srgb, var(--on-dark) 12%, transparent); color: var(--on-dark); }
+
+.header-button {
+    background: transparent;
+    color: color-mix(in srgb, var(--on-dark) 85%, transparent);
+    border-color: color-mix(in srgb, var(--on-dark) 35%, transparent);
+    font-size: 12px;
+    height: 28px;
+    padding: 0 12px;
+}
+.header-button:hover { background: color-mix(in srgb, var(--on-dark) 12%, transparent); color: var(--on-dark); }
+
+/* -- Card, toolbar, inputs, buttons ------------------------------------------ */
 
 .card {
     background: var(--surface);
@@ -146,7 +167,83 @@ button:focus-visible { outline: 2px solid var(--emerald); outline-offset: 2px; }
 .btn-secondary { background: var(--surface); color: var(--emerald); border-color: var(--emerald); }
 .btn-secondary:hover { background: var(--row-focus); }
 
-/* -- Results table --------------------------------------------------------- */
+/* The name is the tooltip. */
+.icon-button {
+    width: var(--btn-height);
+    height: var(--btn-height);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    color: var(--emerald);
+    border: 1px solid var(--emerald);
+    border-radius: var(--radius);
+}
+.icon-button:hover { background: var(--row-focus); }
+
+.input-with-button { position: relative; display: block; }
+.input-with-button input { padding-right: 38px; }
+.input-button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 0;
+    color: var(--muted);
+    border-radius: 0 var(--radius) var(--radius) 0;
+}
+.input-button:hover { color: var(--emerald); background: var(--row-focus); }
+
+.input-with-button.has-two-buttons input { padding-right: 68px; }
+.input-with-button.has-two-buttons .input-clear { right: 32px; border-radius: 0; }
+.input-clear { font-size: 18px; line-height: 1; }
+.input-with-button input:placeholder-shown ~ .input-clear { display: none; }
+
+/* -- Messages, footer, hidden ------------------------------------------------ */
+
+.message { padding: 28px; text-align: center; color: var(--muted); font-size: 13px; }
+
+.exposure-warning {
+    background: var(--danger);
+    color: var(--on-dark);
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+}
+
+.app-footer {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 11px;
+    color: var(--label);
+    padding: 0 4px 20px;
+    line-height: 1.6;
+}
+.app-footer a { color: var(--emerald); }
+
+/* The API docs are a secondary destination: a quiet footer link, not a tab. */
+.footer-api-link {
+    margin-left: auto;
+    text-decoration: none;
+    font-size: 12px;
+    padding: 0 16px;
+}
+
+.result-count { color: var(--label); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+.hidden { display: none !important; }
+
+/* -- Results table and column widths ----------------------------------------- */
 
 .table-scroll { overflow-x: auto; border-radius: var(--radius-lg); }
 
@@ -182,19 +279,16 @@ table.results tbody td {
 
 table.results tbody tr:hover td { background: var(--row-hover); }
 
-.col-total { font-variant-numeric: tabular-nums; }
-
 /* Widths live on the <colgroup>: table-layout: fixed reads the first row, often a colspan message row. */
 .cg-club    { width: 17%; }
 .cg-shooter { width: 16%; }
 .cg-total   { width: 84px; }
 .cg-program { width: 20%; }
 
-.col-total { text-align: right; font-weight: 700; font-size: 15px; }
+.col-total { font-variant-numeric: tabular-nums; text-align: right; font-weight: 700; font-size: 15px; }
 
 .col-program, .col-shooter, .col-club { overflow-wrap: anywhere; }
 
-/* Club and the folded-in time/line are supporting detail, not the result. */
 .col-club { color: var(--ink-soft); }
 .col-program { color: var(--ink-soft); }
 .value-none { color: var(--disabled); }
@@ -217,7 +311,7 @@ table.results tbody tr:hover td { background: var(--row-hover); }
 
 .total-missing { color: var(--warn); font-weight: 600; font-size: 11px; }
 
-/* -- Shot groups ---------------------------------------------------------- */
+/* -- Shot chips and dial ----------------------------------------------------- */
 
 /* One chip per series; the cell wraps between chips first, only an over-wide series wraps inside. */
 .shot-groups {
@@ -239,7 +333,6 @@ table.results tbody tr:hover td { background: var(--row-hover); }
     background: var(--paper);
 }
 
-/* Context: which target and ring scale. Present but never competing with the scores. */
 .shot-group-code {
     flex: 0 0 var(--shot-code-width);
     width: var(--shot-code-width);
@@ -249,7 +342,6 @@ table.results tbody tr:hover td { background: var(--row-hover); }
     letter-spacing: 0.02em;
 }
 
-/* The content. Highest contrast in the row. */
 .shot-group-values {
     display: inline-flex;
     flex-wrap: wrap;
@@ -262,7 +354,6 @@ table.results tbody tr:hover td { background: var(--row-hover); }
     color: var(--ink);
 }
 
-/* A shot is the number; the direction ring sits around it and never replaces it. */
 .shot {
     position: relative;
     display: inline-flex;
@@ -302,7 +393,6 @@ table.results tbody tr:hover td { background: var(--row-hover); }
 /* A centre hit has no direction, so the whole ring is filled rather than one wedge. */
 .shot-ring.is-centre .ring-wedge { fill: var(--ink); stroke: var(--ink); }
 
-/* Trailing tenth-values: the last shot (live only) above the best; the best is context, so dim. */
 .shot-group-fine {
     flex: 0 0 var(--shot-fine-width);
     width: var(--shot-fine-width);
@@ -317,204 +407,7 @@ table.results tbody tr:hover td { background: var(--row-hover); }
 .shot-fine-last { color: var(--ink); }
 .shot-fine-best { color: var(--muted); }
 
-/* -- Messages & warnings --------------------------------------------------- */
-
-.message { padding: 28px; text-align: center; color: var(--muted); font-size: 13px; }
-
-.exposure-warning {
-    background: var(--danger);
-    color: var(--on-dark);
-    padding: 10px 20px;
-    font-size: 13px;
-    font-weight: 600;
-    border-radius: var(--radius);
-    margin-bottom: 16px;
-}
-
-.app-footer {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    font-size: 11px;
-    color: var(--label);
-    padding: 0 4px 20px;
-    line-height: 1.6;
-}
-.app-footer a { color: var(--emerald); }
-
-/* The API docs are a secondary destination: a quiet footer link, not a tab. */
-.footer-api-link {
-    margin-left: auto;
-    text-decoration: none;
-    font-size: 12px;
-    padding: 0 16px;
-}
-
-.result-count { color: var(--label); font-size: 12px; font-variant-numeric: tabular-nums; }
-
-/* -- Fullscreen ------------------------------------------------------------ */
-
-/* Fullscreen drops every piece of chrome so a spectator screen shows results and nothing else. */
-body.is-fullscreen { padding: 0; }
-body.is-fullscreen [data-chrome] { display: none !important; }
-body.is-fullscreen #ui-wrapper { max-width: none; }
-body.is-fullscreen .card {
-    margin: 0;
-    padding: 0;
-    border-radius: 0;
-    box-shadow: none;
-}
-body.is-fullscreen .table-scroll { border-radius: 0; }
-body.is-fullscreen table.results { font-size: 15px; }
-body.is-fullscreen .shot-group-values { font-size: 16px; }
-
-.fullscreen-exit {
-    position: fixed;
-    top: 10px;
-    right: 14px;
-    z-index: 10;
-    width: 32px;
-    padding: 0;
-    justify-content: center;
-    border: 0;
-    background: transparent;
-    color: var(--muted);
-    font-size: 16px;
-    opacity: 0.35;
-    transition: opacity 0.15s;
-}
-.fullscreen-exit:hover, .fullscreen-exit:focus-visible { opacity: 1; }
-
-.hidden { display: none !important; }
-
-/* -- Docs page ------------------------------------------------------------- */
-
-.docs-intro { font-size: 13px; color: var(--ink-soft); line-height: 1.6; max-width: 70ch; }
-
-.endpoint {
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    margin-bottom: 12px;
-    overflow: hidden;
-}
-.endpoint-head {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
-    background: var(--paper);
-    cursor: pointer;
-}
-.endpoint-method {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 700;
-    background: var(--forest);
-    color: var(--on-dark);
-    padding: 3px 8px;
-    border-radius: var(--radius);
-}
-.endpoint-path { font-family: var(--font-mono); font-size: 13px; font-weight: 600; }
-.endpoint-summary { color: var(--ink-soft); font-size: 12px; margin-left: auto; text-align: right; }
-.endpoint-body { padding: 14px; border-top: 1px solid var(--line); }
-.endpoint-body.hidden { display: none; }
-.endpoint-description { font-size: 12px; color: var(--ink-soft); white-space: pre-line; line-height: 1.6; margin: 0 0 14px; }
-.endpoint-heading {
-    margin: 16px 0 8px;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--label);
-}
-.endpoint-heading:first-child { margin-top: 0; }
-.endpoint-note { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
-
-.endpoint-group { margin-bottom: 26px; }
-.endpoint-group-title {
-    margin: 0 0 10px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--emerald);
-}
-
-.header-link {
-    color: color-mix(in srgb, var(--on-dark) 85%, transparent);
-    font-size: 12px;
-    text-decoration: none;
-    border: 1px solid color-mix(in srgb, var(--on-dark) 35%, transparent);
-    border-radius: var(--radius);
-    padding: 5px 12px;
-}
-.header-link:hover { background: color-mix(in srgb, var(--on-dark) 12%, transparent); color: var(--on-dark); }
-
-.docs-panel {
-    border-left: 3px solid var(--emerald);
-    background: var(--paper);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    margin: 16px 0 24px;
-}
-.docs-panel-title {
-    margin: 0 0 6px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--forest);
-}
-.docs-panel-body { margin: 0; font-size: 12px; line-height: 1.65; color: var(--ink-soft); max-width: 90ch; }
-
-/* The status line is separated from the body so it reads as an outcome, not as data. */
-.response-status {
-    display: inline-block;
-    margin-top: 12px;
-    padding: 4px 10px;
-    border-radius: var(--radius) var(--radius) 0 0;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--on-dark);
-}
-.response-status.hidden { display: none; }
-.response-status.is-ok { background: var(--ok); }
-.response-status.is-error { background: var(--danger); }
-
-.param-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
-.param-table th {
-    text-align: left;
-    font-size: 10px;
-    text-transform: uppercase;
-    color: var(--label);
-    letter-spacing: 0.03em;
-    padding: 5px 8px;
-    border-bottom: 1px solid var(--line);
-}
-.param-table td { padding: 5px 8px; border-bottom: 1px solid var(--line); }
-.param-table .mono { font-family: var(--font-mono); }
-
-.try-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.try-row input { flex: 1; min-width: 240px; font-family: var(--font-mono); font-size: 12px; }
-
-pre.response {
-    margin-top: 0;
-    border-top-left-radius: 0;
-    background: var(--forest);
-    color: var(--code-ink);
-    padding: 14px;
-    border-radius: var(--radius);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    line-height: 1.5;
-    overflow-x: auto;
-    max-height: 460px;
-    margin: 12px 0 0;
-}
-pre.response.hidden { display: none; }
-
-/* -- Sections -------------------------------------------------------------- */
+/* -- Sections ---------------------------------------------------------------- */
 
 .section { margin-bottom: 26px; }
 .section:last-child { margin-bottom: 0; }
@@ -536,13 +429,7 @@ pre.response.hidden { display: none; }
 }
 .section-head .toolbar { flex: 1; margin-bottom: 10px; }
 
-/* Fullscreen is read from across a room, so the dial and its value scale up together. */
-body.is-fullscreen {
-    --shot-dial-size: 42px;
-    --shot-dial-font: 14px;
-}
-
-/* -- Line view -------------------------------------------------------------- */
+/* -- Line view --------------------------------------------------------------- */
 
 /* Read at a distance: name and running total carry the row, club and program sit under the name. */
 table.lanes {
@@ -559,7 +446,6 @@ table.lanes td {
 }
 table.lanes tr:last-child td { border-bottom: 0; }
 
-/* Line view columns, same reasoning as above. */
 .cg-line         { width: 64px; }
 .cg-lane-shooter { width: 22%; }
 .cg-lane-total   { width: 96px; }
@@ -606,6 +492,60 @@ tr.lane-row.is-free td { background: var(--paper); }
     font-size: 15px;
 }
 
+/* -- Office view results box ------------------------------------------------- */
+
+/* The lines must stay visible while the operator scrolls results, so the table scrolls, not the page. */
+body:not(.is-fullscreen) #results-scroll {
+    max-height: min(52vh, 620px);
+    overflow-y: auto;
+}
+
+/* -- Fullscreen -------------------------------------------------------------- */
+
+/* The ticker strip height is reserved so the result box has a stable height. */
+body.is-fullscreen {
+    --shot-dial-size: 42px;
+    --shot-dial-font: 14px;
+    --ticker-space: 54px;
+    padding: 0;
+}
+body.is-fullscreen [data-chrome] { display: none !important; }
+
+/* Nothing scrolls on a wall display: the card owns the viewport and results take what the lines leave. */
+body.is-fullscreen #ui-wrapper {
+    max-width: none;
+    height: 100vh;
+    padding-bottom: var(--ticker-space);
+    display: flex;
+    flex-direction: column;
+}
+body.is-fullscreen .card {
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    gap: 18px;
+}
+body.is-fullscreen .table-scroll { border-radius: 0; }
+body.is-fullscreen table.results { font-size: 16px; }
+body.is-fullscreen table.results tbody td { padding: 11px 12px; }
+body.is-fullscreen .shot-group-values { font-size: 16px; }
+body.is-fullscreen .section-results {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+body.is-fullscreen #results-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;   /* the ticker replaces scrolling */
+}
+
 body.is-fullscreen .lane-number { font-size: 28px; }
 body.is-fullscreen .lane-shooter-name { font-size: 30px; }
 body.is-fullscreen .lane-context { font-size: 15px; }
@@ -614,39 +554,27 @@ body.is-fullscreen .cg-lane-total { width: 124px; }
 body.is-fullscreen .cg-line { width: 80px; }
 body.is-fullscreen .lane-free { font-size: 19px; }
 
-/* -- Office view: results scroll inside their own box ----------------------- */
+/* No section titles on a wall display: the tables are obvious from their own content. */
+body.is-fullscreen .section-title { display: none; }
+body.is-fullscreen .section { margin-bottom: 0; }
+body.is-fullscreen .ticker-entry { font-size: 19px; }
 
-/* The lines must stay visible while the operator scrolls results, so the table scrolls, not the page. */
-body:not(.is-fullscreen) #results-scroll {
-    max-height: min(52vh, 620px);
-    overflow-y: auto;
+.fullscreen-exit {
+    position: fixed;
+    top: 10px;
+    right: 14px;
+    z-index: 10;
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 16px;
+    opacity: 0.35;
+    transition: opacity 0.15s;
 }
-
-/* -- Fullscreen layout ------------------------------------------------------ */
-
-/* Nothing scrolls on a wall display: the card owns the viewport and results take what the lines leave. */
-/* The ticker strip is reserved even when empty, so the row-capacity measurement has a stable box. */
-body.is-fullscreen { --ticker-space: 54px; }
-
-body.is-fullscreen #ui-wrapper {
-    height: 100vh;
-    padding-bottom: var(--ticker-space);
-    display: flex;
-    flex-direction: column;
-}
-body.is-fullscreen .card {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    gap: 18px;
-}
-body.is-fullscreen .section-results {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
+.fullscreen-exit:hover, .fullscreen-exit:focus-visible { opacity: 1; }
 
 /* Line-only view: rows share the table height evenly instead of sizing to their own content. */
 body[data-mode="live"] .section-lanes {
@@ -668,17 +596,10 @@ body[data-mode="live"] .cg-lane-total { width: 150px; }
 body[data-mode="live"] .lane-free { font-size: 22px; }
 body[data-mode="live"] { --shot-dial-size: 46px; --shot-dial-font: 15px; }
 body[data-mode="live"] .shot-group-fine { font-size: 15px; --shot-fine-width: 3.6ch; }
-body.is-fullscreen #results-scroll {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;   /* the ticker replaces scrolling */
-}
-body.is-fullscreen table.results { font-size: 16px; }
-body.is-fullscreen table.results tbody td { padding: 11px 12px; }
 
-/* -- Result ticker ---------------------------------------------------------- */
+/* -- Result ticker ----------------------------------------------------------- */
 
-/* The result overflow, fixed to the viewport: as a table footer row it needed an exact row count. */
+/* Fixed to the viewport so the table above never needs an exact row count. */
 #results-ticker {
     display: none;   /* fullscreen only; always shown there, empty or not */
     position: fixed;
@@ -727,32 +648,13 @@ body.is-fullscreen.is-ticker-hidden #ui-wrapper { padding-bottom: 0; }
     to { transform: translateX(-50%); }
 }
 
-
+/* Reduced motion is the one case the ticker stands still; the strip scrolls by hand. */
 @media (prefers-reduced-motion: reduce) {
-    /* Motion off: the entries stay put and the row simply shows what fits. */
     .ticker-track { animation: none; }
     .ticker-viewport { overflow-x: auto; }
 }
 
-body.is-fullscreen .ticker-entry { font-size: 19px; }
-
-/* No section titles on a wall display: the tables are obvious from their own content. */
-body.is-fullscreen .section-title { display: none; }
-body.is-fullscreen .section { margin-bottom: 0; }
-
-/* -- Header button ---------------------------------------------------------- */
-
-.header-button {
-    background: transparent;
-    color: color-mix(in srgb, var(--on-dark) 85%, transparent);
-    border-color: color-mix(in srgb, var(--on-dark) 35%, transparent);
-    font-size: 12px;
-    height: 28px;
-    padding: 0 12px;
-}
-.header-button:hover { background: color-mix(in srgb, var(--on-dark) 12%, transparent); color: var(--on-dark); }
-
-/* -- Fullscreen picker ------------------------------------------------------ */
+/* -- Fullscreen picker ------------------------------------------------------- */
 
 .picker-dialog {
     width: min(680px, 92vw);
@@ -835,8 +737,10 @@ body.is-fullscreen .section { margin-bottom: 0; }
 .picker-settings input, .picker-settings select { width: 160px; }
 .picker-settings input[type=number] { width: 90px; }
 .btn-small { height: 30px; padding: 0 10px; font-size: 12px; justify-self: end; }
+.picker-settings input[type=checkbox] { height: auto; width: auto; justify-self: start; margin: 0; }
+#add-board { align-self: flex-start; }
 
-/* -- Result browser (/browse) ---------------------------------------------- */
+/* -- Result browser ---------------------------------------------------------- */
 
 /* Two groups, filters then display options. Each stays on one line while it fits; the display group
    drops to its own line first, and only then do the groups wrap internally. */
@@ -846,9 +750,12 @@ body.is-fullscreen .section { margin-bottom: 0; }
 .browse-filters input, .browse-filters select { width: 100%; min-width: 0; }
 .browse-filters .filter-date { width: 300px; }
 .browse-filters .filter-license { width: 200px; }
+.browse-filters .filter-total { width: 170px; }
+.browse-filters .filter-order { width: 250px; }
+.browse-filters .filter-detail { width: 190px; }
 .browse-range { display: flex; gap: 6px; }
 .browse-range input { flex: 1 1 0; }
-.browse-actions { display: flex; align-items: center; gap: 12px; white-space: nowrap; height: var(--btn-height); }
+.browse-actions { display: flex; align-items: center; gap: 8px; white-space: nowrap; height: var(--btn-height); }
 
 table.browse .cg-time      { width: 104px; }
 table.browse .cg-license   { width: 72px; }
@@ -867,24 +774,8 @@ th.sortable:hover { color: var(--on-dark); }
 th.sortable.is-sorted::after { content: ' \25B2'; }
 th.sortable.is-sorted[aria-sort="descending"]::after { content: ' \25BC'; }
 
-.input-with-button { position: relative; display: block; }
-.input-with-button input { padding-right: 38px; }
-.input-button {
-    position: absolute;
-    top: 0;
-    right: 0;
-    height: 100%;
-    width: 36px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 0;
-    color: var(--muted);
-    border-radius: 0 var(--radius) var(--radius) 0;
-}
-.input-button:hover { color: var(--emerald); background: var(--row-focus); }
+.shooter-window { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); }
+.shooter-window input { height: auto; }
 
 .shooter-dialog {
     width: min(560px, calc(100vw - 32px));
@@ -918,16 +809,6 @@ th.sortable.is-sorted[aria-sort="descending"]::after { content: ' \25BC'; }
 .shooter-dialog-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
 .shooter-dialog-actions .result-count { margin-right: auto; }
 
-.input-with-button.has-two-buttons input { padding-right: 68px; }
-.input-with-button.has-two-buttons .input-clear { right: 32px; border-radius: 0; }
-.input-clear { font-size: 18px; line-height: 1; }
-.input-with-button input:placeholder-shown ~ .input-clear { display: none; }
-.shooter-window { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); }
-.shooter-window input { height: auto; }
-.browse-filters .filter-total { width: 170px; }
-.browse-filters .filter-order { width: 250px; }
-.browse-filters .filter-detail { width: 190px; }
-
 .export-summary { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; font-size: 12px; }
 .export-summary dt { color: var(--label); }
 .export-summary dd { margin: 0; color: var(--ink); }
@@ -938,20 +819,114 @@ th.sortable.is-sorted[aria-sort="descending"]::after { content: ' \25BC'; }
 
 .toolbar-link { display: inline-flex; align-items: center; height: var(--btn-height); padding: 0 14px; margin-left: auto; border: 1px solid var(--emerald); border-radius: var(--radius); text-decoration: none; font-size: 13px; font-weight: 600; }
 
-/* Square icon buttons; the name is the tooltip. */
-.icon-button {
-    width: var(--btn-height);
-    height: var(--btn-height);
-    padding: 0;
-    display: inline-flex;
+/* -- Docs page --------------------------------------------------------------- */
+
+.docs-intro { font-size: 13px; color: var(--ink-soft); line-height: 1.6; max-width: 70ch; }
+
+.endpoint {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+.endpoint-head {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    background: var(--surface);
-    color: var(--emerald);
-    border: 1px solid var(--emerald);
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--paper);
+    cursor: pointer;
+}
+.endpoint-method {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--forest);
+    color: var(--on-dark);
+    padding: 3px 8px;
     border-radius: var(--radius);
 }
-.icon-button:hover { background: var(--row-focus); }
-.browse-actions { gap: 8px; }
-.picker-settings input[type=checkbox] { height: auto; width: auto; justify-self: start; margin: 0; }
-#add-board { align-self: flex-start; }
+.endpoint-path { font-family: var(--font-mono); font-size: 13px; font-weight: 600; }
+.endpoint-summary { color: var(--ink-soft); font-size: 12px; margin-left: auto; text-align: right; }
+.endpoint-body { padding: 14px; border-top: 1px solid var(--line); }
+.endpoint-description { font-size: 12px; color: var(--ink-soft); white-space: pre-line; line-height: 1.6; margin: 0 0 14px; }
+.endpoint-heading {
+    margin: 16px 0 8px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--label);
+}
+.endpoint-heading:first-child { margin-top: 0; }
+.endpoint-note { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+
+.endpoint-group { margin-bottom: 26px; }
+.endpoint-group-title {
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--emerald);
+}
+
+.docs-panel {
+    border-left: 3px solid var(--emerald);
+    background: var(--paper);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin: 16px 0 24px;
+}
+.docs-panel-title {
+    margin: 0 0 6px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--forest);
+}
+.docs-panel-body { margin: 0; font-size: 12px; line-height: 1.65; color: var(--ink-soft); max-width: 90ch; }
+
+.response-status {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 4px 10px;
+    border-radius: var(--radius) var(--radius) 0 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--on-dark);
+}
+.response-status.is-ok { background: var(--ok); }
+.response-status.is-error { background: var(--danger); }
+
+.param-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
+.param-table th {
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--label);
+    letter-spacing: 0.03em;
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--line);
+}
+.param-table td { padding: 5px 8px; border-bottom: 1px solid var(--line); }
+.param-table .mono { font-family: var(--font-mono); }
+
+.try-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.try-row input { flex: 1; min-width: 240px; font-family: var(--font-mono); font-size: 12px; }
+
+pre.response {
+    border-top-left-radius: 0;
+    background: var(--forest);
+    color: var(--code-ink);
+    padding: 14px;
+    border-radius: var(--radius);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    max-height: 460px;
+    margin: 12px 0 0;
+}

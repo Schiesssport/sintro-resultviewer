@@ -99,6 +99,7 @@
     "Live": {
       // How often the target system is checked for changes, in milliseconds. A handful of lines
       // at one second is negligible load; raising it makes the display lag behind the shooting.
+      // At least 250; the service refuses to start below that.
       "PollMilliseconds": 1000
     }
   },

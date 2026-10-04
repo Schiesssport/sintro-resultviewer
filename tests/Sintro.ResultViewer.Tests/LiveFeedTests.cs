@@ -11,6 +11,16 @@ namespace Sintro.ResultViewer.Tests;
 [Collection(ApiCollection.Name)]
 public class LiveFeedTests(ApiFixture fixture)
 {
+    [Fact]
+    public void theLaneFrameSerialisesWithItsDocumentedType()
+    {
+        var json = JsonSerializer.Serialize(new LanesFrame([]), SintroJson.Options);
+        Assert.StartsWith("{\"type\":\"lanes\"", json);
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal("lanes", document.RootElement.GetProperty("type").GetString());
+        Assert.Equal(JsonValueKind.Array, document.RootElement.GetProperty("lanes").ValueKind);
+    }
+
     private static async Task<string> ReceiveTextAsync(WebSocket socket, CancellationToken token)
     {
         var buffer = new byte[64 * 1024];
@@ -25,6 +35,18 @@ public class LiveFeedTests(ApiFixture fixture)
         while (!result.EndOfMessage);
 
         return builder.ToString();
+    }
+
+    [Fact]
+    public async Task theQueryTokenIsAcceptedOnlyWhereAnEndpointDeclaresIt()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var client = fixture.Server.CreateWebSocketClient();
+
+        var uri = new Uri($"{fixture.Server.BaseAddress}api/v2/programs?token={ApiFixture.Token}");
+
+        var refused = await Assert.ThrowsAnyAsync<Exception>(() => client.ConnectAsync(uri, cts.Token));
+        Assert.Contains("401", refused.Message);
     }
 
     [Fact]
