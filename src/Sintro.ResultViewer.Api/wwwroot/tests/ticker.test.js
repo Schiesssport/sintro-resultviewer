@@ -2,125 +2,45 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-    tickerConfig, rowsThatFit, splitForTicker, tickerDurationSeconds,
+    tickerConfig, tickerDurationSeconds,
     tickerContentKey, tickerQuery, normaliseTickerSettings,
 } from '../core/ticker.js';
 
 const items = (count) => Array.from({ length: count }, (_, index) => ({ id: index + 1 }));
-const ids = (list) => list.map((item) => item.id);
 
 describe('tickerConfig', () => {
-    test('defaults to the documented count and reading time', () => {
-        const config = tickerConfig('');
-        assert.equal(config.seconds, 20);
-        assert.equal(config.count, 50);
+    test('defaults to the documented values', () => {
+        assert.deepEqual(tickerConfig(''), { seconds: 20, results: 50, skip: 0, hidden: false });
     });
 
-    test('reads per-display overrides from the query string', () => {
-        const config = tickerConfig('?tickerSeconds=8&tickerCount=20');
-        assert.equal(config.seconds, 8);
-        assert.equal(config.count, 20);
+    test('reads every parameter', () => {
+        assert.deepEqual(tickerConfig('?tickerSeconds=8&resultCount=40&tickerSkip=6&ticker=off'),
+            { seconds: 8, results: 40, skip: 6, hidden: true });
     });
 
-    test('ignores nonsense instead of producing NaN timers', () => {
-        const config = tickerConfig('?tickerSeconds=abc&tickerCount=');
-        assert.equal(config.seconds, 20);
-        assert.equal(config.count, 50);
+    test('nonsense falls back to the defaults', () => {
+        assert.deepEqual(tickerConfig('?tickerSeconds=abc&resultCount=&tickerSkip=x&ticker=on'),
+            { seconds: 20, results: 50, skip: 0, hidden: false });
     });
 
-    test('clamps values that would freeze or thrash the display', () => {
+    test('values are clamped to a readable range', () => {
         assert.equal(tickerConfig('?tickerSeconds=0').seconds, 1);
-        assert.equal(tickerConfig('?tickerSeconds=-5').seconds, 1);
         assert.equal(tickerConfig('?tickerSeconds=9999').seconds, 120);
-        assert.equal(tickerConfig('?tickerCount=99999').count, 500);
-    });
-
-    test('a count of zero is allowed and switches the ticker off', () => {
-        assert.equal(tickerConfig('?tickerCount=0').count, 0);
-    });
-});
-
-describe('rowsThatFit', () => {
-    test('divides the space by the row height', () => {
-        assert.equal(rowsThatFit(400, 40), 10);
-        assert.equal(rowsThatFit(419, 40), 10);
-    });
-
-    test('never returns zero rows, however cramped', () => {
-        assert.equal(rowsThatFit(10, 40), 1);
-        assert.equal(rowsThatFit(0, 40), 1);
-    });
-
-    test('survives an unmeasurable layout', () => {
-        // Called before first paint, heights can be NaN or zero.
-        assert.equal(rowsThatFit(NaN, 40), 1);
-        assert.equal(rowsThatFit(400, 0), 1);
-        assert.equal(rowsThatFit(400, NaN), 1);
-    });
-});
-
-describe('splitForTicker', () => {
-    test('everything is visible when it all fits', () => {
-        const split = splitForTicker(items(5), 10, 36);
-        assert.deepEqual(ids(split.visible), [1, 2, 3, 4, 5]);
-        assert.deepEqual(split.ticker, []);
-    });
-
-    test('the overflow goes to the ticker', () => {
-        const split = splitForTicker(items(20), 8, 36);
-        assert.deepEqual(ids(split.visible), [1, 2, 3, 4, 5, 6, 7, 8]);
-        assert.deepEqual(ids(split.ticker), [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
-    });
-
-    test('the ticker is capped, and the rest is simply not shown', () => {
-        const split = splitForTicker(items(100), 10, 50);
-        assert.equal(split.visible.length, 10);
-        assert.equal(split.ticker.length, 50);
-        assert.equal(ids(split.ticker).at(-1), 60);
-    });
-
-    test('a single overflow row is shown inline rather than in a ticker', () => {
-        // A ticker that never changes is just a row that is hard to read.
-        const split = splitForTicker(items(9), 8, 36);
-        assert.equal(split.visible.length, 9);
-        assert.deepEqual(split.ticker, []);
-    });
-
-    test('tickerCount 0 hides the overflow entirely', () => {
-        const split = splitForTicker(items(20), 8, 0);
-        assert.equal(split.visible.length, 8);
-        assert.deepEqual(split.ticker, []);
-    });
-
-    test('handles an empty list and a zero-row viewport', () => {
-        assert.deepEqual(splitForTicker([], 10, 36), { visible: [], ticker: [] });
-        assert.deepEqual(splitForTicker(undefined, 10, 36), { visible: [], ticker: [] });
-
-        const none = splitForTicker(items(5), 0, 36);
-        assert.deepEqual(none.visible, []);
-        assert.equal(none.ticker.length, 5);
+        assert.equal(tickerConfig('?resultCount=0').results, 1);
+        assert.equal(tickerConfig('?resultCount=99999').results, 500);
+        assert.equal(tickerConfig('?tickerSkip=-3').skip, 0);
     });
 });
 
 describe('normaliseTickerSettings', () => {
-    test('a cleared count box does not silently switch the ticker off', () => {
-        // Number('') is 0; the URL must not end up saying tickerCount=0.
-        assert.equal(normaliseTickerSettings({ seconds: '', count: '' }).count, 50);
+    test('a cleared box keeps the default rather than becoming zero', () => {
+        // Number('') is 0; the URL must not end up saying resultCount=0.
+        const settings = normaliseTickerSettings({ seconds: '', results: '', skip: '' });
+        assert.deepEqual(settings, { seconds: 20, results: 50, skip: 0, hidden: false });
     });
 
-    test('clamps and truncates the way the display will read them back', () => {
-        const settings = normaliseTickerSettings({ seconds: '7.9', count: '9999' });
-        assert.equal(settings.seconds, 7);
-        assert.equal(settings.count, 500);
-    });
-
-    test('the built query round-trips through tickerConfig unchanged', () => {
-        const settings = normaliseTickerSettings({ seconds: '12', count: '30' });
-        assert.deepEqual(tickerConfig(tickerQuery(settings)), settings);
-    });
-
-    test('tickerQuery normalises too, so a URL never carries an unreadable value', () => {
-        assert.equal(tickerQuery({ seconds: 'abc', count: -4 }), '?tickerSeconds=20&tickerCount=0');
+    test('whole numbers only', () => {
+        assert.equal(normaliseTickerSettings({ seconds: '7.9' }).seconds, 7);
     });
 });
 
@@ -177,11 +97,13 @@ describe('tickerContentKey', () => {
 
 describe('tickerQuery', () => {
     test('round-trips through tickerConfig', () => {
-        const config = { seconds: 8, count: 40 };
+        const config = { seconds: 8, results: 40, skip: 6, hidden: false };
         assert.deepEqual(tickerConfig(tickerQuery(config)), config);
     });
 
-    test('always names both settings, so a copied URL is self-contained', () => {
-        assert.equal(tickerQuery({ seconds: 20, count: 50 }), '?tickerSeconds=20&tickerCount=50');
+    test('a hidden ticker travels as ticker=off, and the query normalises too', () => {
+        assert.equal(tickerQuery({ seconds: 8, results: 40, skip: 6, hidden: true }),
+            '?resultCount=40&tickerSkip=6&tickerSeconds=8&ticker=off');
+        assert.equal(tickerQuery({ seconds: 'abc', results: -4 }), '?resultCount=1&tickerSkip=0&tickerSeconds=20');
     });
 });

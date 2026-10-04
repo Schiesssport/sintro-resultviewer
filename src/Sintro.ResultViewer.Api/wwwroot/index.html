@@ -48,10 +48,10 @@
                 <div class="toolbar" data-chrome>
                     <label for="date-input" data-i18n="toolbar.date">Datum</label>
                     <input type="date" id="date-input">
-                    <button id="reload-button" class="btn-secondary" data-i18n="toolbar.reload">Aktualisieren</button>
-                    <span id="result-count" class="result-count"></span>
                     <input type="search" id="filter-input" class="filter-input"
                            data-i18n-placeholder="toolbar.filterPlaceholder">
+                    <span id="result-count" class="result-count"></span>
+                    <a class="btn-action toolbar-link" href="/browse" data-i18n="nav.browse">Resultauswertung</a>
                 </div>
             </div>
 
@@ -81,7 +81,6 @@
 
     <footer class="app-footer" data-chrome>
         <span data-i18n="footer.note"></span>
-        <a class="btn-secondary footer-api-link" href="/browse" data-i18n="nav.browse">Durchsuchen</a>
         <a class="btn-secondary footer-api-link" href="/docs" data-i18n="nav.api">API</a>
     </footer>
 </div>
@@ -100,13 +99,6 @@
     <div class="dialog-body">
         <p class="dialog-intro" data-i18n="fullscreen.intro"></p>
         <div id="fullscreen-modes" class="picker-list"></div>
-
-        <div class="picker-settings">
-            <label for="ticker-seconds-input" data-i18n="fullscreen.tickerSeconds">Lesezeit pro Eintrag (s)</label>
-            <input type="number" id="ticker-seconds-input" min="1" max="120" step="1">
-            <label for="ticker-count-input" data-i18n="fullscreen.tickerCount">Resultate in der Laufschrift</label>
-            <input type="number" id="ticker-count-input" min="0" max="500" step="5">
-        </div>
 
         <p class="dialog-hint" data-i18n="fullscreen.hint"></p>
     </div>

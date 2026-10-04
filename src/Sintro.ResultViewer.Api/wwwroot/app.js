@@ -8,15 +8,14 @@ import {
 import { shotDial } from './core/sectors.js';
 import { isLineAvailable, dayOffsetMs, holdClearedLines } from './core/lanes.js';
 import { parseViewMode, layoutFor, pathForMode, FULLSCREEN_MODES } from './core/viewmode.js';
+import { BOARDS_STORAGE_KEY, parseBoards, normaliseBoard, boardPath, boardQuery } from './core/boards.js';
 import {
-    tickerConfig, rowsThatFit, splitForTicker, tickerDurationSeconds, tickerContentKey, tickerQuery,
-    normaliseTickerSettings,
+    tickerConfig, tickerDurationSeconds, tickerContentKey,
 } from './core/ticker.js';
 import { SintroApi } from './api.js';
 
-const RESULT_LIMIT = 100;
+const RESULT_LIMIT = 50;   // office view; a display loads resultCount
 const IDLE_SWEEP_MS = 15_000;
-const ESTIMATED_ROW_HEIGHT = 44;
 
 const api = new SintroApi(window.SINTRO_TOKEN);
 let ticker = tickerConfig(location.search);
@@ -194,27 +193,11 @@ const messageRow = (text) =>
 const visibleResults = () => programs.filter(
     (program) => matchesFilter(program, filterText, shooterLabel(program, t).text));
 
-// Fullscreen only. The layout always reserves the ticker strip, so the measured box excludes it.
-const measureResultCapacity = () => {
-    const scroll = el('results-scroll');
-    const head = scroll.querySelector('thead');
-    const sampleRow = el('results-body').querySelector('tr');
-
-    const rowHeight = sampleRow?.getBoundingClientRect().height || ESTIMATED_ROW_HEIGHT;
-    const available = scroll.getBoundingClientRect().height
-        - (head?.getBoundingClientRect().height ?? 0);
-
-    return rowsThatFit(available, rowHeight);
-};
-
-// Rendered once so a row can be measured, then split and rendered again.
+// Fullscreen only. The box clips what does not fit (overflow hidden), so nothing is measured or guessed.
+// The ticker, when enabled, carries the same results minus the first tickerSkip, which the table already shows.
 const renderFullscreenResults = (body, visible) => {
     body.innerHTML = visible.map(programRow).join('');
-
-    const split = splitForTicker(visible, measureResultCapacity(), ticker.count);
-    body.innerHTML = split.visible.map(programRow).join('');
-
-    return split.ticker;
+    return ticker.hidden ? [] : visible.slice(ticker.skip);
 };
 
 const renderResults = () => {
@@ -326,7 +309,8 @@ const loadResults = async () => {
         // Finished only: a running pass shows on its line, never twice. The API sends newest first.
         const page = await api.programs({
             date: el('date-input').value || undefined,
-            limit: RESULT_LIMIT,
+            // One request feeds both the table and the ticker; resultCount sizes it on a display.
+            limit: layoutFor(mode).fullscreen ? ticker.results : RESULT_LIMIT,
             state: 'finished',
         });
         if (request !== resultsRequest) return;
@@ -390,10 +374,14 @@ const applyMode = (next) => {
 };
 
 // The display settings live in the URL, so every navigation re-reads them.
+const applyTickerVisibility = () => document.body.classList.toggle('is-ticker-hidden', ticker.hidden);
+
 const applyRoute = (next, query) => {
     ticker = tickerConfig(query);
+    applyTickerVisibility();
     tickerKey = null;
     applyMode(next);
+    loadResults();   // the limit depends on the mode and resultCount
 };
 
 const goTo = (next, query = location.search) => {
@@ -402,40 +390,123 @@ const goTo = (next, query = location.search) => {
 };
 
 // -- Fullscreen picker --------------------------------------------------------
+// A list of boards, each a mode plus its settings, remembered per browser so a display's configuration
+// can be looked up again. Seeded with one board per mode; the operator edits, adds and removes.
 
-// Clamped and whole, so the URL beside each mode is exactly what that display gets.
-const pickerTicker = () => normaliseTickerSettings({
-    seconds: el('ticker-seconds-input').value,
-    count: el('ticker-count-input').value,
-});
+let boards = [];
 
-const absoluteUrlFor = (target) =>
-    new URL(pathForMode(target) + tickerQuery(pickerTicker()), location.origin).href;
+const loadBoards = () => {
+    try {
+        boards = parseBoards(localStorage.getItem(BOARDS_STORAGE_KEY));
+    } catch {
+        boards = parseBoards(null);
+    }
+};
 
-// A wall display is usually another screen, so every mode also offers its URL for pasting.
-const renderFullscreenModes = () => {
-    el('fullscreen-modes').innerHTML = FULLSCREEN_MODES.map((target) => `
-        <div class="picker-item">
-            <div class="picker-text">
-                <div class="picker-name">${escapeHtml(t(`fullscreen.mode.${target}`))}</div>
-                <div class="picker-url">${escapeHtml(absoluteUrlFor(target))}</div>
+const saveBoards = () => {
+    try {
+        localStorage.setItem(BOARDS_STORAGE_KEY, JSON.stringify(boards));
+    } catch {
+        // Private mode or blocked storage: the list still works for this page view.
+    }
+};
+
+const boardName = (board) => board.name || t(`fullscreen.mode.${board.mode}`);
+const boardUrl = (board) => new URL(boardPath(board), location.origin).href;
+
+const numberField = (index, key, label, value, min) => `
+        <label for="board-${index}-${key}">${escapeHtml(label)}</label>
+        <input type="number" id="board-${index}-${key}" data-index="${index}" data-key="${key}" value="${value}" min="${min}" max="500" step="1">`;
+
+const modeOptions = (selected) => FULLSCREEN_MODES.map((mode) =>
+    `<option value="${mode}" ${mode === selected ? 'selected' : ''}>${escapeHtml(t(`fullscreen.mode.${mode}`))}</option>`).join('');
+
+const boardSettings = (board, index) => `
+        <details class="picker-settings-details">
+            <summary>${escapeHtml(t('fullscreen.settings'))}</summary>
+            <div class="picker-settings">
+                <label for="board-${index}-name">${escapeHtml(t('fullscreen.boardName'))}</label>
+                <input type="text" id="board-${index}-name" data-index="${index}" data-key="name" value="${escapeHtml(board.name)}" placeholder="${escapeHtml(t(`fullscreen.mode.${board.mode}`))}">
+                <label for="board-${index}-mode">${escapeHtml(t('fullscreen.boardMode'))}</label>
+                <select id="board-${index}-mode" data-index="${index}" data-key="mode">${modeOptions(board.mode)}</select>
+                ${numberField(index, 'results', t('fullscreen.resultCount'), board.results, 1)}
+                ${numberField(index, 'skip', t('fullscreen.tickerSkip'), board.skip, 0)}
+                ${numberField(index, 'seconds', t('fullscreen.tickerSeconds'), board.seconds, 1)}
+                <label for="board-${index}-hidden">${escapeHtml(t('fullscreen.hideTicker'))}</label>
+                <input type="checkbox" id="board-${index}-hidden" data-index="${index}" data-key="hidden" ${board.hidden ? 'checked' : ''}>
+                <span></span>
+                <button type="button" class="btn-secondary btn-small" data-remove-board="${index}">${escapeHtml(t('fullscreen.removeBoard'))}</button>
             </div>
-            <button class="btn-action" data-open-mode="${escapeHtml(target)}">${escapeHtml(t('fullscreen.show'))}</button>
-            <button class="btn-secondary" data-copy-mode="${escapeHtml(target)}">${escapeHtml(t('fullscreen.copy'))}</button>
-        </div>`).join('');
+        </details>`;
+
+// A wall display is usually another screen, so every board also offers its URL for pasting.
+const renderBoards = () => {
+    el('fullscreen-modes').innerHTML = boards.map((board, index) => `
+        <div class="picker-item">
+            <div class="picker-row">
+                <div class="picker-text">
+                    <div class="picker-name" data-name="${index}">${escapeHtml(boardName(board))}</div>
+                    <div class="picker-url" data-url="${index}">${escapeHtml(boardUrl(board))}</div>
+                </div>
+                <button class="btn-action" data-open-board="${index}">${escapeHtml(t('fullscreen.show'))}</button>
+                <button class="btn-secondary" data-copy-board="${index}">${escapeHtml(t('fullscreen.copy'))}</button>
+            </div>
+            ${boardSettings(board, index)}
+        </div>`).join('') + `
+        <button type="button" class="btn-secondary" id="add-board">${escapeHtml(t('fullscreen.addBoard'))}</button>`;
+};
+
+// Reads one board's fields, stores them and refreshes only its name and URL, so typing is not interrupted.
+const onBoardInput = (event) => {
+    const index = Number(event.target.dataset.index);
+    if (!Number.isInteger(index) || !boards[index]) return;
+
+    const field = (key) => el('fullscreen-modes').querySelector(`[data-index="${index}"][data-key="${key}"]`);
+    boards[index] = normaliseBoard({
+        name: field('name').value,
+        mode: field('mode').value,
+        results: field('results').value,
+        skip: field('skip').value,
+        seconds: field('seconds').value,
+        hidden: field('hidden').checked,
+    });
+    saveBoards();
+    el('fullscreen-modes').querySelector(`[data-name="${index}"]`).textContent = boardName(boards[index]);
+    el('fullscreen-modes').querySelector(`[data-url="${index}"]`).textContent = boardUrl(boards[index]);
+};
+
+const onBoardsClick = (event) => {
+    const open = event.target.closest('[data-open-board]');
+    if (open) return void showFullscreen(boards[open.dataset.openBoard]);
+
+    const copy = event.target.closest('[data-copy-board]');
+    if (copy) return void copyBoardUrl(boards[copy.dataset.copyBoard], copy);
+
+    const remove = event.target.closest('[data-remove-board]');
+    if (remove) {
+        boards.splice(Number(remove.dataset.removeBoard), 1);
+        if (boards.length === 0) boards = parseBoards(null);
+        saveBoards();
+        return void renderBoards();
+    }
+
+    if (event.target.closest('#add-board')) {
+        boards.push(normaliseBoard({}));
+        saveBoards();
+        renderBoards();
+        el('fullscreen-modes').querySelector(`.picker-item:last-of-type details`).open = true;
+    }
 };
 
 const openFullscreenPicker = () => {
-    el('ticker-seconds-input').value = String(ticker.seconds);
-    el('ticker-count-input').value = String(ticker.count);
-    renderFullscreenModes();
+    loadBoards();
+    renderBoards();
     el('fullscreen-dialog').showModal();
 };
 
-const showFullscreen = async (target) => {
-    const query = tickerQuery(pickerTicker());
+const showFullscreen = async (board) => {
     el('fullscreen-dialog').close();
-    goTo(target, query);
+    goTo(board.mode, boardQuery(board));
 
     try {
         // Needs a user gesture; a /fullscreen/* URL opened directly still drops the chrome.
@@ -445,9 +516,9 @@ const showFullscreen = async (target) => {
     }
 };
 
-const copyFullscreenUrl = async (target, button) => {
+const copyBoardUrl = async (board, button) => {
     try {
-        await navigator.clipboard.writeText(absoluteUrlFor(target));
+        await navigator.clipboard.writeText(boardUrl(board));
     } catch {
         // Clipboard needs a secure context; on plain http the URL beside the button is still selectable.
         button.textContent = t('fullscreen.copyFailed');
@@ -471,7 +542,6 @@ const attachToolbarHandlers = () => {
         renderResults();
     });
     el('date-input').addEventListener('change', loadResults);
-    el('reload-button').addEventListener('click', loadResults);
 
     el('language-select').addEventListener('change', (event) => {
         language = event.target.value;
@@ -486,17 +556,8 @@ const attachFullscreenHandlers = () => {
     el('fullscreen-exit').addEventListener('click', exitFullscreen);
     el('fullscreen-dialog-close').addEventListener('click', () => el('fullscreen-dialog').close());
 
-    for (const id of ['ticker-seconds-input', 'ticker-count-input']) {
-        el(id).addEventListener('input', renderFullscreenModes);
-    }
-
-    el('fullscreen-modes').addEventListener('click', (event) => {
-        const open = event.target.closest('[data-open-mode]');
-        if (open) return void showFullscreen(open.dataset.openMode);
-
-        const copy = event.target.closest('[data-copy-mode]');
-        if (copy) copyFullscreenUrl(copy.dataset.copyMode, copy);
-    });
+    el('fullscreen-modes').addEventListener('input', onBoardInput);
+    el('fullscreen-modes').addEventListener('click', onBoardsClick);
 
     // Leaving browser fullscreen with Esc bypasses the button, so follow its state back.
     document.addEventListener('fullscreenchange', () => {
@@ -550,6 +611,7 @@ const start = async () => {
     attachFullscreenHandlers();
     attachWindowHandlers();
     applyMode(parseViewMode(location.pathname));
+    applyTickerVisibility();
 
     await syncClock();
     await Promise.all([loadLanes(), loadResults()]);

@@ -116,6 +116,10 @@ used key exists, so `data-i18n`, `data-i18n-title` and `data-i18n-aria-label` in
 
 `/` is the office dashboard: lines on top, a scrollable result table below, controls visible.
 
+The fullscreen picker is a list of *boards*: a mode plus `resultCount`, `tickerSkip`, `tickerSeconds`
+and `ticker=off`, seeded with one board per mode and kept in the browser's `localStorage`
+(`core/boards.js`), so an operator can look up which display runs which configuration.
+
 `/fullscreen/{live,results,live+results}` are wall displays — no controls, sized to be
 read across a room. They are real routes so each can be bookmarked and pointed at from a TV; the
 server returns the same page for the three of them and the client reads `location.pathname`. Any

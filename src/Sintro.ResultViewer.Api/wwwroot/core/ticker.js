@@ -1,9 +1,9 @@
-// Splits a result list between the rows that fit on screen and a marquee for the overflow. Pure.
+// Fullscreen ticker settings and marquee timing. Pure.
 
 const DEFAULT_TICKER_SECONDS = 20;
-const DEFAULT_TICKER_COUNT = 50;
+const DEFAULT_RESULT_COUNT = 50;
 const MAX_TICKER_SECONDS = 120;
-const MAX_TICKER_COUNT = 500;
+const MAX_RESULT_COUNT = 500;
 
 const clampNumber = (raw, fallback, min, max) => {
     const value = Number.parseInt(raw, 10);
@@ -11,39 +11,25 @@ const clampNumber = (raw, fallback, min, max) => {
 };
 
 // Used both when reading a URL and when building one, so the picker's URL is what the display gets.
-export const normaliseTickerSettings = ({ seconds, count }) => ({
+// results: how many newest results a display loads (table and ticker share them);
+// skip: how many of those the ticker leaves out at the top, so it does not repeat the visible rows.
+export const normaliseTickerSettings = ({ seconds, results, skip, hidden }) => ({
     seconds: clampNumber(seconds, DEFAULT_TICKER_SECONDS, 1, MAX_TICKER_SECONDS),
-    count: clampNumber(count, DEFAULT_TICKER_COUNT, 0, MAX_TICKER_COUNT),
+    results: clampNumber(results, DEFAULT_RESULT_COUNT, 1, MAX_RESULT_COUNT),
+    skip: clampNumber(skip, 0, 0, MAX_RESULT_COUNT),
+    hidden: hidden === true || hidden === 'off',
 });
 
-// Per-display settings from the query string: /fullscreen/results?tickerSeconds=8&tickerCount=20
+// Per-display settings from the query string: /fullscreen/results?resultCount=40&tickerSkip=6&tickerSeconds=8&ticker=off
 export const tickerConfig = (search) => {
     const params = new URLSearchParams(search ?? '');
 
     return normaliseTickerSettings({
         seconds: params.get('tickerSeconds'),
-        count: params.get('tickerCount'),
+        results: params.get('resultCount'),
+        skip: params.get('tickerSkip'),
+        hidden: params.get('ticker'),
     });
-};
-
-export const rowsThatFit = (availableHeight, rowHeight) => {
-    if (!Number.isFinite(availableHeight) || !Number.isFinite(rowHeight) || rowHeight <= 0) return 1;
-    return Math.max(1, Math.floor(availableHeight / rowHeight));
-};
-
-// A ticker holding a single entry is pointless, so that entry becomes an ordinary row instead.
-export const splitForTicker = (items, visibleCount, tickerCount) => {
-    const all = items ?? [];
-    const visible = Math.max(0, visibleCount);
-
-    if (all.length <= visible) return { visible: all, ticker: [] };
-
-    const overflow = all.slice(visible, visible + Math.max(0, tickerCount));
-    if (overflow.length <= 1) {
-        return { visible: all.slice(0, visible + overflow.length), ticker: [] };
-    }
-
-    return { visible: all.slice(0, visible), ticker: overflow };
 };
 
 // An entry travels containerWidth + its own width while visible, so reading time stays constant.
@@ -67,6 +53,6 @@ export const tickerContentKey = (items) =>
     (items ?? []).map((item) => item?.id ?? '').join(',');
 
 export const tickerQuery = (settings) => {
-    const { seconds, count } = normaliseTickerSettings(settings);
-    return `?tickerSeconds=${seconds}&tickerCount=${count}`;
+    const { seconds, results, skip, hidden } = normaliseTickerSettings(settings);
+    return `?resultCount=${results}&tickerSkip=${skip}&tickerSeconds=${seconds}${hidden ? '&ticker=off' : ''}`;
 };
