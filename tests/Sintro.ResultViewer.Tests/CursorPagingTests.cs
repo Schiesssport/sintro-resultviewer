@@ -135,7 +135,7 @@ public class CursorPagingTests(ApiFixture fixture)
     public async Task theSyncRecipeKeepsToTheEventDays()
     {
         // The documented recipe: state=finished, order=asc, a date window, and a stored cursor, all at once.
-        var day = ApiFixture.BackupDate;
+        var day = ApiFixture.Today;
         var first = await ProgramsAsync($"state=finished&order=asc&from={day}&to={day}&limit=1");
         Assert.NotEmpty(first.Items);
 

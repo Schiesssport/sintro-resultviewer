@@ -7,16 +7,28 @@ using Sintro.ResultViewer.Data;
 
 namespace Sintro.ResultViewer.Tests;
 
-/// <summary>Boots the real API against the seeded dev database, with "today" pinned to the backup's last shooting day.</summary>
+/// <summary>Boots the real API against the dev database. "Today" is the export's last shooting day unless Sintro__ReferenceDate says otherwise; empty means the real date, which is what the seeded database wants.</summary>
 public sealed class ApiFixture : WebApplicationFactory<SintroRepository>
 {
     public const string BackupDate = "2026-07-08";
     public const string Token = "integration-test-token-0123456789";
 
+    public static string? ReferenceDate { get; } =
+        Environment.GetEnvironmentVariable("Sintro__ReferenceDate") switch
+        {
+            null => BackupDate,
+            "" => null,
+            var pinned => pinned,
+        };
+
+    /// <summary>The day the API's today-only default resolves to, as the tests must spell it in from/to.</summary>
+    public static string Today { get; } =
+        ReferenceDate ?? DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Europe/Zurich"))).ToString("yyyy-MM-dd");
+
     /// <summary>A window wide enough to cover any export; tests must not assume a particular shooting day.</summary>
     public const string WholeRange = "from=2000-01-01&to=2100-12-31";
 
-    private static string ConnectionString =>
+    public static string ConnectionString =>
         Environment.GetEnvironmentVariable("ConnectionStrings__Sintro")
         ?? "Server=localhost,11433;Database=DBSINTRO300;User Id=sa;Password=Sintro_Dev_2026!;TrustServerCertificate=true;Encrypt=false";
 
@@ -24,7 +36,7 @@ public sealed class ApiFixture : WebApplicationFactory<SintroRepository>
     {
         builder.UseSetting("ConnectionStrings:Sintro", ConnectionString);
         builder.UseSetting("Sintro:ApiReadTokens:0", Token);
-        builder.UseSetting("Sintro:ReferenceDate", BackupDate);
+        if (ReferenceDate is not null) builder.UseSetting("Sintro:ReferenceDate", ReferenceDate);
         builder.UseSetting("Sintro:TimeZone", "Europe/Zurich");
         builder.UseSetting("Sintro:MaxPageSize", "5000");
         // Keeps the lane watcher from polling during tests.

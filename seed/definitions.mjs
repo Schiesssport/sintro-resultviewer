@@ -1,8 +1,9 @@
 // What the seeded range looks like. Everything invented; edit freely.
 // generate.mjs turns this into the rows the device would have written.
 
-// The day the tests and the dev config treat as "today" (Sintro__ReferenceDate).
-export const TODAY = '2026-07-08';
+// The seed is dated relative to the day it is generated (SEED_TODAY, set by scripts/db-seed.sh
+// from the host's clock), so the viewer shows live-looking data without a pinned ReferenceDate.
+export const TODAY = process.env.SEED_TODAY ?? new Date().toISOString().slice(0, 10);
 
 export const LANE_COUNT = 6;
 
@@ -63,7 +64,7 @@ export const parseStages = (name) => name.split(/\s+/).map((token) => {
     return { target: match[1], valuation: Number(match[2]), kind: STAGE_KIND[match[3]], shots: Number(match[4]) };
 });
 
-// A session is one block of shooting on one day. Each pass names a program and a shooter (index
+// A session is one block of shooting on one day, daysAgo days before TODAY. Each pass names a program and a shooter (index
 // into SHOOTERS, or null for an anonymous pass). Lanes are assigned by the generator: the next
 // lane to come free, so a long evening queues up the way a real one does. matchCode is the Stich
 // number the operator enters in contest mode (0 outside events); a pass may override the
@@ -73,36 +74,36 @@ export const parseStages = (name) => name.split(/\s+/).map((token) => {
 // end marker), 'abandoned' (loaded and left: only the marker row, no shots).
 //
 // Aim: about 60 Stiche, roughly one in ten anonymous, every program shot by at least three
-// different named shooters.
+// different named shooters, all within the last seven days.
 const each = (program, shooters, extra = {}) => shooters.map((shooter) => ({ program, shooter, ...extra }));
 const anonymous = (program, extra = {}) => ({ program, shooter: null, ...extra });
 
 export const SESSIONS = [
-    { day: '2026-06-17', start: '18:30', matchCode: 0, passes: [
+    { daysAgo: 6, start: '18:30', matchCode: 0, passes: [
         ...each(21, [0, 1, 2, 3, 4]),
         ...each(71, [6, 7, 8]),
         anonymous(11),
     ] },
-    { day: '2026-06-24', start: '18:30', matchCode: 0, passes: [
+    { daysAgo: 4, start: '18:30', matchCode: 0, passes: [
         ...each(22, [0, 1, 5, 6, 7]),
         ...each(23, [3, 4]),
         ...each(31, [2], { stopAfter: 5 }),
         anonymous(21),
     ] },
-    { day: '2026-07-01', start: '18:30', matchCode: 0, passes: [
+    { daysAgo: 2, start: '18:30', matchCode: 0, passes: [
         ...each(11, [0, 1, 2, 3]),
         ...each(31, [4, 5], { stopAfter: 4 }),
         ...each(31, [6]),
         ...each(71, [0, 8]),
         anonymous(71),
     ] },
-    { day: '2026-07-04', start: '13:30', matchCode: 0, passes: [
+    { daysAgo: 1, start: '13:30', matchCode: 0, passes: [
         ...each(23, [6, 7, 8, 1]),
         ...each(91, [0, 3, 5]),
         ...each(22, [2, 4, 8]),
         anonymous(22),
     ] },
-    { day: TODAY, start: '19:00', matchCode: 0, passes: [
+    { daysAgo: 0, start: '19:00', matchCode: 0, passes: [
         ...each(22, [0, 3, 7, 1, 4, 5, 6], { matchCode: 122 }),
         ...each(21, [0, 2, 8], { matchCode: 121 }),
         ...each(11, [1, 5, 7], { matchCode: 111 }),

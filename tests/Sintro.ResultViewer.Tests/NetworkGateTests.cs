@@ -11,9 +11,9 @@ public sealed class GatedApiFixture : WebApplicationFactory<SintroRepository>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseSetting("ConnectionStrings:Sintro", "Server=localhost,11433;Database=DBSINTRO300;User Id=sa;Password=Sintro_Dev_2026!;TrustServerCertificate=true;Encrypt=false");
+        builder.UseSetting("ConnectionStrings:Sintro", ApiFixture.ConnectionString);
         builder.UseSetting("Sintro:ApiReadTokens:0", ApiFixture.Token);
-        builder.UseSetting("Sintro:ReferenceDate", ApiFixture.BackupDate);
+        if (ApiFixture.ReferenceDate is not null) builder.UseSetting("Sintro:ReferenceDate", ApiFixture.ReferenceDate);
         builder.UseSetting("Sintro:Live:PollMilliseconds", "600000");
         // 10.1.2.0/24 contains neither loopback nor any in-process address.
         builder.UseSetting("Sintro:Network:Api:0", "10.1.2.0/24");
@@ -74,9 +74,9 @@ public sealed class TrustedProxyApiFixture : WebApplicationFactory<SintroReposit
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseSetting("ConnectionStrings:Sintro", "Server=localhost,11433;Database=DBSINTRO300;User Id=sa;Password=Sintro_Dev_2026!;TrustServerCertificate=true;Encrypt=false");
+        builder.UseSetting("ConnectionStrings:Sintro", ApiFixture.ConnectionString);
         builder.UseSetting("Sintro:ApiReadTokens:0", ApiFixture.Token);
-        builder.UseSetting("Sintro:ReferenceDate", ApiFixture.BackupDate);
+        if (ApiFixture.ReferenceDate is not null) builder.UseSetting("Sintro:ReferenceDate", ApiFixture.ReferenceDate);
         builder.UseSetting("Sintro:Live:PollMilliseconds", "600000");
         builder.UseSetting("Sintro:TrustedProxies:0", "127.0.0.0/8");
         builder.UseSetting("Sintro:TrustedProxies:1", "172.20.0.0/16");

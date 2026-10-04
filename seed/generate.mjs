@@ -43,6 +43,12 @@ const centisecondsSinceNewYear = (date) =>
 
 const localDate = (day, time) => new Date(`${day}T${time}:00`);
 
+const dayOfSession = (session) => {
+    const date = new Date(`${TODAY}T12:00:00`);
+    date.setDate(date.getDate() - session.daysAgo);
+    return date.toISOString().slice(0, 10);
+};
+
 // -- Shots ---------------------------------------------------------------------
 
 const BAND_TOTAL = FINE_VALUE_BANDS.reduce((sum, band) => sum + band.share, 0);
@@ -173,7 +179,7 @@ const sessionsSql = () => {
         const laneFreeAt = new Map(Array.from({ length: LANE_COUNT }, (_, index) => [index + 1, 0]));
         const built = session.passes.map((pass) => {
             const lane = [...laneFreeAt.entries()].sort((a, b) => a[1] - b[1] || a[0] - b[0])[0][0];
-            const earliest = localDate(session.day, session.start);
+            const earliest = localDate(dayOfSession(session), session.start);
             const startAt = new Date(Math.max(earliest.getTime(), laneFreeAt.get(lane) + 60_000));
             const result = buildPass({ session, pass: { ...pass, lane }, programId: programId++, startAt });
             laneFreeAt.set(lane, pass.state === 'active' ? Infinity : result.endedAt.getTime());

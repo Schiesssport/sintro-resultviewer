@@ -100,7 +100,7 @@ cp <your two .bak exports> .db/     # never committed: real names and licence nu
 scripts/db-restore.sh               # dev SQL Server + restore
 scripts/db-demo-data.sh             # optional: adds tens and mouches an export may lack
 scripts/db-seed.sh                  # or: an invented database from seed/, no export needed
-scripts/test.sh                     # .NET suite + viewer suite (SINTRO_DB=SintroSeed for the seed)
+scripts/test.sh                     # .NET suite + viewer suite (see seed/README.md to run on the seed)
 scripts/run.sh                      # http://localhost:8080
 scripts/publish-win.sh              # -> bin/win-x64/
 ```

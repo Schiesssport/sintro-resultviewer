@@ -12,10 +12,16 @@ scripts/db-seed.sh     builds the database SintroSeed (or any name you pass) in 
 ```
 
 ```bash
-scripts/db-seed.sh                      # (re)create SintroSeed from the definitions
-SINTRO_DB=SintroSeed scripts/test.sh    # run the suite against it
-SINTRO_DB=SintroSeed scripts/run.sh     # view it on http://localhost:8080
+scripts/db-seed.sh                                            # (re)create SintroSeed, dated up to today
+SINTRO_DB=SintroSeed SINTRO_REFERENCE_DATE= scripts/test.sh   # run the suite against it
+SINTRO_DB=SintroSeed SINTRO_REFERENCE_DATE= scripts/run.sh    # view it on http://localhost:8080
 ```
+
+The sessions are dated relative to the day the seed runs (the last seven days, the event day
+being today), so the viewer shows live-looking data. The export workflow pins "today" to the
+export's last shooting day with `Sintro__ReferenceDate`; an empty `SINTRO_REFERENCE_DATE` turns
+that off so the API and the tests use the real date. `SEED_TODAY=YYYY-MM-DD` dates a seed
+elsewhere.
 
 ## What the draft contains
 
@@ -29,9 +35,9 @@ SINTRO_DB=SintroSeed scripts/run.sh     # view it on http://localhost:8080
   07x B4, 09x special. 91 changes target and valuation mid-pass, so the API withholds its grand
   total; the eight-series A100 program (31) is stopped after 4, 5 or all 8 series (`stopAfter`
   on the pass).
-- 5 sessions, about 60 Stiche in all, roughly one in ten anonymous, every program shot by at
-  least three different named shooters: four training evenings and an event day on the
-  reference date `2026-07-08`. Event Stiche carry the program family with a leading 1 as match
+- 5 sessions in the last seven days, about 60 Stiche in all, roughly one in ten anonymous,
+  every program shot by at least three different named shooters: four training evenings and an
+  event day today. Event Stiche carry the program family with a leading 1 as match
   code (111, 121, 122, 131, 171, 191). The event day also holds an abandoned pass (marker only)
   and a pass still active on a lane. Lanes are assigned by the generator, next free lane first.
 
