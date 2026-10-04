@@ -1,4 +1,4 @@
-import { formatDateTime } from './format.js';
+import { formatDateTime, resultTotals, resultText } from './format.js';
 
 // Licences lose their leading zeros so 012345 and 12345 agree.
 export const parseList = (text, { numeric = false } = {}) =>
@@ -40,12 +40,18 @@ const shooterColumns = (program) => ({
     program: program.targetProgram ?? '',
 });
 
+// Sorting and the result range use the first scale's sum; the text shows every scale when they do not add.
+const programTotalColumns = (program) => {
+    const totals = resultTotals(program);
+    return { total: totals[0]?.value ?? null, totalText: totals.length > 1 ? resultText(program) : null };
+};
+
 const programRow = (program, detail, seriesOrder, shotOrder) => ({
     key: `p${program.id}`,
     ...shooterColumns(program),
     matchCode: distinctMatchCodes(countingShots(program)),
     at: lastShotAt(countingShots(program)) ?? program.startedAt ?? '',
-    total: program.total?.value ?? null,
+    ...programTotalColumns(program),
     breakdown: orderSeries(program.series ?? [], seriesOrder).map((series) => seriesGroup(series, detail, shotOrder)),
 });
 
@@ -140,7 +146,7 @@ const exportCell = (row, column) => {
     switch (column) {
         case 'time': return formatDateTime(row.at);
         case 'shooter': return `${row.lastName} ${row.firstName}`.trim();
-        case 'total': return row.total === null ? '' : String(row.total);
+        case 'total': return row.total === null ? '' : row.totalText ?? String(row.total);
         case 'targetCode': return row.targetCode === null ? '' : String(row.targetCode);
         default: return String(row[column] ?? '');
     }

@@ -20,10 +20,7 @@ public static class ScoreCalculator
     public sealed record ProgramScore(
         IReadOnlyList<ShotSeries> Series,
         IReadOnlyList<ShotSeries> Sighting,
-        ProgramTotal? Total,
-        TotalUnavailableReason? TotalUnavailable,
-        IReadOnlyList<int> ShotValues,
-        int ShotCount);
+        IReadOnlyList<ProgramTotal> Totals);
 
     public static ProgramScore Calculate(
         DateTime programStart,
@@ -39,15 +36,7 @@ public static class ScoreCalculator
         var series = GroupIntoSeries(countingShots, targets, programStart, clock);
         var sighting = GroupIntoSeries(realShots.Where(IsSighting), targets, programStart, clock);
 
-        var (total, unavailable) = BuildTotal(series);
-
-        return new ProgramScore(
-            series,
-            sighting,
-            total,
-            unavailable,
-            countingShots.Select(row => row.PrimaryResult).ToList(),
-            countingShots.Count);
+        return new ProgramScore(series, sighting, BuildTotals(series));
     }
 
     public static string? FindEndShotTime(IEnumerable<ShotRow> shots) =>
@@ -117,18 +106,13 @@ public static class ScoreCalculator
             At: at is null ? null : clock.ToOffset(at.Value));
     }
 
-    private static (ProgramTotal?, TotalUnavailableReason?) BuildTotal(List<ShotSeries> series)
-    {
-        if (series.Count == 0) return (null, null);
-
-        var valuations = series.Select(entry => entry.Valuation).Distinct().ToList();
-
-        if (valuations.Any(valuation => valuation is null))
-            return (null, TotalUnavailableReason.UnknownValuation);
-
-        if (valuations.Count > 1)
-            return (null, TotalUnavailableReason.MixedValuation);
-
-        return (new ProgramTotal(series.Sum(entry => entry.Subtotal), valuations[0]!.Value), null);
-    }
+    // One sum per target and ring scale, in the order first shot: a 5er series added to a 10er one is meaningless.
+    private static List<ProgramTotal> BuildTotals(List<ShotSeries> series) =>
+        series.GroupBy(entry => entry.TargetType)
+              .Select(group => new ProgramTotal(
+                  group.Key,
+                  group.First().Valuation,
+                  group.Sum(entry => entry.Subtotal),
+                  group.SelectMany(entry => entry.Shots).Select(shot => shot.FineValue).ToList()))
+              .ToList();
 }

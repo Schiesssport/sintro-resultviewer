@@ -34,7 +34,6 @@ const keysInUse = () => {
     // Built from state: t(`live.${state}`), t(display.reasonKey), t(`fullscreen.mode.${target}`).
     for (const key of [
         'live.connected', 'live.connecting', 'live.offline',
-        'total.mixedValuation', 'total.unknownValuation',
         'fullscreen.mode.live+results', 'fullscreen.mode.live', 'fullscreen.mode.results',
     ]) keys.add(key);
 

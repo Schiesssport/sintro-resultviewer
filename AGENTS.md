@@ -104,7 +104,7 @@ The integration tests assert these rules.
 | Marker rows are `ShotNr 9999` only, never `TotalType 7` | The last real shot carries `TotalType 7` too; filtering on it drops every final shot |
 | Sighting = `ShotType = 0`, **never** `ShotGroup = 0`; `sighting` is a list per group | Counting shots occur in group 0; merged groups would add 5er to 10er |
 | Valuation per `(ProgramID, ShotGroup)`, highest `TargeinformationID` wins | Duplicate rows exist and can disagree |
-| `Total` null on mixed valuations, `TotalUnavailable` says why | 5er + 10er is meaningless |
+| `Totals` has one entry per target/scale, never one sum across scales | 5er + 10er is meaningless |
 | Never join on `Shots.StartNr` — use `ProgramID → Programs.ShooterID` | Almost always zero |
 | `Shooters.StartNr` **is the licence number**, no length cap | Six digits, zero-padded; 7-9 digits planned |
 | `shooter: null` is normal | Most passes are anonymous |

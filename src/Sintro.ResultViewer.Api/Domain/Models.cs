@@ -7,13 +7,6 @@ public enum ProgramState
     Abandoned,
 }
 
-/// <summary>Why <see cref="ShootingProgram.Total"/> is null, so a missing total is debuggable.</summary>
-public enum TotalUnavailableReason
-{
-    MixedValuation,
-    UnknownValuation,
-}
-
 public sealed record Club(int Id, string Number, string Name);
 
 public sealed record Shooter(
@@ -45,7 +38,8 @@ public sealed record ShotSeries(
     int? BestFineValue,
     IReadOnlyList<Shot> Shots);
 
-public sealed record ProgramTotal(int Value, int Valuation);
+/// <summary>The sum over every counting series of one target and ring scale; a pass that changes scale has several, never one number across scales.</summary>
+public sealed record ProgramTotal(string TargetType, int? Valuation, int Value, IReadOnlyList<int> FineValues);
 
 /// <summary>One row of dbo.Programs, a "Stich" in the UI; named ShootingProgram because <c>Program</c> is the entry point, exposed as the <c>program</c> resource.</summary>
 public sealed record ShootingProgram(
@@ -58,10 +52,7 @@ public sealed record ShootingProgram(
     ProgramState State,
     Shooter? Shooter,
     string? ContestShooterName,
-    ProgramTotal? Total,
-    TotalUnavailableReason? TotalUnavailable,
-    int ShotCount,
-    IReadOnlyList<int> ShotValues,
+    IReadOnlyList<ProgramTotal> Totals,
     IReadOnlyList<ShotSeries> Series,
     IReadOnlyList<ShotSeries> Sighting);
 

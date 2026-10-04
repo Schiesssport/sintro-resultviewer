@@ -309,7 +309,6 @@ table.results tbody tr:hover td { background: var(--row-hover); }
 }
 .badge-dup { background: var(--danger-tint); color: var(--danger-ink); }
 
-.total-missing { color: var(--warn); font-weight: 600; font-size: 11px; }
 
 /* -- Shot chips and dial ----------------------------------------------------- */
 

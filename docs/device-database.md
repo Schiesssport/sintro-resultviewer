@@ -125,9 +125,9 @@ It can differ between series of the same pass — the device supports switching 
 mid-pass, and programs exist that do exactly that. Therefore:
 
 - compute a **subtotal per series**, always;
-- compute a **grand total only when every counting series shares one valuation**. Adding a 5er
-  series to a 10er series produces a confident-looking wrong number. The API returns `total: null`
-  with a `totalUnavailable` reason instead.
+- sum **only within one target and valuation**. Adding a 5er series to a 10er series produces a
+  confident-looking wrong number. The API returns `totals`, one entry per target and scale, and a
+  pass that changed scale simply has two.
 
 `Targetinformation` may hold several rows for the same `(ProgramID, ShotGroup)`. They almost always
 agree; where they do not, **the highest `TargeinformationID` is current**.
@@ -233,8 +233,11 @@ Target and valuation combine into the notation the sport already uses — `A10`,
 One row per firing point. `ProgramID` is the pass currently loaded on it, or null. The row persists
 after a pass ends, so "on a line" does not mean "being shot" — see how the viewer derives
 availability in `wwwroot/core/lanes.js`. A pass left unfinished keeps its line: shots fired days later land
-under the old `ProgramID`, so its `finishedAt` and shot order come out wrong. Seen only in testing;
-a shooter ends the pass in normal use, so the API does not correct for it.
+under the old `ProgramID`, so its `finishedAt` and shot order come out wrong. Measured in one export:
+the later shots start again at `ShotNr 1` in `ShotGroup 0`, as if the program had been re-run on the
+same row. Seen only in testing; a shooter ends the pass in normal use and the target is restarted
+between days, so the API does not correct for it. Such passes break the test invariants and are
+removed from the dev database rather than modelled.
 
 ## Consequences for the API
 

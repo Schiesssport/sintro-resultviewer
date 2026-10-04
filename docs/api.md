@@ -62,10 +62,10 @@ curl -H "Authorization: Bearer $TOKEN" \
         "duplicateLicense": false
       },
       "contestShooterName": null,
-      "total": { "value": 31, "valuation": 5 },
-      "totalUnavailable": null,
-      "shotCount": 10,
-      "shotValues": [4, 3, 4, 3, 3, 5, 3, 4, 2, 0],
+      "totals": [
+        { "targetType": "A5", "valuation": 5, "value": 31,
+          "fineValues": [74, 61, 78, 55, 59, 93, 60, 72, 44, 0] }
+      ],
       "series": [
         {
           "index": 1,
@@ -94,14 +94,13 @@ curl -H "Authorization: Bearer $TOKEN" \
 |---|---|
 | `shooter` | `null` for most passes: registering is optional. `lane` + `startedAt` always identify a pass. `contestShooterName` is the device's free-text name field, if the operator typed one |
 | `duplicateLicense` | The device has no unique constraint on licences; `true` means another shooter carries the same number |
-| `total` | Sum of all counting shots. `null` when the series used different ring scales (`totalUnavailable: "mixedValuation"`) or a scale is unknown (`"unknownValuation"`); use each series' `subtotal` then |
-| `total.valuation` | Ring scale: `5`, `10`, `100`, ... |
-| `shotValues` | Counting-shot ring values in firing order, sighting shots excluded |
+| `totals` | One entry per target and ring scale, in the order first shot: `value` is the sum of the counting shots on that scale, `fineValues` their fine values in firing order. A pass shot on one scale has exactly one entry; a pass that changed scale has several, never one number across scales. `valuation: null` means the device recorded no scale for those series |
+| `totals[].valuation` | Ring scale: `4`, `5`, `10`, `100` |
 | `targetCode`, `targetProgram` | The program number and name as the operator set them on the device. Free text, not a key: operators rename programs |
 | `series` | Counting shots grouped by stage. `targetType` is target letter plus scale: `A10`, `B4`, `S10` (Sau). `bestFineValue` is the best tenth-value among hits |
 | `shots[].matchCode` | The event match (Stich) the operator entered for the pass, stored by the device on every shot. `null` outside events. It is independent of `targetCode`: one program is shot under several match codes |
-| `shots[].fineValue` | Tenth-ring value (`74` = 7.4). `mouche`: centre hit. `hitSector`: `1` is twelve o'clock, clockwise in 45° steps, `0` centre, `null` unknown. `x`, `y`: device coordinates |
-| `sighting` | Probe series, same shape as `series`, one per stage. Never counted in `total` |
+| `shots[].fineValue` | Tenth-ring value (`74` = 7.4); the ring `value` follows from it, not the reverse, so the compact lists carry fine values. The usual tie-breaker, the best fine value of a series, is `series[].bestFineValue`. `mouche`: centre hit. `hitSector`: `1` is twelve o'clock, clockwise in 45° steps, `0` centre, `null` unknown. `x`, `y`: device coordinates |
+| `sighting` | Probe series, same shape as `series`, one per stage. Never counted in `totals` |
 | `startedAt`, `finishedAt`, `at` | ISO 8601 with the range's UTC offset. `finishedAt` is `null` until the device writes the end total |
 
 ## Paging and syncing

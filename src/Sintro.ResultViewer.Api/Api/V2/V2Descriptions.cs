@@ -51,10 +51,13 @@ internal static class V2Descriptions
         a pass matches when any value fits. matchCode is looked up on the pass's shots.
 
         Each series carries a targetType such as A10 or B4 — the target letter plus the
-        ring scale, the same notation used in program names. Shots carry matchCode, the
-        event match the operator entered for the pass (null outside events), and hitSector: 1 is
-        twelve o'clock and the numbers run clockwise in 45 degree steps, 0 is a centre
-        hit, and null means the device reported no sector.
+        ring scale, the same notation used in program names. totals has one entry per
+        targetType: the sum of its series and the fine values of its shots in firing order.
+        A pass shot on one scale has exactly one entry; a pass that changed scale has
+        several, because a 5er series added to a 10er one is meaningless. Shots carry
+        matchCode, the event match the operator entered for the pass (null outside events),
+        and hitSector: 1 is twelve o'clock and the numbers run clockwise in 45 degree
+        steps, 0 is a centre hit, and null means the device reported no sector.
 
         {CollectionHelp}
         """;
@@ -63,10 +66,11 @@ internal static class V2Descriptions
         Replace {id} in the path with a program id from /programs, for example
         /api/v2/programs/2000.
 
-        total is null when the program's series used different ring scales — adding a 5er
-        series to a 10er one is meaningless — and totalUnavailable says why. Use each
-        series' subtotal in that case. sighting lists the Probe series, one per stage the
-        device recorded them in; they never count towards the total.
+        totals carries one sum per target and ring scale with the fine values of its shots;
+        an entry with valuation null means the device recorded no scale for those series.
+        The usual tie-breaker, the best fine value of a series, is each series' bestFineValue
+        (or the maximum over its shots). sighting lists the Probe series, one per stage the
+        device recorded them in; they never count towards any total.
         """;
 
     public const string Shooters = $"""

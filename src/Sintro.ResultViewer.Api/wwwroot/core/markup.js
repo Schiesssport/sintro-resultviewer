@@ -1,13 +1,13 @@
-import { escapeHtml, formatTime, formatDateTime, totalDisplay, shotGroups, tickerEntry, shooterLabel } from './format.js';
+import { escapeHtml, formatTime, formatDateTime, resultText, activeTotal, shotGroups, tickerEntry, shooterLabel } from './format.js';
 import { shotDial } from './sectors.js';
 
-export const totalCell = (program, t) => {
-    const total = totalDisplay(program);
-    if (total.hasTotal) return String(total.value);
+const dash = '<span class="value-none">–</span>';
 
-    return total.reasonKey
-        ? `<span class="total-missing" title="${escapeHtml(t(total.reasonKey))}">–</span>`
-        : '–';
+export const totalCell = (program) => escapeHtml(resultText(program)) || dash;
+
+export const laneTotalCell = (program) => {
+    const total = activeTotal(program);
+    return total === null ? dash : String(total);
 };
 
 export const shooterName = (program, t) => {
@@ -101,6 +101,6 @@ export const browseRowHtml = (row) => `
         <td class="col-club">${escapeHtml(row.club)}</td>
         <td class="col-code">${row.targetCode ?? ''}</td>
         <td class="col-code">${escapeHtml(row.matchCode)}</td>
-        <td class="col-total">${row.total === null ? '<span class="value-none">–</span>' : row.total}</td>
+        <td class="col-total">${row.total === null ? dash : escapeHtml(row.totalText ?? row.total)}</td>
         <td class="col-shots"><div class="shot-groups">${row.breakdown.map(browseGroupHtml).join('')}</div></td>
     </tr>`;

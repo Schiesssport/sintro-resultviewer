@@ -1,7 +1,7 @@
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
 import { escapeHtml, shooterLabel, matchesFilter, programLabel, laneContext, localIsoDate } from './core/format.js';
 import {
-    totalCell, shooterName, clubCell, shotGroupsCell, messageRow, tickerRun,
+    totalCell, laneTotalCell, shooterName, clubCell, shotGroupsCell, messageRow, tickerRun,
 } from './core/markup.js';
 import { isLineAvailable, dayOffsetMs, holdClearedLines } from './core/lanes.js';
 import { parseViewMode, layoutFor, pathForMode } from './core/viewmode.js';
@@ -57,7 +57,7 @@ const occupiedLineRow = (lane, program) => {
                 <div class="lane-shooter-name ${label.fallback ? 'is-fallback' : ''}">${html}</div>
                 <div class="lane-context">${escapeHtml(laneContext(program))}</div>
             </td>
-            <td class="lane-total">${totalCell(program, t)}</td>
+            <td class="lane-total">${laneTotalCell(program)}</td>
             <td class="lane-shots">${shotGroupsCell(program, t, { live: true })}</td>
         </tr>`;
 };
@@ -105,7 +105,7 @@ const programRow = (program) => {
     return `<tr>
         <td class="col-club">${clubCell(program)}</td>
         <td class="col-shooter ${label.fallback ? 'shooter-fallback' : 'shooter-name'}">${html}</td>
-        <td class="col-total">${totalCell(program, t)}</td>
+        <td class="col-total">${totalCell(program)}</td>
         <td class="col-shots">${shotGroupsCell(program, t)}</td>
         <td class="col-program">${escapeHtml(programLabel(program))}</td></tr>`;
 };

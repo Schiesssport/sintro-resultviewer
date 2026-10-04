@@ -28,7 +28,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         var withResult = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
 
         Assert.NotEmpty(withResult.Items);
-        Assert.All(withResult.Items, program => Assert.True(program.ShotCount > 0));
+        Assert.All(withResult.Items, program => Assert.True(program.Series.Sum(series => series.ShotCount) > 0));
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
             .ToHashSet();
 
         Assert.All(everything.Items.Where(program => extra.Contains(program.Id)),
-            program => Assert.Equal(0, program.ShotCount));
+            program => Assert.Empty(program.Series));
     }
 
     [Fact]
@@ -108,32 +108,32 @@ public class ProgramEndpointTests(ApiFixture fixture)
     }
 
     [Fact]
-    public async Task aTotalIsTheSumOfItsSeriesSubtotals()
+    public async Task eachTotalIsTheSumOfTheSeriesOnItsScale()
     {
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
-        var scored = page.Items.Where(program => program.Total is not null).ToList();
 
-        Assert.NotEmpty(scored);
-        Assert.All(scored, program =>
+        Assert.NotEmpty(page.Items);
+        Assert.All(page.Items, program =>
         {
-            Assert.Equal(program.Series.Sum(series => series.Subtotal), program.Total!.Value);
-            Assert.Single(program.Series.Select(series => series.Valuation).Distinct());
+            Assert.Equal(program.Series.Select(series => series.TargetType).Distinct(), program.Totals.Select(total => total.TargetType));
+            Assert.All(program.Totals, total =>
+            {
+                var onScale = program.Series.Where(series => series.TargetType == total.TargetType).ToList();
+                Assert.Equal(onScale.Sum(series => series.Subtotal), total.Value);
+                Assert.Equal(onScale.SelectMany(series => series.Shots).Select(shot => shot.FineValue), total.FineValues);
+                Assert.Equal(onScale[0].Valuation, total.Valuation);
+            });
         });
     }
 
     [Fact]
-    public async Task theFlatShotValuesMatchTheSeriesTheyCameFrom()
+    public async Task aProgramOnOneScaleHasExactlyOneTotal()
     {
         var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
+        var single = page.Items.Where(program => program.Series.Select(series => series.TargetType).Distinct().Count() == 1).ToList();
 
-        Assert.All(page.Items, program =>
-        {
-            var fromSeries = program.Series.SelectMany(series => series.Shots)
-                                           .Select(shot => shot.Value).ToList();
-
-            Assert.Equal(fromSeries, program.ShotValues);
-            Assert.Equal(fromSeries.Count, program.ShotCount);
-        });
+        Assert.NotEmpty(single);
+        Assert.All(single, program => Assert.Single(program.Totals));
     }
 
     [Fact]
@@ -145,7 +145,8 @@ public class ProgramEndpointTests(ApiFixture fixture)
         Assert.NotEmpty(withSighting);
         Assert.All(withSighting, program =>
         {
-            Assert.Equal(program.Series.Sum(series => series.ShotCount), program.ShotCount);
+            Assert.All(program.Totals, total =>
+                Assert.Equal(program.Series.Where(series => series.TargetType == total.TargetType).Sum(series => series.ShotCount), total.FineValues.Count));
             Assert.All(program.Sighting, series => Assert.True(series.ShotCount > 0));
         });
     }
@@ -160,24 +161,6 @@ public class ProgramEndpointTests(ApiFixture fixture)
             .SelectMany(series => series.Shots);
 
         Assert.DoesNotContain(9999, everyShot.Select(shot => shot.Number));
-    }
-
-    [Fact]
-    public async Task aPassWithoutATotalAlwaysSaysWhy()
-    {
-        var page = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
-        var unscored = page.Items.Where(program => program.Total is null).ToList();
-
-        // The default filter guarantees shots, so the only honest reasons are a mixed or an unknown ring scale.
-        Assert.All(unscored, program => Assert.NotNull(program.TotalUnavailable));
-
-        var mixed = unscored
-            .Where(program => program.TotalUnavailable == TotalUnavailableReason.MixedValuation)
-            .ToList();
-
-        // Asserted only if the export happens to contain such a pass.
-        Assert.All(mixed, program =>
-            Assert.True(program.Series.Select(series => series.Valuation).Distinct().Count() > 1));
     }
 
     [Fact]

@@ -224,10 +224,7 @@ public sealed partial class SintroRepository
             ContestShooterName: string.IsNullOrWhiteSpace(row.ContestShooterName)
                 ? null
                 : row.ContestShooterName.Trim(),
-            Total: score.Total,
-            TotalUnavailable: score.TotalUnavailable,
-            ShotCount: score.ShotCount,
-            ShotValues: score.ShotValues,
+            Totals: score.Totals,
             Series: score.Series,
             Sighting: score.Sighting);
     }

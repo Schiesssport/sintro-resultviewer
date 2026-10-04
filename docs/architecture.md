@@ -97,7 +97,7 @@ The consumer-facing guide is [`api.md`](api.md); this section is the reasoning b
   `{"error": "<stable code>", "detail": "<text>"}` (`ApiError` in `Api/`). The viewer has exactly
   one error parser.
 - **`sighting` is a list**, one series per `ShotGroup` the sighting shots were fired in. Merging
-  them would add a 5er group to a 10er one — the sum `total` refuses to make.
+  them would add a 5er group to a 10er one — the sum `totals` never makes.
 - **ISO 8601 everywhere**, with the range's UTC offset attached.
 - The OpenAPI document at `/openapi/v2.json` needs no token — it is schema, not data — and `/docs`
   renders it as a browsable, try-it-here page, in German, French or English; the user pages are

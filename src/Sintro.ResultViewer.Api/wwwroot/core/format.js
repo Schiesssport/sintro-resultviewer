@@ -43,15 +43,42 @@ export const shooterLabel = (program, t) => {
     };
 };
 
-// A 5er series added to a 10er one is a confident wrong number, so the API withholds it and names why.
-export const totalDisplay = (program) => {
-    if (program.total) return { hasTotal: true, value: program.total.value, reasonKey: null };
+// In the sport, 4er and 5er results are added together (an A5 series and a B4 series make one result);
+// every other scale stands alone, and a series whose scale the device never recorded does too.
+const SCALES_SUMMED_TOGETHER = [4, 5];
 
-    const reasonKey = program.totalUnavailable === 'mixedValuation' ? 'total.mixedValuation'
-        : program.totalUnavailable === 'unknownValuation' ? 'total.unknownValuation'
-        : null;
+const scaleFamily = (valuation) =>
+    SCALES_SUMMED_TOGETHER.includes(valuation) ? SCALES_SUMMED_TOGETHER.join('/') : String(valuation);
 
-    return { hasTotal: false, value: null, reasonKey };
+// Derived from series[], the detailed data: one { label, value } per scale family, in the order first shot.
+export const resultTotals = (program) => {
+    const groups = new Map();
+    for (const series of program?.series ?? []) {
+        const key = scaleFamily(series.valuation);
+        const group = groups.get(key) ?? { labels: [], value: 0 };
+        if (!group.labels.includes(series.targetType)) group.labels.push(series.targetType);
+        group.value += series.subtotal ?? 0;
+        groups.set(key, group);
+    }
+    return [...groups.values()].map((group) => ({ label: group.labels.join('/'), value: group.value }));
+};
+
+// The bare number when one scale was shot; "A10 87 · A100 173" when scales that do not add were mixed.
+export const resultText = (program) => {
+    const totals = resultTotals(program);
+    if (totals.length === 0) return '';
+    if (totals.length === 1) return String(totals[0].value);
+    return totals.map((total) => `${total.label} ${total.value}`).join(' · ');
+};
+
+// On a live lane only the scale being shot right now matters: the family of the last series.
+export const activeTotal = (program) => {
+    const last = (program?.series ?? []).at(-1);
+    if (!last) return null;
+    const family = scaleFamily(last.valuation);
+    return (program.series ?? [])
+        .filter((series) => scaleFamily(series.valuation) === family)
+        .reduce((sum, series) => sum + (series.subtotal ?? 0), 0);
 };
 
 export const matchesFilter = (program, query, labelText = '') => {
@@ -65,7 +92,7 @@ export const matchesFilter = (program, query, labelText = '') => {
         labelText,
         program.shooter?.license,
         program.shooter?.club?.name,
-        (program.shotValues ?? []).join(' '),
+        (program.series ?? []).flatMap((series) => series.shots ?? []).map((shot) => shot.value).join(' '),
     ].filter((part) => part !== null && part !== undefined).join(' ').toLowerCase();
 
     return terms.every((term) => haystack.includes(term));
@@ -90,7 +117,7 @@ export const laneContext = (program) =>
 
 export const tickerEntry = (program, t) => {
     const name = shooterLabel(program, t).text;
-    const total = program?.total ? String(program.total.value) : '–';
+    const total = resultText(program) || '–';
     const context = [program?.targetProgram, whenAndWhere(program)].filter(Boolean).join(', ');
 
     return context ? `${name}: ${total} (${context})` : `${name}: ${total}`;

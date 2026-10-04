@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-    escapeHtml, formatTime, shooterLabel, totalDisplay, matchesFilter, laneContext,
+    escapeHtml, formatTime, shooterLabel, resultTotals, resultText, activeTotal, matchesFilter, laneContext,
     shotGroups, programLabel, tickerEntry, localIsoDate,
 } from '../core/format.js';
 import { TRANSLATIONS, translate } from '../core/i18n.js';
@@ -18,10 +18,11 @@ const program = (overrides = {}) => ({
     state: 'finished',
     shooter: null,
     contestShooterName: null,
-    total: { value: 31, valuation: 5 },
-    totalUnavailable: null,
-    shotValues: [4, 3, 4, 3, 3, 5, 3, 4, 2, 0],
-    series: [],
+    series: [
+        { index: 1, valuation: 5, targetType: 'A5', subtotal: 14, shots: [4, 3, 4, 3].map((value) => ({ value })) },
+        { index: 2, valuation: 5, targetType: 'A5', subtotal: 11, shots: [3, 5, 3].map((value) => ({ value })) },
+        { index: 3, valuation: 5, targetType: 'A5', subtotal: 6, shots: [4, 2, 0].map((value) => ({ value })) },
+    ],
     sighting: [],
     ...overrides,
 });
@@ -115,29 +116,55 @@ describe('shooterLabel', () => {
     });
 });
 
-describe('totalDisplay', () => {
-    test('reports the total', () => {
-        const display = totalDisplay(program());
-        assert.equal(display.hasTotal, true);
-        assert.equal(display.value, 31);
+const series = (targetType, valuation, subtotal) => ({ targetType, valuation, subtotal, shots: [] });
+
+describe('resultTotals', () => {
+    test('one scale gives one total, summed over its series', () => {
+        assert.deepEqual(resultTotals(program()), [{ label: 'A5', value: 31 }]);
     });
 
-    test('names mixed valuation as the reason no total exists', () => {
-        const display = totalDisplay(program({ total: null, totalUnavailable: 'mixedValuation' }));
-        assert.equal(display.hasTotal, false);
-        assert.equal(display.reasonKey, 'total.mixedValuation');
-        assert.equal(t(display.reasonKey), 'Wertung wechselt – kein Gesamttotal');
+    test('4er and 5er results are added together, as the sport does', () => {
+        const mixed = program({ series: [series('A5', 5, 23), series('B4', 4, 56)] });
+        assert.deepEqual(resultTotals(mixed), [{ label: 'A5/B4', value: 79 }]);
     });
 
-    test('names unknown valuation', () => {
-        const display = totalDisplay(program({ total: null, totalUnavailable: 'unknownValuation' }));
-        assert.equal(display.reasonKey, 'total.unknownValuation');
+    test('other scales stay apart, in the order first shot', () => {
+        const mixed = program({ series: [series('A10', 10, 87), series('A100', 100, 173), series('A10', 10, 9)] });
+        assert.deepEqual(resultTotals(mixed), [{ label: 'A10', value: 96 }, { label: 'A100', value: 173 }]);
     });
 
-    test('a pass with no shots has no total and no reason', () => {
-        const display = totalDisplay(program({ total: null, totalUnavailable: null }));
-        assert.equal(display.hasTotal, false);
-        assert.equal(display.reasonKey, null);
+    test('a series whose scale the device never recorded is its own total', () => {
+        const mixed = program({ series: [series('A10', 10, 87), series('??', null, 7)] });
+        assert.deepEqual(resultTotals(mixed), [{ label: 'A10', value: 87 }, { label: '??', value: 7 }]);
+    });
+
+    test('no series, no totals', () => {
+        assert.deepEqual(resultTotals(program({ series: [] })), []);
+    });
+});
+
+describe('resultText', () => {
+    test('the bare number for one scale', () => {
+        assert.equal(resultText(program()), '31');
+    });
+
+    test('labelled sums when scales do not add', () => {
+        assert.equal(resultText(program({ series: [series('A10', 10, 87), series('A100', 100, 173)] })), 'A10 87 · A100 173');
+    });
+
+    test('empty without shots', () => {
+        assert.equal(resultText(program({ series: [] })), '');
+    });
+});
+
+describe('activeTotal', () => {
+    test('is the sum of the scale being shot right now, the last series', () => {
+        assert.equal(activeTotal(program({ series: [series('A10', 10, 87), series('A100', 100, 173)] })), 173);
+        assert.equal(activeTotal(program({ series: [series('A100', 100, 173), series('A10', 10, 87), series('A10', 10, 9)] })), 96);
+    });
+
+    test('is null before the first shot', () => {
+        assert.equal(activeTotal(program({ series: [] })), null);
     });
 });
 
@@ -346,15 +373,18 @@ describe('tickerEntry', () => {
             'Linie 6 · 20:45: 31 (Obligatorisches Programm, 20:45/L6)');
     });
 
-    test('a pass with no usable total shows a dash rather than a wrong number', () => {
-        const entry = tickerEntry(
-            program({ shooter: shooter(), total: null, totalUnavailable: 'MixedValuation' }), t);
-        assert.match(entry, /Hans Muster: –/);
+    test('a pass without shots shows a dash rather than a wrong number', () => {
+        assert.match(tickerEntry(program({ shooter: shooter(), series: [] }), t), /Hans Muster: –/);
+    });
+
+    test('scales that do not add are both named', () => {
+        const mixed = program({ shooter: shooter(), series: [series('A10', 10, 87), series('A100', 100, 173)] });
+        assert.match(tickerEntry(mixed, t), /Hans Muster: A10 87 · A100 173/);
     });
 
     test('drops context that is not there instead of leaving empty brackets', () => {
         assert.equal(
-            tickerEntry({ targetProgram: '', startedAt: null, lane: null, total: { value: 7 }, shooter: shooter() }, t),
+            tickerEntry({ targetProgram: '', startedAt: null, lane: null, series: [series('A10', 10, 7)], shooter: shooter() }, t),
             'Hans Muster: 7');
     });
 });

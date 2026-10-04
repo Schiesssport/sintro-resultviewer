@@ -143,9 +143,9 @@ A few things worth knowing before building against it:
   `startedAt` are what always identify one.
 - **A pass is `active`, `finished` or `abandoned`.** The third is real: started, never ended, and
   no longer on a line.
-- **`total` is `null` when a pass mixes ring scales**, with `totalUnavailable` giving the reason;
-  use the per-series `subtotal`. Each series carries a `targetType` (`A10`, `B4`, `S10`) combining
-  target and scale.
+- **`totals` lists one sum per target and ring scale.** A pass shot on one scale has one entry; a
+  pass that changed scale has two, never one number across scales. Each series carries a
+  `targetType` (`A10`, `B4`, `S10`) combining target and scale.
 - **Timestamps are ISO 8601** with the range's offset.
 - **An unknown `state` or `order` value is a 400**, not a silently ignored filter.
 

@@ -16,7 +16,6 @@ const program = (overrides = {}) => ({
         license: '012345', firstName: 'Hans', lastName: 'Muster',
         club: { id: 1, number: '1.02.1.04.133', name: 'Feldschützen Musterdorf' },
     },
-    total: { value: 27, valuation: 10 },
     series: [
         { index: 1, valuation: 10, targetType: 'A10', subtotal: 17, shots: [shot(1, 8, 84), shot(2, 9, 93)] },
         { index: 2, valuation: 10, targetType: 'A10', subtotal: 10, shots: [shot(3, 10, 102)] },
@@ -53,8 +52,28 @@ describe('buildRows', () => {
         ]);
     });
 
-    test('a withheld program total stays null', () => {
-        assert.equal(buildRows([program({ total: null })])[0].total, null);
+    test('a pass without series has no total', () => {
+        assert.equal(buildRows([program({ series: [] })])[0].total, null);
+    });
+
+    test('scales that do not add keep the first sum for sorting and show both in the text', () => {
+        const mixed = program({ series: [
+            { index: 1, valuation: 10, targetType: 'A10', subtotal: 17, shots: [shot(1, 8, 84), shot(2, 9, 93)] },
+            { index: 2, valuation: 100, targetType: 'A100', subtotal: 95, shots: [shot(3, 95, 95)] },
+        ] });
+        const [row] = buildRows([mixed]);
+        assert.equal(row.total, 17);
+        assert.equal(row.totalText, 'A10 17 · A100 95');
+    });
+
+    test('a 4er and a 5er series add up to one result', () => {
+        const mixed = program({ series: [
+            { index: 1, valuation: 5, targetType: 'A5', subtotal: 23, shots: [shot(1, 5, 99)] },
+            { index: 2, valuation: 4, targetType: 'B4', subtotal: 56, shots: [shot(2, 4, 90)] },
+        ] });
+        const [row] = buildRows([mixed]);
+        assert.equal(row.total, 79);
+        assert.equal(row.totalText, null);
     });
 
     test('series mode: one row per series with its subtotal', () => {
@@ -220,7 +239,7 @@ describe('exportText', () => {
     });
 
     test('a withheld total exports as an empty field and quotes are doubled', () => {
-        const odd = buildRows([program({ total: null, shooter: { license: '1', firstName: 'A "B"', lastName: 'C', club: null } })]);
+        const odd = buildRows([program({ series: [], shooter: { license: '1', firstName: 'A "B"', lastName: 'C', club: null } })]);
         assert.equal(exportText(odd, ['shooter', 'total'], headers, ';'), 'Schütze;Resultat\r\n"C A ""B""";');
     });
 

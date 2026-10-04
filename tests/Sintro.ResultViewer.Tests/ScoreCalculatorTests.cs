@@ -28,42 +28,45 @@ public class ScoreCalculatorTests
     {
         var shots = new[]
         {
-            Shot(1, 1, 8, 1), Shot(2, 2, 9, 1, totalType: 1),
-            Shot(3, 3, 10, 2), Shot(4, 4, 7, 2, totalType: 7),
+            Shot(1, 1, 8, 1, secondary: 81), Shot(2, 2, 9, 1, totalType: 1, secondary: 92),
+            Shot(3, 3, 10, 2, secondary: 103), Shot(4, 4, 7, 2, totalType: 7, secondary: 74),
         };
         var targets = new[] { Target(1, 10), Target(2, 10) };
 
         var score = Calculate(shots, targets);
 
         Assert.Equal(2, score.Series.Count);
-        Assert.Equal(34, score.Total!.Value);
-        Assert.Equal(10, score.Total.Valuation);
-        Assert.Null(score.TotalUnavailable);
-        Assert.Equal([8, 9, 10, 7], score.ShotValues);
+        var total = Assert.Single(score.Totals);
+        Assert.Equal("A10", total.TargetType);
+        Assert.Equal(10, total.Valuation);
+        Assert.Equal(34, total.Value);
+        Assert.Equal([81, 92, 103, 74], total.FineValues);
     }
 
     [Fact]
-    public void mixedValuation_yieldsNoTotalButKeepsSubtotals()
+    public void mixedValuation_yieldsOneTotalPerScale()
     {
         // The device can switch valuation mid-pass; adding a 5er series to a 10er one is meaningless.
-        var shots = new[] { Shot(1, 1, 5, 1), Shot(2, 2, 9, 2) };
+        var shots = new[] { Shot(1, 1, 5, 1, secondary: 99), Shot(2, 2, 9, 2, secondary: 88) };
         var targets = new[] { Target(1, 5), Target(2, 10) };
 
         var score = Calculate(shots, targets);
 
-        Assert.Null(score.Total);
-        Assert.Equal(TotalUnavailableReason.MixedValuation, score.TotalUnavailable);
-        Assert.Equal(5, score.Series[0].Subtotal);
-        Assert.Equal(9, score.Series[1].Subtotal);
+        Assert.Equal(["A5", "A10"], score.Totals.Select(total => total.TargetType));
+        Assert.Equal([5, 9], score.Totals.Select(total => total.Value));
+        Assert.Equal([99], score.Totals[0].FineValues);
+        Assert.Equal([88], score.Totals[1].FineValues);
     }
 
     [Fact]
-    public void missingTargetInfo_reportsUnknownValuation()
+    public void missingTargetInfo_isATotalWithoutAScale()
     {
         var score = Calculate([Shot(1, 1, 8, 1)], []);
 
-        Assert.Null(score.Total);
-        Assert.Equal(TotalUnavailableReason.UnknownValuation, score.TotalUnavailable);
+        var total = Assert.Single(score.Totals);
+        Assert.Null(total.Valuation);
+        Assert.Equal("??", total.TargetType);
+        Assert.Equal(8, total.Value);
         Assert.Null(score.Series[0].Valuation);
     }
 
@@ -85,9 +88,8 @@ public class ScoreCalculatorTests
             [Shot(1, 1, 9, 1), Shot(2, 9999, 0, 0, totalType: 7, hitPosition: 255, shotTime: null)],
             [Target(1, 10)]);
 
-        Assert.Equal(1, score.ShotCount);
-        Assert.Equal([9], score.ShotValues);
-        Assert.Equal(9, score.Total!.Value);
+        Assert.Equal(1, Assert.Single(score.Series).ShotCount);
+        Assert.Equal(9, Assert.Single(score.Totals).Value);
     }
 
     [Fact]
@@ -99,9 +101,7 @@ public class ScoreCalculatorTests
             []);
 
         Assert.Empty(score.Series);
-        Assert.Equal(0, score.ShotCount);
-        Assert.Null(score.Total);
-        Assert.Null(score.TotalUnavailable);
+        Assert.Empty(score.Totals);
     }
 
     [Fact]
@@ -121,9 +121,10 @@ public class ScoreCalculatorTests
         Assert.Equal(2, sighting.ShotCount);
         Assert.Equal(5, sighting.Subtotal);
 
-        Assert.Equal(19, score.Total!.Value);
-        Assert.Equal(10, score.Total.Valuation);
-        Assert.Equal(2, score.ShotCount);
+        var total = Assert.Single(score.Totals);
+        Assert.Equal(19, total.Value);
+        Assert.Equal(10, total.Valuation);
+        Assert.Equal(2, Assert.Single(score.Series).ShotCount);
     }
 
     [Fact]
@@ -134,7 +135,7 @@ public class ScoreCalculatorTests
 
         Assert.Empty(score.Sighting);
         Assert.Single(score.Series);
-        Assert.Equal(9, score.Total!.Value);
+        Assert.Equal(9, Assert.Single(score.Totals).Value);
     }
 
     [Fact]
@@ -146,13 +147,13 @@ public class ScoreCalculatorTests
 
         Assert.Equal(4, Assert.Single(score.Sighting).Index);
         Assert.Single(score.Series);
-        Assert.Equal(10, score.Total!.Valuation);
+        Assert.Equal(10, Assert.Single(score.Totals).Valuation);
     }
 
     [Fact]
     public void sightingShotsInSeveralGroups_stayOneSeriesPerGroup()
     {
-        // Merging them would add a 5er group to a 10er one, the very sum Total refuses to make.
+        // Merging them would add a 5er group to a 10er one, the very sum totals refuse to make.
         var shots = new[]
         {
             Shot(1, 1, 4, 0, shotType: 0),
@@ -166,7 +167,7 @@ public class ScoreCalculatorTests
         Assert.Equal([0, 2], score.Sighting.Select(series => series.Index));
         Assert.Equal([5, 10], score.Sighting.Select(series => series.Valuation));
         Assert.Equal([4, 9], score.Sighting.Select(series => series.Subtotal));
-        Assert.Equal(8, score.Total!.Value);
+        Assert.Equal(8, Assert.Single(score.Totals).Value);
     }
 
     [Fact]
@@ -177,19 +178,19 @@ public class ScoreCalculatorTests
             [Shot(1, 1, 9, 1), Shot(2, 2, 8, 1, totalType: 7), Shot(3, 9999, 0, 1, totalType: 7)],
             [Target(1, 10)]);
 
-        Assert.Equal(2, score.ShotCount);
-        Assert.Equal([9, 8], score.ShotValues);
+        Assert.Equal(2, Assert.Single(score.Series).ShotCount);
+        Assert.Equal(17, Assert.Single(score.Totals).Value);
     }
 
     [Fact]
-    public void unknownValuationWinsOverMixedWhenBothApply()
+    public void anUnknownScaleIsItsOwnTotalBesideTheKnownOnes()
     {
-        // A client seeing mixedValuation would look for the second scale and not find it.
         var score = Calculate(
             [Shot(1, 1, 5, 1), Shot(2, 1, 9, 2), Shot(3, 1, 7, 3)],
             [Target(1, 5), Target(2, 10)]);
 
-        Assert.Equal(TotalUnavailableReason.UnknownValuation, score.TotalUnavailable);
+        Assert.Equal(["A5", "A10", "??"], score.Totals.Select(total => total.TargetType));
+        Assert.Equal([5, 10, null], score.Totals.Select(total => total.Valuation));
     }
 
     [Fact]
@@ -204,9 +205,9 @@ public class ScoreCalculatorTests
     {
         var score = Calculate([Shot(1, 1, 0, 1), Shot(2, 2, 9, 1)], [Target(1, 10)]);
 
-        Assert.Equal(2, score.ShotCount);
-        Assert.Equal(9, score.Total!.Value);
-        Assert.Equal([0, 9], score.ShotValues);
+        Assert.Equal(2, Assert.Single(score.Series).ShotCount);
+        Assert.Equal(9, Assert.Single(score.Totals).Value);
+        Assert.Equal([0, 0], Assert.Single(score.Totals).FineValues);
     }
 
     [Fact]
@@ -339,6 +340,6 @@ public class ScoreCalculatorTests
         var score = Calculate(shots, [Target(1, 10), Target(2, 10)]);
 
         Assert.Equal([1, 2], score.Series.Select(series => series.Index));
-        Assert.Equal([8, 9, 6, 7], score.ShotValues);
+        Assert.Equal([8, 9, 6, 7], score.Series.SelectMany(series => series.Shots).Select(shot => shot.Value));
     }
 }
