@@ -99,13 +99,15 @@ A real installation is the executable above, against the range's own SQL Server.
 cp <your two .bak exports> .db/     # never committed: real names and licence numbers
 scripts/db-restore.sh               # dev SQL Server + restore
 scripts/db-demo-data.sh             # optional: adds tens and mouches an export may lack
-scripts/test.sh                     # .NET suite + viewer suite
+scripts/db-seed.sh                  # or: an invented database from seed/, no export needed
+scripts/test.sh                     # .NET suite + viewer suite (SINTRO_DB=SintroSeed for the seed)
 scripts/run.sh                      # http://localhost:8080
 scripts/publish-win.sh              # -> bin/win-x64/
 ```
 
 Without a device export the integration tests skip (`SINTRO_SKIP_DB_TESTS=1`) and everything else
-still runs. That is what CI does too, since an export can never be committed.
+still runs. That is what CI does today, since an export can never be committed; the seeded
+database in [`seed/`](seed/README.md) is the way to change that.
 
 ### API
 

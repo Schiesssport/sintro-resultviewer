@@ -41,7 +41,7 @@ services:
       HOME: /home/sdk
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "1"
-      ConnectionStrings__Sintro: "Server=db,1433;Database=DBSINTRO300;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Sintro_Dev_2026!};TrustServerCertificate=true;Encrypt=false"
+      ConnectionStrings__Sintro: "Server=db,1433;Database=${SINTRO_DB:-DBSINTRO300};User Id=sa;Password=${MSSQL_SA_PASSWORD:-Sintro_Dev_2026!};TrustServerCertificate=true;Encrypt=false"
       Sintro__ReferenceDate: "2026-07-08"
 
   # The API as it will actually be deployed. scripts/run.sh brings this up.
@@ -54,7 +54,7 @@ services:
     environment:
       # No address here: 8080 is what appsettings.jsonc binds, so the container and the
       # Windows deployment listen on the same port and are the same thing to debug.
-      ConnectionStrings__Sintro: "Server=db,1433;Database=DBSINTRO300;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Sintro_Dev_2026!};TrustServerCertificate=true;Encrypt=false"
+      ConnectionStrings__Sintro: "Server=db,1433;Database=${SINTRO_DB:-DBSINTRO300};User Id=sa;Password=${MSSQL_SA_PASSWORD:-Sintro_Dev_2026!};TrustServerCertificate=true;Encrypt=false"
       # Dev-only token. A range configures this in appsettings.jsonc instead.
       Sintro__ApiReadTokens__0: ${SINTRO_API_TOKEN:-dev-token-please-change-0123456789abcdef}
       Sintro__ReferenceDate: ${SINTRO_REFERENCE_DATE:-2026-07-08}
