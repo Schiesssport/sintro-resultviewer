@@ -29,7 +29,7 @@ No .NET, SQL Server or Node on the host. Docker is dev only; a range runs the pu
 |---|---|
 | `db-up.sh` | Dev SQL Server (`localhost:11433`, `sa` / `Sintro_Dev_2026!`) |
 | `db-restore.sh` | Restore the `.bak` exports from `.db/` |
-| `db-demo-data.sh` | DEV ONLY: adds tens and mouches |
+| `db-seed.sh` | Invented database from `seed/` |
 | `sql.sh "SELECT …"` | Ad-hoc query |
 | `test.sh` | Full suite: .NET (unit + integration) and viewer |
 | `test-web.sh` | Viewer only (`node --test`) |
