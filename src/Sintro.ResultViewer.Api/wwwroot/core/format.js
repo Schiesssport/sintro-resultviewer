@@ -64,12 +64,13 @@ export const resultTotals = (program) => {
 };
 
 // The bare number when one scale was shot; "A10 87 · A100 173" when scales that do not add were mixed.
-export const resultText = (program) => {
-    const totals = resultTotals(program);
+export const totalsText = (totals) => {
     if (totals.length === 0) return '';
     if (totals.length === 1) return String(totals[0].value);
     return totals.map((total) => `${total.label} ${total.value}`).join(' · ');
 };
+
+export const resultText = (program) => totalsText(resultTotals(program));
 
 // On a live lane only the scale being shot right now matters: the family of the last series.
 export const activeTotal = (program) => {

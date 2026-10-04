@@ -1,9 +1,16 @@
-import { escapeHtml, formatTime, formatDateTime, resultText, activeTotal, shotGroups, tickerEntry, shooterLabel } from './format.js';
+import { escapeHtml, formatTime, formatDateTime, resultTotals, activeTotal, shotGroups, tickerEntry, shooterLabel } from './format.js';
 import { shotDial } from './sectors.js';
 
 const dash = '<span class="value-none">–</span>';
 
-export const totalCell = (program) => escapeHtml(resultText(program)) || dash;
+// Each "label value" pair is one unbreakable unit; a narrow column breaks between pairs, never inside.
+export const totalsHtml = (totals) => {
+    if (totals.length === 0) return dash;
+    if (totals.length === 1) return String(totals[0].value);
+    return totals.map((total) => `<span class="total-part">${escapeHtml(total.label)} ${total.value}</span>`).join(' ');
+};
+
+export const totalCell = (program) => totalsHtml(resultTotals(program));
 
 export const laneTotalCell = (program) => {
     const total = activeTotal(program);
@@ -101,6 +108,6 @@ export const browseRowHtml = (row) => `
         <td class="col-club">${escapeHtml(row.club)}</td>
         <td class="col-code">${row.targetCode ?? ''}</td>
         <td class="col-code">${escapeHtml(row.matchCode)}</td>
-        <td class="col-total">${row.total === null ? dash : escapeHtml(row.totalText ?? row.total)}</td>
+        <td class="col-total">${totalsHtml(row.totals)}</td>
         <td class="col-shots"><div class="shot-groups">${row.breakdown.map(browseGroupHtml).join('')}</div></td>
     </tr>`;

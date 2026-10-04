@@ -63,7 +63,7 @@ describe('buildRows', () => {
         ] });
         const [row] = buildRows([mixed]);
         assert.equal(row.total, 17);
-        assert.equal(row.totalText, 'A10 17 · A100 95');
+        assert.deepEqual(row.totals, [{ label: 'A10', value: 17 }, { label: 'A100', value: 95 }]);
     });
 
     test('a 4er and a 5er series add up to one result', () => {
@@ -73,7 +73,7 @@ describe('buildRows', () => {
         ] });
         const [row] = buildRows([mixed]);
         assert.equal(row.total, 79);
-        assert.equal(row.totalText, null);
+        assert.deepEqual(row.totals, [{ label: 'A5/B4', value: 79 }]);
     });
 
     test('series mode: one row per series with its subtotal', () => {

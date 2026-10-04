@@ -286,6 +286,7 @@ table.results tbody tr:hover td { background: var(--row-hover); }
 .cg-program { width: 20%; }
 
 .col-total { font-variant-numeric: tabular-nums; text-align: right; font-weight: 700; font-size: 15px; }
+.total-part { white-space: nowrap; }
 
 .col-program, .col-shooter, .col-club { overflow-wrap: anywhere; }
 

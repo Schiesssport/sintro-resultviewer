@@ -21,7 +21,8 @@ test('a result on one scale is the bare number', () => {
 });
 
 test('scales that do not add are shown side by side, labelled', () => {
-    assert.equal(totalCell({ series: [series('A10', 10, 87), series('A100', 100, 173)] }), 'A10 87 · A100 173');
+    assert.equal(totalCell({ series: [series('A10', 10, 87), series('A100', 100, 173)] }),
+        '<span class="total-part">A10 87</span> <span class="total-part">A100 173</span>');
 });
 
 test('a pass without shots shows a dash', () => {
