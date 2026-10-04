@@ -211,7 +211,7 @@ public class ScoreCalculatorTests
     }
 
     [Fact]
-    public void moucheAndHitSector_areMapped()
+    public void innerTenAndHitSector_areMapped()
     {
         var shots = new[]
         {
@@ -223,7 +223,7 @@ public class ScoreCalculatorTests
         var score = Calculate(shots, [Target(1, 10)]);
         var mapped = score.Series[0].Shots;
 
-        Assert.True(mapped[0].Mouche);
+        Assert.True(mapped[0].InnerTen);
         Assert.Equal(0, mapped[0].HitSector);   // 0 is a centre hit, not "unknown"
         Assert.Null(mapped[1].HitSector);       // 255 means the device reported none
         Assert.Equal(6, mapped[2].HitSector);

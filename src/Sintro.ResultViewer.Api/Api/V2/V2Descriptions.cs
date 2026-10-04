@@ -57,8 +57,9 @@ internal static class V2Descriptions
         A pass shot on one scale has exactly one entry; a pass that changed scale has
         several, because a 5er series added to a 10er one is meaningless. Shots carry
         matchCode, the event match the operator entered for the pass (null outside events),
-        and hitSector: 1 is twelve o'clock and the numbers run clockwise in 45 degree
-        steps, 0 is a centre hit, and null means the device reported no sector.
+        innerTen (the device's centre-hit flag, a Mouche) and hitSector: 1 is twelve o'clock
+        and the numbers run clockwise in 45 degree steps, 0 is an inner ten, and null means
+        the device reported no sector.
 
         {CollectionHelp}
         """;

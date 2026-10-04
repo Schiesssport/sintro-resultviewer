@@ -45,7 +45,7 @@ a synonym for something already listed.
 | rapid-fire stage | Serienfeuer (SF) | `Shots.FireMethod = 2` | See *Fire method*, unverified |
 | shot value | Trefferwert | `Shots.PrimaryResult` | Ring value in the active valuation |
 | fine value | Zehntelwert | `Shots.SecondaryResult` | 0–100, the decimal ring |
-| mouche | Mouche | `Shots.Mouche` | Centre hit |
+| inner ten (`innerTen`) | Mouche | `Shots.Mouche` | Centre hit; whether the device marks it is a target-display setting |
 | hit sector | Trefferlage | `Shots.HitPosition` | Clock direction of the hit |
 | valuation | Wertung | `Targetinformation.TargetValuation` | Ring scale: 4, 5, 10 or 100 |
 | target | Scheibe | `Targetinformation.TargetType` | A, B or Sau silhouette |

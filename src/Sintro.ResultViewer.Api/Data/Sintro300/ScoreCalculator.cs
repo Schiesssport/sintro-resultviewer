@@ -98,7 +98,7 @@ public static class ScoreCalculator
             MatchCode: row.ExternalNumber == 0 ? null : row.ExternalNumber,
             Value: row.PrimaryResult,
             FineValue: row.SecondaryResult,
-            Mouche: row.Mouche == 1,
+            InnerTen: row.Mouche == 1,
             HitSector: row.HitPosition == NoHitSector ? null : row.HitPosition,
             X: row.X,
             Y: row.Y,

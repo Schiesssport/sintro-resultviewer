@@ -124,7 +124,7 @@ export const tickerEntry = (program, t) => {
     return context ? `${name}: ${total} (${context})` : `${name}: ${total}`;
 };
 
-// A mouche is not marked: on 5er and 4er targets a glyph in place of the single digit reads as a zero.
+// An inner ten is not marked: on 5er and 4er targets a glyph in place of the single digit reads as a zero.
 // On a 100er target the fine value is the ring value itself, so showing it twice would only confuse.
 export const shotGroups = (program) => (program.series ?? []).map((series) => {
     const fineIsRing = series.valuation === 100;

@@ -74,7 +74,7 @@ curl -H "Authorization: Bearer $TOKEN" \
           "bestFineValue": 74,
           "fineValues": [74, 61, 78, 55],
           "shots": [
-            { "number": 1, "matchCode": 12, "value": 4, "fineValue": 74, "mouche": false, "hitSector": 1,
+            { "number": 1, "matchCode": 12, "value": 4, "fineValue": 74, "innerTen": false, "hitSector": 1,
               "x": 39, "y": 129, "at": "2026-07-08T20:46:12.55+02:00" }
           ]
         }
@@ -99,7 +99,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 | `series` | Counting shots grouped by stage, in firing order; so are `shots` inside a series and `sighting`. The position in the array is the only ordinal: the third series is `series[2]`, its first three shots `series[2].shots[0:3]`. `targetType` is target letter plus scale: `A10`, `B4`, `S10` (Sau). `fineValues` are the shots' fine values in firing order; `bestFineValue` the best among hits (misses excluded), the usual tie-breaker |
 | `shots[].number` | The device's shot count: counting shots count from 1 across the whole pass, sighting shots have their own count. It matches the device display, it is not a position inside a series |
 | `shots[].matchCode` | The event match (Stich) the operator entered for the pass, stored by the device on every shot. `null` outside events. It is independent of `targetCode`: one program is shot under several match codes |
-| `shots[].fineValue` | Tenth-ring value (`74` = 7.4); the ring `value` follows from it, not the reverse, so the compact lists carry fine values. The usual tie-breaker, the best fine value of a series, is `series[].bestFineValue`. `mouche`: centre hit. `hitSector`: `1` is twelve o'clock, clockwise in 45° steps, `0` centre, `null` unknown. `x`, `y`: device coordinates |
+| `shots[].fineValue` | Tenth-ring value (`74` = 7.4); the ring `value` follows from it, not the reverse, so the compact lists carry fine values. The usual tie-breaker, the best fine value of a series, is `series[].bestFineValue`. `innerTen`: the device's centre-hit flag (Mouche); such a hit also has `hitSector` `0`. `hitSector`: `1` is twelve o'clock, clockwise in 45° steps, `0` centre, `null` unknown. `x`, `y`: hit coordinates in mm from the centre, `y` up |
 | `sighting` | Probe series, same shape as `series`, one per stage. Never counted in `totals` |
 | `startedAt`, `finishedAt`, `at` | ISO 8601 with the range's UTC offset. `finishedAt` is `null` until the device writes the end total |
 

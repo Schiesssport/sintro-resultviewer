@@ -22,7 +22,8 @@ public sealed record Shot(
     int? MatchCode,
     int Value,
     int FineValue,
-    bool Mouche,
+    // The device's inner-ten flag; it also reports such a hit as HitSector 0.
+    bool InnerTen,
     // Clock sector 1-8 of the hit, 0 for a centre hit, null when the device reported none.
     int? HitSector,
     double X,

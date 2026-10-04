@@ -224,7 +224,7 @@ describe('shotGroups', () => {
         const groups = shotGroups(withSeries([
             {
                 valuation: 10, targetType: 'A10', subtotal: 19, bestFineValue: 96,
-                shots: [{ value: 9, mouche: false }, { value: 10, mouche: true }],
+                shots: [{ value: 9, innerTen: false }, { value: 10, innerTen: true }],
             },
         ]));
 
@@ -301,10 +301,10 @@ describe('shotGroups shot entries', () => {
 
     test('each shot carries its text and the raw sector for the ring', () => {
         assert.deepEqual(shotsOf([
-            { value: 9, mouche: false, hitSector: 3 },
-            { value: 10, mouche: true, hitSector: 0 },
-            { value: 8, mouche: false, hitSector: null },
-            { value: 0, mouche: false, hitSector: 6 },
+            { value: 9, innerTen: false, hitSector: 3 },
+            { value: 10, innerTen: true, hitSector: 0 },
+            { value: 8, innerTen: false, hitSector: null },
+            { value: 0, innerTen: false, hitSector: 6 },
         ]), [
             { text: '9', sector: 3 },
             { text: '10', sector: 0 },
@@ -313,10 +313,10 @@ describe('shotGroups shot entries', () => {
         ]);
     });
 
-    test('a mouche shows its plain ring value, never a glyph', () => {
+    test('an inner ten shows its plain ring value, never a glyph', () => {
         // On 5er and 4er targets a centre hit scores 5 or 4; a glyph in place of that digit read as a zero.
         const texts = shotsOf([
-            { value: 10, mouche: true }, { value: 5, mouche: true }, { value: 4, mouche: true },
+            { value: 10, innerTen: true }, { value: 5, innerTen: true }, { value: 4, innerTen: true },
         ]).map((shot) => shot.text);
 
         assert.deepEqual(texts, ['10', '5', '4']);
