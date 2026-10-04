@@ -502,7 +502,6 @@ body:not(.is-fullscreen) #results-scroll {
 
 /* -- Fullscreen -------------------------------------------------------------- */
 
-/* Fullscreen is read from across a room, so the dial and its value scale up together. */
 /* The ticker strip height is reserved so the result box has a stable height. */
 body.is-fullscreen {
     --shot-dial-size: 42px;

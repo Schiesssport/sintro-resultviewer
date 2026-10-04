@@ -1,9 +1,21 @@
+using Microsoft.Data.SqlClient;
 using Sintro.ResultViewer.Data.Sintro300;
 
 namespace Sintro.ResultViewer.Tests;
 
 public class ProgramMappingTests
 {
+    [RequiresDatabaseFact]
+    public async Task theDeviceTextDateIsParsedDayFirst()
+    {
+        // Mirrors StartedAtSql; the date is invented.
+        await using var connection = new SqlConnection(ApiFixture.ConnectionString);
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("SELECT TRY_CONVERT(datetime2, REPLACE('08.07.2026-20:45:54', '-', ' '), 104)", connection);
+
+        Assert.Equal(new DateTime(2026, 7, 8, 20, 45, 54), await command.ExecuteScalarAsync());
+    }
+
     [Fact]
     public void anUnparseableStartTimeIsReportedAsTheEpochSoBadDataIsVisible()
     {

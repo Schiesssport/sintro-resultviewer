@@ -4,6 +4,8 @@ Blueprint for coding agents. Keep in sync; max 10 000 chars.
 
 ## Rules
 
+Non-negotiable.
+
 1. **Always read a file before editing it** — never edit from memory.
 2. **No real personal data anywhere.** `.db/` is gitignored and stays so; device exports hold real
    shooters' names and licences. Fixtures, tests and docs use invented ones (`Hans Muster`).
@@ -139,7 +141,7 @@ is in `core/format.js`; keep it. Viewer rules that fail silently if broken (see
   None configured is valid; the session token covers the viewer. `Authorization: Bearer` is the
   only accepted header. Tokens are compared as SHA-256 digests.
 - **`TrustedProxies` is a list, not a switch**: `X-Forwarded-For` is unwound only through hops in
-  it, stopping at the first stranger.
+  it, stopping at the first stranger (`Security/ClientAddress.cs`).
 - **`TokenAuth` reads endpoint metadata:** `/health` carries `AllowAnonymous`, `/live` carries
   `QueryTokenOnUpgrade`. `UseWebSockets()` must stay before `UseTokenAuth()`: `?token=` is accepted
   only on a genuine upgrade to `/live`; a plain GET with `?token=` is always 401 (`LiveFeedTests`

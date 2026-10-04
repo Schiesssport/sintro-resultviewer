@@ -49,7 +49,11 @@ app.MapV2();
 app.MapOpenApi();
 
 app.MapViewer();
-app.UseStaticFiles();
+// Browsers cache heuristically; after an update a display would mix old and new modules until a hard reload.
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache",
+});
 
 // Only after binding is a framework-chosen port known.
 app.Lifetime.ApplicationStarted.Register(() => StartupBanner.LogReachableAddresses(

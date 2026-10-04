@@ -31,6 +31,7 @@ public sealed class TokenAuth(
         await next(context);
     }
 
+    // Routing has run: WebApplication inserts UseRouting ahead of user middleware, so the endpoint is known here; without it the check fails closed.
     // /api is the one convention shared by every version; an endpoint opts out with AllowAnonymous.
     private static bool RequiresToken(HttpContext context) =>
         context.Request.Path.StartsWithSegments("/api") &&

@@ -10,10 +10,10 @@ export const formatTime = (iso) => {
 
 const pad = (n) => String(n).padStart(2, '0');
 
-// Local day: toISOString is UTC and shifts the date after 22:00 Swiss time.
+// Local day: toISOString is UTC, which is behind local time, so it names the previous day shortly after midnight.
 export const localIsoDate = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
-// "19.09. 17:52:08" read off the ISO text, so a tablet in another timezone cannot shift range times.
+// "19.09. 17:52:08", read off the ISO text.
 export const formatDateTime = (iso) => {
     const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2}:\d{2})/.exec(String(iso ?? ''));
     return match ? `${match[3]}.${match[2]}. ${match[4]}` : '';

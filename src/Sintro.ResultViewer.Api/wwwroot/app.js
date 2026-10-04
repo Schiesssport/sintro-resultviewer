@@ -286,7 +286,7 @@ const showBoard = async (board) => {
     }
 };
 
-const boardsDialog = createBoardsDialog({ t: (key, params) => t(key, params), onShow: showBoard });
+const boardsDialog = createBoardsDialog({ t, onShow: showBoard });
 
 const exitFullscreen = async () => {
     goTo('dashboard');

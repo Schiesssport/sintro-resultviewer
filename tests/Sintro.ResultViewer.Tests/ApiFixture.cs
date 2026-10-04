@@ -16,7 +16,7 @@ public sealed class ApiFixture : WebApplicationFactory<Program>
     /// <summary>A window wide enough to cover any export; tests must not assume a particular shooting day.</summary>
     public const string WholeRange = "from=2000-01-01&to=2100-12-31";
 
-    private static string ConnectionString =>
+    public static string ConnectionString =>
         Environment.GetEnvironmentVariable("ConnectionStrings__Sintro")
         ?? "Server=localhost,11433;Database=DBSINTRO300;User Id=sa;Password=Sintro_Dev_2026!;TrustServerCertificate=true;Encrypt=false";
 

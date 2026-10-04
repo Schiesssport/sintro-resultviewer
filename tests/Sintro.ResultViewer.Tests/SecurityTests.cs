@@ -153,6 +153,16 @@ public class SecurityTests(ApiFixture fixture)
         Assert.Equal(HttpStatusCode.OK, (await fixture.CreateClient().GetAsync("/app.js")).StatusCode);
     }
 
+    [Theory]
+    [InlineData("/app.js")]
+    [InlineData("/core/format.js")]
+    public async Task staticAssetsAreRevalidatedOnEveryUse(string path)
+    {
+        var response = await fixture.CreateClient().GetAsync(path);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.CacheControl?.NoCache, "expected Cache-Control: no-cache");
+    }
+
     [Fact]
     public async Task theOpenApiDocumentNeedsNoToken()
     {

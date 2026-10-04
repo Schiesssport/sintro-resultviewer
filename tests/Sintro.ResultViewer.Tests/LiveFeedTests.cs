@@ -15,6 +15,7 @@ public class LiveFeedTests(ApiFixture fixture)
     public void theLaneFrameSerialisesWithItsDocumentedType()
     {
         var json = JsonSerializer.Serialize(new LanesFrame([]), SintroJson.Options);
+        Assert.StartsWith("{\"type\":\"lanes\"", json);
         using var document = JsonDocument.Parse(json);
         Assert.Equal("lanes", document.RootElement.GetProperty("type").GetString());
         Assert.Equal(JsonValueKind.Array, document.RootElement.GetProperty("lanes").ValueKind);

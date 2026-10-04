@@ -47,7 +47,7 @@ device. Its Sintro 300 implementation, `Data/Sintro300/SintroRepository*.cs` (on
 entity: programs, lanes, shooters and clubs, catalog), holds every SQL statement in the project; a
 query written anywhere else is a bug, because the schema's traps are documented and handled in
 exactly one place. Beside it sit the small pure helpers that carry most of the test weight:
-`ScoreCalculator` (series, valuations, totals), `SintroTime` (the device's text dates) and
+`ScoreCalculator` (series, valuations, totals), `SintroTime` (shot times combined with the program date) and
 `TargetKind`. Another device or schema version is a sibling folder implementing
 `ISintroRepository`; `LicenseNumber`, `Cursor`, `SintroClock` and the filters stay shared.
 
