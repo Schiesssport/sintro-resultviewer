@@ -45,7 +45,7 @@ public sealed record ProgramTotal(string TargetType, int? Valuation, int Value, 
 public sealed record ShootingProgram(
     int Id,
     int TargetCode,
-    string TargetProgram,
+    string TargetTitle,
     int Lane,
     DateTimeOffset StartedAt,
     DateTimeOffset? FinishedAt,
@@ -58,4 +58,4 @@ public sealed record ShootingProgram(
 
 public sealed record LaneStatus(int Number, ShootingProgram? CurrentProgram);
 
-public sealed record ProgramCatalogEntry(int TargetCode, string TargetProgram, int ProgramCount, DateTimeOffset? LastStartedAt);
+public sealed record ProgramCatalogEntry(int TargetCode, string TargetTitle, int ProgramCount, DateTimeOffset? LastStartedAt);

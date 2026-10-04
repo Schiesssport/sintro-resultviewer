@@ -10,7 +10,7 @@ const shot = (number, value, fineValue, matchCode = 11) =>
 const program = (overrides = {}) => ({
     id: 2000,
     targetCode: 41,
-    targetProgram: 'Ehrengaben',
+    targetTitle: 'Ehrengaben',
     startedAt: '2026-07-08T20:45:54+02:00',
     shooter: {
         license: '012345', firstName: 'Hans', lastName: 'Muster',

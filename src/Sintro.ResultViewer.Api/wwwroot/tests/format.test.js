@@ -12,7 +12,7 @@ const t = (key, params) => translate(TRANSLATIONS.de, key, params);
 const program = (overrides = {}) => ({
     id: 2000,
     targetCode: 31,
-    targetProgram: 'Obligatorisches Programm',
+    targetTitle: 'Obligatorisches Programm',
     lane: 6,
     startedAt: '2026-07-08T20:45:54+02:00',
     state: 'finished',
@@ -176,7 +176,7 @@ describe('laneContext', () => {
     });
 
     test('an anonymous pass shows the program alone, with no dangling separator', () => {
-        assert.equal(laneContext(program({ shooter: null, targetProgram: 'A10-Probe' })), 'A10-Probe');
+        assert.equal(laneContext(program({ shooter: null, targetTitle: 'A10-Probe' })), 'A10-Probe');
         assert.equal(laneContext(null), '');
     });
 });
@@ -339,24 +339,24 @@ describe('programLabel', () => {
 
     test('drops the empty parenthesis when there is no context at all', () => {
         assert.equal(
-            programLabel({ targetProgram: 'Feldschiessen', startedAt: null, lane: null }),
+            programLabel({ targetTitle: 'Feldschiessen', startedAt: null, lane: null }),
             'Feldschiessen');
     });
 
     test('keeps the line when the time is unusable', () => {
         assert.equal(
-            programLabel({ targetProgram: 'Feldschiessen', startedAt: 'nonsense', lane: 3 }),
+            programLabel({ targetTitle: 'Feldschiessen', startedAt: 'nonsense', lane: 3 }),
             'Feldschiessen (L3)');
     });
 
     test('keeps the time when the line is missing', () => {
         assert.equal(
-            programLabel({ targetProgram: 'Feldschiessen', startedAt: '2026-07-08T09:05:00+02:00' }),
+            programLabel({ targetTitle: 'Feldschiessen', startedAt: '2026-07-08T09:05:00+02:00' }),
             'Feldschiessen (09:05)');
     });
 
     test('line 0 is a real line, not a missing one', () => {
-        assert.match(programLabel({ targetProgram: 'X', lane: 0 }), /L0/);
+        assert.match(programLabel({ targetTitle: 'X', lane: 0 }), /L0/);
     });
 });
 
@@ -384,7 +384,7 @@ describe('tickerEntry', () => {
 
     test('drops context that is not there instead of leaving empty brackets', () => {
         assert.equal(
-            tickerEntry({ targetProgram: '', startedAt: null, lane: null, series: [series('A10', 10, 7)], shooter: shooter() }, t),
+            tickerEntry({ targetTitle: '', startedAt: null, lane: null, series: [series('A10', 10, 7)], shooter: shooter() }, t),
             'Hans Muster: 7');
     });
 });

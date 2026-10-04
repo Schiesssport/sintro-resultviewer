@@ -49,7 +49,7 @@ public sealed partial class SintroRepository
                                             WHERE s.ProgramID = e.ProgramID AND s.ShotNr <> 9999
                                               AND s.ExternalNumber IN @matchCodes))
           AND   (@lane        IS NULL OR e.LaneNr = @lane)
-          AND   (@targetProgram IS NULL OR e.Name LIKE @targetProgram ESCAPE '\')
+          AND   (@targetTitle IS NULL OR e.Name LIKE @targetTitle ESCAPE '\')
           AND   (@activeOnly  = 0 OR e.IsActive = 1)
           AND   (@finishedOnly = 0 OR e.EndShotId IS NOT NULL)
           AND   (@abandonedOnly = 0 OR (e.EndShotId IS NULL AND e.IsActive = 0))
@@ -99,7 +99,7 @@ public sealed partial class SintroRepository
         parameters.Add("anyMatchCode", filter.MatchCodes.Count > 0 ? 1 : 0);
         parameters.Add("matchCodes", filter.MatchCodes.Count > 0 ? filter.MatchCodes : [0]);
         parameters.Add("lane", filter.Lane);
-        parameters.Add("targetProgram", ContainsPattern(filter.TargetProgram));
+        parameters.Add("targetTitle", ContainsPattern(filter.TargetTitle));
         parameters.Add("activeOnly", filter.State == ProgramState.Active ? 1 : 0);
         parameters.Add("finishedOnly", filter.State == ProgramState.Finished ? 1 : 0);
         parameters.Add("abandonedOnly", filter.State == ProgramState.Abandoned ? 1 : 0);
@@ -215,7 +215,7 @@ public sealed partial class SintroRepository
         return new ShootingProgram(
             Id: row.ProgramID,
             TargetCode: row.Number,
-            TargetProgram: row.Name,
+            TargetTitle: row.Name,
             Lane: row.LaneNr,
             StartedAt: clock.ToOffset(start),
             FinishedAt: FinishedAt(start, shots),

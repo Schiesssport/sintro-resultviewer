@@ -98,8 +98,8 @@ internal static class V2Descriptions
 
     public const string Catalog = """
         Not a lookup table and not paged. The operator renames programs freely, so one
-        targetCode can appear under several targetProgram names. Filter /programs by
-        targetCode and/or targetProgram using the pairs listed here. lastStartedAt is when
+        targetCode can appear under several targetTitle names. Filter /programs by
+        targetCode and/or targetTitle using the pairs listed here. lastStartedAt is when
         a program of that pair was last started.
         """;
 

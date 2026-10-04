@@ -69,7 +69,7 @@ public static class V2Endpoints
 
         api.MapGet("/program-catalog", ListCatalog)
            .WithTags(TagReference)
-           .WithSummary("Distinct (targetCode, targetProgram) pairs present, with counts")
+           .WithSummary("Distinct (targetCode, targetTitle) pairs present, with counts")
            .WithDescription(V2Descriptions.Catalog);
     }
 
@@ -109,7 +109,7 @@ public static class V2Endpoints
         CancellationToken token,
         [FromQuery] string? state = null,
         [FromQuery] string? targetCode = null,
-        [FromQuery] string? targetProgram = null,
+        [FromQuery] string? targetTitle = null,
         [FromQuery] string? matchCode = null,
         [FromQuery] string? license = null,
         [FromQuery] int? lane = null,
@@ -132,7 +132,7 @@ public static class V2Endpoints
         {
             State = parsedState,
             TargetCodes = targetCodes,
-            TargetProgram = targetProgram,
+            TargetTitle = targetTitle,
             MatchCodes = matchCodes,
             Licenses = V2Query.SplitList(license),
             Lane = lane,

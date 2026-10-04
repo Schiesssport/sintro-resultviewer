@@ -6,7 +6,7 @@ public sealed record ProgramFilter
 {
     public ProgramState? State { get; init; }
     public IReadOnlyList<int> TargetCodes { get; init; } = [];
-    public string? TargetProgram { get; init; }
+    public string? TargetTitle { get; init; }
     // A pass matches when any real shot carries one of these codes; the device writes it per shot.
     public IReadOnlyList<int> MatchCodes { get; init; } = [];
     public IReadOnlyList<string> Licenses { get; init; } = [];

@@ -29,7 +29,7 @@ One item is one *program*: one shooter's pass at the target, a "Passe". Newest f
 | `from`, `to` | Date window, `YYYY-MM-DD`, inclusive. **Default: today only.** |
 | `state` | `active` (on a line now), `finished` (end total written), `abandoned` (neither) |
 | `targetCode` | Program number on the device, one or a comma-separated list: `targetCode=41,44` |
-| `targetProgram` | Program name contains text |
+| `targetTitle` | Program name contains text |
 | `matchCode` | Passes with a shot carrying one of these match codes, comma-separated like `targetCode` |
 | `license` | Shooter's licence number, leading zeros optional; comma-separated for several shooters |
 | `lane` | Line number |
@@ -48,7 +48,7 @@ curl -H "Authorization: Bearer $TOKEN" \
     {
       "id": 2000,
       "targetCode": 31,
-      "targetProgram": "Hirssimatch Vorrunde",
+      "targetTitle": "Hirssimatch Vorrunde",
       "lane": 6,
       "startedAt": "2026-07-08T20:45:54+02:00",
       "finishedAt": "2026-07-08T20:46:51.89+02:00",
@@ -95,7 +95,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 | `duplicateLicense` | The device has no unique constraint on licences; `true` means another shooter carries the same number |
 | `totals` | One entry per target and ring scale, in the order first shot: `value` is the sum of the counting shots on that scale, `fineValues` their fine values in firing order. A pass shot on one scale has exactly one entry; a pass that changed scale has several, never one number across scales. `valuation: null` means the device recorded no scale for those series |
 | `totals[].valuation` | Ring scale: `4`, `5`, `10`, `100` |
-| `targetCode`, `targetProgram` | The program number and name as the operator set them on the device. Free text, not a key: operators rename programs |
+| `targetCode`, `targetTitle` | The program number and name as the operator set them on the device. Free text, not a key: operators rename programs |
 | `series` | Counting shots grouped by stage, in firing order; so are `shots` inside a series and `sighting`. The position in the array is the only ordinal: the third series is `series[2]`, its first three shots `series[2].shots[0:3]`. `targetType` is target letter plus scale: `A10`, `B4`, `S10` (Sau). `fineValues` are the shots' fine values in firing order; `bestFineValue` the best among hits (misses excluded), the usual tie-breaker |
 | `shots[].number` | The device's shot count: counting shots count from 1 across the whole pass, sighting shots have their own count. It matches the device display, it is not a position inside a series |
 | `shots[].matchCode` | The event match (Stich) the operator entered for the pass, stored by the device on every shot. `null` outside events. It is independent of `targetCode`: one program is shot under several match codes |
@@ -145,7 +145,7 @@ device prunes its oldest passes.
 | `GET /shooters?q=&club=&from=&to=` | Registered shooters, paged. `q` matches name or licence; `from`/`to` keeps only shooters with a pass in that window |
 | `GET /shooters/{license}` | Every shooter on that licence plus their passes (paged with `cursor`, `limit`, `order`) |
 | `GET /clubs?q=` | The Swiss club register as held by the device, paged |
-| `GET /program-catalog` | Distinct `(targetCode, targetProgram)` pairs with counts; operators rename programs freely |
+| `GET /program-catalog` | Distinct `(targetCode, targetTitle)` pairs with counts; operators rename programs freely |
 | `GET /live` | Every line with the pass currently on it, `currentProgram: null` when free |
 | `GET /health` | `{ databaseReachable, today, liveClients, publicExposure }`, no token needed |
 

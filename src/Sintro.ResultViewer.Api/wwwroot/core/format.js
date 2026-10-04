@@ -86,7 +86,7 @@ export const matchesFilter = (program, query, labelText = '') => {
     if (terms.length === 0) return true;
 
     const haystack = [
-        program.targetProgram,
+        program.targetTitle,
         program.targetCode,
         program.lane,
         labelText,
@@ -107,18 +107,18 @@ const whenAndWhere = (program) => {
 
 // Time and line ride along instead of taking columns.
 export const programLabel = (program) => {
-    const name = program?.targetProgram ?? '';
+    const name = program?.targetTitle ?? '';
     const context = whenAndWhere(program);
     return context ? `${name} (${context})` : name;
 };
 
 export const laneContext = (program) =>
-    [program?.shooter?.club?.name, program?.targetProgram].filter(Boolean).join(' · ');
+    [program?.shooter?.club?.name, program?.targetTitle].filter(Boolean).join(' · ');
 
 export const tickerEntry = (program, t) => {
     const name = shooterLabel(program, t).text;
     const total = resultText(program) || '–';
-    const context = [program?.targetProgram, whenAndWhere(program)].filter(Boolean).join(', ');
+    const context = [program?.targetTitle, whenAndWhere(program)].filter(Boolean).join(', ');
 
     return context ? `${name}: ${total} (${context})` : `${name}: ${total}`;
 };

@@ -37,7 +37,7 @@ const shooterColumns = (program) => ({
     firstName: program.shooter?.firstName ?? '',
     club: program.shooter?.club?.name ?? '',
     startedAt: program.startedAt ?? '',
-    program: program.targetProgram ?? '',
+    program: program.targetTitle ?? '',
 });
 
 // Sorting and the result range use the first scale's sum; the text shows every scale when they do not add.

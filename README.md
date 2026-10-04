@@ -117,11 +117,11 @@ with [`docs/api.md`](docs/api.md): access setup, the results list field by field
 | Endpoint | Returns |
 |---|---|
 | `GET /live` | Every line and the pass currently on it. The same URL upgrades to a **WebSocket** pushing changes |
-| `GET /programs` | Passes, newest first. `state`, `targetCode`, `targetProgram`, `matchCode`, `license`, `lane`, `from`, `to`, `withoutResult`, `order`, `cursor`, `limit` |
+| `GET /programs` | Passes, newest first. `state`, `targetCode`, `targetTitle`, `matchCode`, `license`, `lane`, `from`, `to`, `withoutResult`, `order`, `cursor`, `limit` |
 | `GET /programs/{id}` | One pass with all series and shots |
 | `GET /shooters`, `/shooters/{license}` | Registered shooters, optionally only those with a pass in `from`/`to`; licence lookup with their passes (also cursor-paged) |
 | `GET /clubs` | The Swiss club register held by the device |
-| `GET /program-catalog` | Distinct `(targetCode, targetProgram)` pairs present, with counts |
+| `GET /program-catalog` | Distinct `(targetCode, targetTitle)` pairs present, with counts |
 | `GET /health` | Database reachability (no token required) |
 
 `/docs` renders the OpenAPI document as a browsable, try-it-here page; `/openapi/v2.json` is the

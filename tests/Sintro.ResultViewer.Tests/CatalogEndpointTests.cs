@@ -251,7 +251,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
 
         // Operators rename programs, so one number can appear under several names.
         Assert.Equal(catalog.Count,
-            catalog.Select(entry => (entry.TargetCode, entry.TargetProgram)).Distinct().Count());
+            catalog.Select(entry => (entry.TargetCode, entry.TargetTitle)).Distinct().Count());
     }
 
     [Fact]

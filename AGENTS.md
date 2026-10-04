@@ -109,7 +109,7 @@ The integration tests assert these rules.
 | `Shooters.StartNr` **is the licence number**, no length cap | Six digits, zero-padded; 7-9 digits planned |
 | `shooter: null` is normal | Most passes are anonymous |
 | Parse `StartTime` as `dd.MM.yyyy-HH:mm:ss`, emit ISO 8601 | Day-first text; its order is meaningless |
-| `targetCode`/`targetProgram` = `Programs.Number`/`Name`, free text | Operators rename programs |
+| `targetCode`/`targetTitle` = `Programs.Number`/`Name`, free text | Operators rename programs |
 | `matchCode` = `Shots.ExternalNumber`, `0` → `null` | The event Stich, per shot |
 | `TargetType` is the Scheibe: `0`=A, `1`=B, `3`=S (Sau) | Matches the A/B prefixes in program names |
 | `hitSector` 1 is twelve o'clock, **clockwise** in 45° steps | Derived from the mean `atan2(y,x)` per sector |
