@@ -104,14 +104,14 @@ split as [OpenRangeOffice](https://github.com/Schiesssport/OpenRangeOffice):
 | | |
 |---|---|
 | `wwwroot/core/` | **Pure logic.** No DOM, no `fetch`, no globals. Unit-tested under `node --test` |
-| `wwwroot/app.js`, `docs.js` | The app layer. Owns the DOM, and only it may |
+| `wwwroot/app.js`, `boards-dialog.js`, `browse.js`, `docs.js`, `dom.js` | The DOM layer. Owns the DOM, and only it may |
 | `wwwroot/api.js` | `fetch` and WebSocket client |
 | `wwwroot/tokens.css` | Vendored from the shared [design system](https://github.com/Schiesssport/design-system), plus a clearly marked block of project-local tokens at the end. Never hard-code a colour in `styles.css`; derived tints use `color-mix()` on a token |
 
 Anything that can be tested without a browser belongs in `core/`. That is where the interesting
-parts live: `format.js` (labels, shot rendering, the shooter fallback chain), `sectors.js` (the hit
+parts live: `format.js` (labels, the shooter fallback chain), `markup.js` (the HTML strings of every view), `sectors.js` (the hit
 dial), `lanes.js` (when a line frees up, and the 60-second hold that keeps a finished pass on its line
-after the device has already cleared the lane), `ticker.js` (display settings, and how fast the marquee runs), `boards.js` (the
+after the device has already cleared the lane), `display.js` (display settings, and how fast the marquee runs), `boards.js` (the
 remembered display list), `browse.js` (rows, sorting and export text of the result browser), `viewmode.js`
 (which view a URL means), `openapi.js` (reading the spec for `/docs`, and which URLs the try box may
 call with the token), `i18n.js` (German and French — a test asserts every key is used and every

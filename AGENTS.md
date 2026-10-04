@@ -55,7 +55,7 @@ src/Sintro.ResultViewer.Api/
   Live/             LaneWatcher (polls) → LiveHub (WebSocket fan-out)
   Api/V2/           VERSION-SPECIFIC: routes, tags, wire envelopes
   Viewer/           page routes, session token injected
-  wwwroot/          core/ = PURE logic (i18n, format, sectors, lanes, viewmode, ticker, boards, browse);
+  wwwroot/          core/ = PURE logic (i18n, format, sectors, lanes, viewmode, display, markup, boards, browse);
                     app.js, docs.js, browse.js = DOM; tests/
 tests/Sintro.ResultViewer.Tests/
 ```

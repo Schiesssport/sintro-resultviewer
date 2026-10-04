@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -23,8 +23,13 @@ const keysInFiles = (files) => {
     return keys;
 };
 
+const pageFiles = () => [
+    ...readdirSync(root).filter((f) => /\.(js|html)$/.test(f)),
+    ...readdirSync(join(root, 'core')).map((f) => `core/${f}`),
+];
+
 const keysInUse = () => {
-    const keys = keysInFiles(['app.js', 'docs.js', 'browse.js', 'core/format.js', 'index.html', 'docs.html', 'browse.html']);
+    const keys = keysInFiles(pageFiles());
 
     // Built from state: t(`live.${state}`), t(display.reasonKey), t(`fullscreen.mode.${target}`).
     for (const key of [

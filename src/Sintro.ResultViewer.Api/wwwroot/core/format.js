@@ -10,6 +10,17 @@ export const formatTime = (iso) => {
     return match ? `${match[1]}:${match[2]}` : '';
 };
 
+const pad = (n) => String(n).padStart(2, '0');
+
+// Local day: toISOString is UTC and shifts the date after 22:00 Swiss time.
+export const localIsoDate = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+// "19.09. 17:52:08" read off the ISO text, so a tablet in another timezone cannot shift range times.
+export const formatDateTime = (iso) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2}:\d{2})/.exec(String(iso ?? ''));
+    return match ? `${match[3]}.${match[2]}. ${match[4]}` : '';
+};
+
 // Most passes are anonymous; the chain name → licence → free text → line + time never fails.
 export const shooterLabel = (program, t) => {
     const shooter = program.shooter ?? null;

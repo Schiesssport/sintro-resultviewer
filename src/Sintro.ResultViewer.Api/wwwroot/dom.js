@@ -1,4 +1,5 @@
 // DOM helpers shared by the three pages. Nothing here is pure; core/ stays DOM-free.
+import { localIsoDate } from './core/format.js';
 
 const ATTRIBUTE_TARGETS = [
     ['data-i18n', 'i18n', (node, text) => { node.textContent = text; }],
@@ -10,5 +11,13 @@ const ATTRIBUTE_TARGETS = [
 export const applyTranslations = (t, root = document) => {
     for (const [attribute, dataKey, apply] of ATTRIBUTE_TARGETS) {
         for (const node of root.querySelectorAll(`[${attribute}]`)) apply(node, t(node.dataset[dataKey]));
+    }
+};
+
+export const readToday = async (api) => {
+    try {
+        return (await api.health()).today;
+    } catch {
+        return localIsoDate(new Date());
     }
 };

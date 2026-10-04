@@ -1,5 +1,7 @@
 // Result browser logic: flatten passes to rows per program, series or shot, and sort them. Filtering is the API's job.
 
+import { formatDateTime } from './format.js';
+
 // "41, 44" → ['41', '44']; licences lose their leading zeros so 012345 and 12345 agree.
 export const parseList = (text, { numeric = false } = {}) =>
     String(text ?? '')
@@ -25,12 +27,6 @@ const seriesGroup = (series, detail, order) => ({
     code: series.targetType ?? '',
     values: orderShots(series.shots ?? [], order).map((shot) => shotText(shot, detail)),
 });
-
-// "19.09. 17:52:08" read off the ISO text, so a tablet in another timezone cannot shift range times.
-export const formatDateTime = (iso) => {
-    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2}:\d{2})/.exec(String(iso ?? ''));
-    return match ? `${match[3]}.${match[2]}. ${match[4]}` : '';
-};
 
 const lastShotAt = (shots) => shots.at(-1)?.at ?? null;
 

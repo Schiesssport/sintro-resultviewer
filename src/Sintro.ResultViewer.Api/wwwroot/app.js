@@ -1,25 +1,24 @@
 // DOM layer of the viewer; all pure logic lives in core/. No framework, no build step.
 
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
+import { escapeHtml, shooterLabel, matchesFilter, programLabel, laneContext, localIsoDate } from './core/format.js';
 import {
-    escapeHtml, shooterLabel, totalDisplay, matchesFilter, shotGroups, programLabel, laneContext,
-    tickerEntry,
-} from './core/format.js';
-import { shotDial } from './core/sectors.js';
+    totalCell, shooterName, clubCell, shotGroupsCell, messageRow, tickerRun,
+} from './core/markup.js';
 import { isLineAvailable, dayOffsetMs, holdClearedLines } from './core/lanes.js';
-import { parseViewMode, layoutFor, pathForMode, FULLSCREEN_MODES } from './core/viewmode.js';
-import { BOARDS_STORAGE_KEY, parseBoards, normaliseBoard, boardPath, boardQuery } from './core/boards.js';
+import { parseViewMode, layoutFor, pathForMode } from './core/viewmode.js';
 import {
-    tickerConfig, tickerDurationSeconds, tickerContentKey,
-} from './core/ticker.js';
+    DEFAULT_RESULT_COUNT, parseDisplayQuery, displayQuery,
+    tickerDurationSeconds, tickerContentKey,
+} from './core/display.js';
 import { applyTranslations } from './dom.js';
+import { createBoardsDialog } from './boards-dialog.js';
 import { SintroApi } from './api.js';
 
-const RESULT_LIMIT = 50;   // office view; a display loads resultCount
 const IDLE_SWEEP_MS = 15_000;
 
 const api = new SintroApi(window.SINTRO_TOKEN);
-let ticker = tickerConfig(location.search);
+let display = parseDisplayQuery(location.search);
 
 let language = DEFAULT_LANGUAGE;
 let programs = [];
@@ -44,79 +43,6 @@ const resultColumns = () => document.querySelectorAll('.results colgroup col').l
 // Wall clock shifted onto the data's day when a ReferenceDate pins development.
 const now = () => Date.now() + clockOffsetMs;
 
-// -- Shared cells -------------------------------------------------------------
-
-const totalCell = (program) => {
-    const display = totalDisplay(program);
-    if (display.hasTotal) return String(display.value);
-
-    return display.reasonKey
-        ? `<span class="total-missing" title="${escapeHtml(t(display.reasonKey))}">–</span>`
-        : '–';
-};
-
-const shooterName = (program) => {
-    const label = shooterLabel(program, t);
-    const duplicate = label.shooter?.duplicateLicense
-        ? `<span class="badge badge-dup">${t('badge.duplicateLicense')}</span>`
-        : '';
-
-    return { label, html: `${escapeHtml(label.text)}${duplicate}` };
-};
-
-const clubCell = (program) => {
-    const name = program.shooter?.club?.name;
-    return name ? escapeHtml(name) : '<span class="value-none">–</span>';
-};
-
-// Eight wedges around the ring value with the reported sector filled; the number stays readable.
-const shotRing = (sector) => {
-    const dial = shotDial({ hitSector: sector });
-    const { cx, cy } = dial.geometry;
-    const wedges = dial.wedges.map((wedge) =>
-        `<path d="${wedge.ringPath}" class="${wedge.filled ? 'ring-wedge is-hit' : 'ring-wedge'}"/>`)
-        .join('');
-
-    return `<svg class="shot-ring${dial.isCentre ? ' is-centre' : ''}" viewBox="0 0 ${cx * 2} ${cy * 2}" aria-hidden="true">${wedges}</svg>`;
-};
-
-const shotHtml = (shot, withRing) => {
-    const value = `<span class="shot-value">${escapeHtml(shot.text)}</span>`;
-    const ring = withRing && shot.sector !== null ? shotRing(shot.sector) : '';
-
-    return `<span class="shot${withRing ? ' is-ringed' : ''}">${ring}${value}</span>`;
-};
-
-const fineValues = (group, withLast) => {
-    const last = withLast && Number.isFinite(group.lastFineValue)
-        ? `<span class="shot-fine-last" title="${escapeHtml(t('series.lastFine'))}">${group.lastFineValue}</span>`
-        : '';
-    const best = !Number.isFinite(group.bestFineValue) ? ''
-        : `<span class="shot-fine-best" title="${escapeHtml(t('series.bestFine'))}">${group.bestFineValue}</span>`;
-
-    return last || best ? `<span class="shot-group-fine">${last}${best}</span>` : '';
-};
-
-const shotGroupChip = (group, { withRings, withLast }) => `
-        <span class="shot-group" title="${escapeHtml(t('series.subtotal'))} ${group.subtotal}">
-            <span class="shot-group-code">${escapeHtml(group.code)}</span>
-            <span class="shot-group-values">${group.shots.map((shot) => shotHtml(shot, withRings)).join('')}</span>
-            ${fineValues(group, withLast)}
-        </span>`;
-
-// One chip per series: [A10 | 7 6 0 6 | 96]. Live only, the series being shot also shows its last shot's fine value.
-const shotGroupsCell = (program, { live = false } = {}) => {
-    const groups = shotGroups(program);
-    if (groups.length === 0) return '';
-
-    const chips = groups.map((group, index) =>
-        shotGroupChip(group, { withRings: live, withLast: live && index === groups.length - 1 }));
-
-    return `<div class="shot-groups">${chips.join('')}</div>`;
-};
-
-// -- Lines --------------------------------------------------------------------
-
 const freeLineRow = (lane) => `
             <tr class="lane-row is-free">
                 <td class="lane-number">${lane.number}</td>
@@ -124,7 +50,7 @@ const freeLineRow = (lane) => `
             </tr>`;
 
 const occupiedLineRow = (lane, program) => {
-    const { label, html } = shooterName(program);
+    const { label, html } = shooterName(program, t);
 
     return `
         <tr class="lane-row">
@@ -133,8 +59,8 @@ const occupiedLineRow = (lane, program) => {
                 <div class="lane-shooter-name ${label.fallback ? 'is-fallback' : ''}">${html}</div>
                 <div class="lane-context">${escapeHtml(laneContext(program))}</div>
             </td>
-            <td class="lane-total">${totalCell(program)}</td>
-            <td class="lane-shots">${shotGroupsCell(program, { live: true })}</td>
+            <td class="lane-total">${totalCell(program, t)}</td>
+            <td class="lane-shots">${shotGroupsCell(program, t, { live: true })}</td>
         </tr>`;
 };
 
@@ -175,21 +101,18 @@ const renderLines = () => {
     document.body.style.setProperty('--lane-count', String(Math.max(1, lanes.length)));
 };
 
-// -- Results ------------------------------------------------------------------
-
 const programRow = (program) => {
-    const { label, html } = shooterName(program);
+    const { label, html } = shooterName(program, t);
 
     return `<tr>
         <td class="col-club">${clubCell(program)}</td>
         <td class="col-shooter ${label.fallback ? 'shooter-fallback' : 'shooter-name'}">${html}</td>
-        <td class="col-total">${totalCell(program)}</td>
-        <td class="col-shots">${shotGroupsCell(program)}</td>
+        <td class="col-total">${totalCell(program, t)}</td>
+        <td class="col-shots">${shotGroupsCell(program, t)}</td>
         <td class="col-program">${escapeHtml(programLabel(program))}</td></tr>`;
 };
 
-const messageRow = (text) =>
-    `<tr><td colspan="${resultColumns()}" class="message">${escapeHtml(text)}</td></tr>`;
+const messageRowHere = (text) => messageRow(text, resultColumns());
 
 const visibleResults = () => programs.filter(
     (program) => matchesFilter(program, filterText, shooterLabel(program, t).text));
@@ -198,7 +121,7 @@ const visibleResults = () => programs.filter(
 // The ticker, when enabled, carries the same results minus the first tickerSkip, which the table already shows.
 const renderFullscreenResults = (body, visible) => {
     body.innerHTML = visible.map(programRow).join('');
-    return ticker.hidden ? [] : visible.slice(ticker.skip);
+    return display.hidden ? [] : visible.slice(display.skip);
 };
 
 const renderResults = () => {
@@ -206,7 +129,7 @@ const renderResults = () => {
     const body = el('results-body');
 
     if (visible.length === 0) {
-        body.innerHTML = messageRow(t('msg.empty'));
+        body.innerHTML = messageRowHere(t('msg.empty'));
         tickerItems = [];
     } else if (!layoutFor(mode).fullscreen) {
         body.innerHTML = visible.map(programRow).join('');
@@ -219,23 +142,6 @@ const renderResults = () => {
     el('result-count').textContent = t('msg.count', { shown: visible.length });
 };
 
-// -- Ticker -------------------------------------------------------------------
-
-const tickerMarkup = () => {
-    const entries = tickerItems
-        .map((item) => `<span class="ticker-entry">${escapeHtml(tickerEntry(item, t))}</span>`)
-        .join('');
-
-    // The run is doubled and translated by exactly -50%, which makes the loop seamless.
-    return `
-        <div class="ticker-viewport">
-            <div class="ticker-track">
-                <span class="ticker-run">${entries}</span>
-                <span class="ticker-run" aria-hidden="true">${entries}</span>
-            </div>
-        </div>`;
-};
-
 // Rebuilding restarts the marquee, and results reload on every live message: hence the key guard.
 const renderTicker = () => {
     const bar = el('results-ticker');
@@ -246,7 +152,7 @@ const renderTicker = () => {
     // Resume at the same point in the loop rather than jumping back to the start.
     const elapsed = document.querySelector('.ticker-track')?.getAnimations?.()[0]?.currentTime ?? 0;
 
-    bar.innerHTML = tickerItems.length === 0 ? '' : tickerMarkup();
+    bar.innerHTML = tickerItems.length === 0 ? '' : tickerRun(tickerItems, t);
     applyTickerSpeed(elapsed);
 };
 
@@ -261,7 +167,7 @@ const applyTickerSpeed = (resumeAtMs = 0) => {
         containerWidth: viewport.getBoundingClientRect().width,
         contentWidth: run.getBoundingClientRect().width,
         entryCount: tickerItems.length,
-        secondsVisible: ticker.seconds,
+        secondsVisible: display.seconds,
     });
 
     track.style.animationDuration = duration > 0 ? `${duration}s` : '';
@@ -271,8 +177,6 @@ const applyTickerSpeed = (resumeAtMs = 0) => {
         animation.currentTime = resumeAtMs % (duration * 1000);
     }
 };
-
-// -- Static text --------------------------------------------------------------
 
 const renderStaticText = () => {
     document.documentElement.lang = language;
@@ -289,8 +193,6 @@ const renderAll = () => {
     renderResults();
 };
 
-// -- Data ---------------------------------------------------------------------
-
 // Requests overlap on every live message; only the latest may render, or a stale list lands last.
 const loadResults = async () => {
     const request = ++resultsRequest;
@@ -300,7 +202,7 @@ const loadResults = async () => {
         const page = await api.programs({
             date: el('date-input').value || undefined,
             // One request feeds both the table and the ticker; resultCount sizes it on a display.
-            limit: layoutFor(mode).fullscreen ? ticker.results : RESULT_LIMIT,
+            limit: layoutFor(mode).fullscreen ? display.results : DEFAULT_RESULT_COUNT,
             state: 'finished',
         });
         if (request !== resultsRequest) return;
@@ -313,7 +215,7 @@ const loadResults = async () => {
         programs = [];
         tickerItems = [];
         renderTicker();
-        el('results-body').innerHTML = messageRow(t('msg.error', { detail: error.message }));
+        el('results-body').innerHTML = messageRowHere(t('msg.error', { detail: error.message }));
         el('result-count').textContent = '';
     }
 };
@@ -347,8 +249,6 @@ const liveState = (state) => {
     indicator.textContent = t(`live.${state}`);
 };
 
-// -- Routing ------------------------------------------------------------------
-
 const applyMode = (next) => {
     mode = next;
     const layout = layoutFor(mode);
@@ -364,10 +264,10 @@ const applyMode = (next) => {
 };
 
 // The display settings live in the URL, so every navigation re-reads them.
-const applyTickerVisibility = () => document.body.classList.toggle('is-ticker-hidden', ticker.hidden);
+const applyTickerVisibility = () => document.body.classList.toggle('is-ticker-hidden', display.hidden);
 
 const applyRoute = (next, query) => {
-    ticker = tickerConfig(query);
+    display = parseDisplayQuery(query);
     applyTickerVisibility();
     tickerKey = null;
     applyMode(next);
@@ -379,124 +279,8 @@ const goTo = (next, query = location.search) => {
     applyRoute(next, query);
 };
 
-// -- Fullscreen picker --------------------------------------------------------
-// A list of boards, each a mode plus its settings, remembered per browser so a display's configuration
-// can be looked up again. Seeded with one board per mode; the operator edits, adds and removes.
-
-let boards = [];
-
-const loadBoards = () => {
-    try {
-        boards = parseBoards(localStorage.getItem(BOARDS_STORAGE_KEY));
-    } catch {
-        boards = parseBoards(null);
-    }
-};
-
-const saveBoards = () => {
-    try {
-        localStorage.setItem(BOARDS_STORAGE_KEY, JSON.stringify(boards));
-    } catch {
-        // Private mode or blocked storage: the list still works for this page view.
-    }
-};
-
-const boardName = (board) => board.name || t(`fullscreen.mode.${board.mode}`);
-const boardUrl = (board) => new URL(boardPath(board), location.origin).href;
-
-const numberField = (index, key, label, value, min) => `
-        <label for="board-${index}-${key}">${escapeHtml(label)}</label>
-        <input type="number" id="board-${index}-${key}" data-index="${index}" data-key="${key}" value="${value}" min="${min}" max="500" step="1">`;
-
-const modeOptions = (selected) => FULLSCREEN_MODES.map((mode) =>
-    `<option value="${mode}" ${mode === selected ? 'selected' : ''}>${escapeHtml(t(`fullscreen.mode.${mode}`))}</option>`).join('');
-
-const boardSettings = (board, index) => `
-        <details class="picker-settings-details">
-            <summary>${escapeHtml(t('fullscreen.settings'))}</summary>
-            <div class="picker-settings">
-                <label for="board-${index}-name">${escapeHtml(t('fullscreen.boardName'))}</label>
-                <input type="text" id="board-${index}-name" data-index="${index}" data-key="name" value="${escapeHtml(board.name)}" placeholder="${escapeHtml(t(`fullscreen.mode.${board.mode}`))}">
-                <label for="board-${index}-mode">${escapeHtml(t('fullscreen.boardMode'))}</label>
-                <select id="board-${index}-mode" data-index="${index}" data-key="mode">${modeOptions(board.mode)}</select>
-                ${numberField(index, 'results', t('fullscreen.resultCount'), board.results, 1)}
-                ${numberField(index, 'skip', t('fullscreen.tickerSkip'), board.skip, 0)}
-                ${numberField(index, 'seconds', t('fullscreen.tickerSeconds'), board.seconds, 1)}
-                <label for="board-${index}-hidden">${escapeHtml(t('fullscreen.hideTicker'))}</label>
-                <input type="checkbox" id="board-${index}-hidden" data-index="${index}" data-key="hidden" ${board.hidden ? 'checked' : ''}>
-                <span></span>
-                <button type="button" class="btn-secondary btn-small" data-remove-board="${index}">${escapeHtml(t('fullscreen.removeBoard'))}</button>
-            </div>
-        </details>`;
-
-// A wall display is usually another screen, so every board also offers its URL for pasting.
-const renderBoards = () => {
-    el('fullscreen-modes').innerHTML = boards.map((board, index) => `
-        <div class="picker-item">
-            <div class="picker-row">
-                <div class="picker-text">
-                    <div class="picker-name" data-name="${index}">${escapeHtml(boardName(board))}</div>
-                    <div class="picker-url" data-url="${index}">${escapeHtml(boardUrl(board))}</div>
-                </div>
-                <button class="btn-action" data-open-board="${index}">${escapeHtml(t('fullscreen.show'))}</button>
-                <button class="btn-secondary" data-copy-board="${index}">${escapeHtml(t('fullscreen.copy'))}</button>
-            </div>
-            ${boardSettings(board, index)}
-        </div>`).join('') + `
-        <button type="button" class="btn-secondary" id="add-board">${escapeHtml(t('fullscreen.addBoard'))}</button>`;
-};
-
-// Reads one board's fields, stores them and refreshes only its name and URL, so typing is not interrupted.
-const onBoardInput = (event) => {
-    const index = Number(event.target.dataset.index);
-    if (!Number.isInteger(index) || !boards[index]) return;
-
-    const field = (key) => el('fullscreen-modes').querySelector(`[data-index="${index}"][data-key="${key}"]`);
-    boards[index] = normaliseBoard({
-        name: field('name').value,
-        mode: field('mode').value,
-        results: field('results').value,
-        skip: field('skip').value,
-        seconds: field('seconds').value,
-        hidden: field('hidden').checked,
-    });
-    saveBoards();
-    el('fullscreen-modes').querySelector(`[data-name="${index}"]`).textContent = boardName(boards[index]);
-    el('fullscreen-modes').querySelector(`[data-url="${index}"]`).textContent = boardUrl(boards[index]);
-};
-
-const onBoardsClick = (event) => {
-    const open = event.target.closest('[data-open-board]');
-    if (open) return void showFullscreen(boards[open.dataset.openBoard]);
-
-    const copy = event.target.closest('[data-copy-board]');
-    if (copy) return void copyBoardUrl(boards[copy.dataset.copyBoard], copy);
-
-    const remove = event.target.closest('[data-remove-board]');
-    if (remove) {
-        boards.splice(Number(remove.dataset.removeBoard), 1);
-        if (boards.length === 0) boards = parseBoards(null);
-        saveBoards();
-        return void renderBoards();
-    }
-
-    if (event.target.closest('#add-board')) {
-        boards.push(normaliseBoard({}));
-        saveBoards();
-        renderBoards();
-        el('fullscreen-modes').querySelector(`.picker-item:last-of-type details`).open = true;
-    }
-};
-
-const openFullscreenPicker = () => {
-    loadBoards();
-    renderBoards();
-    el('fullscreen-dialog').showModal();
-};
-
-const showFullscreen = async (board) => {
-    el('fullscreen-dialog').close();
-    goTo(board.mode, boardQuery(board));
+const showBoard = async (board) => {
+    goTo(board.mode, displayQuery(board));
 
     try {
         // Needs a user gesture; a /fullscreen/* URL opened directly still drops the chrome.
@@ -506,25 +290,12 @@ const showFullscreen = async (board) => {
     }
 };
 
-const copyBoardUrl = async (board, button) => {
-    try {
-        await navigator.clipboard.writeText(boardUrl(board));
-    } catch {
-        // Clipboard needs a secure context; on plain http the URL beside the button is still selectable.
-        button.textContent = t('fullscreen.copyFailed');
-        return;
-    }
-
-    button.textContent = t('fullscreen.copied');
-    setTimeout(() => { button.textContent = t('fullscreen.copy'); }, 2000);
-};
+const boardsDialog = createBoardsDialog({ t: (key, params) => t(key, params), onShow: showBoard });
 
 const exitFullscreen = async () => {
     goTo('dashboard');
     if (document.fullscreenElement) await document.exitFullscreen();
 };
-
-// -- Wiring -------------------------------------------------------------------
 
 const attachToolbarHandlers = () => {
     el('filter-input').addEventListener('input', (event) => {
@@ -542,12 +313,8 @@ const attachToolbarHandlers = () => {
 };
 
 const attachFullscreenHandlers = () => {
-    el('fullscreen-button').addEventListener('click', openFullscreenPicker);
+    el('fullscreen-button').addEventListener('click', boardsDialog.open);
     el('fullscreen-exit').addEventListener('click', exitFullscreen);
-    el('fullscreen-dialog-close').addEventListener('click', () => el('fullscreen-dialog').close());
-
-    el('fullscreen-modes').addEventListener('input', onBoardInput);
-    el('fullscreen-modes').addEventListener('click', onBoardsClick);
 
     // Leaving browser fullscreen with Esc bypasses the button, so follow its state back.
     document.addEventListener('fullscreenchange', () => {
@@ -573,8 +340,6 @@ const attachWindowHandlers = () => {
     });
 };
 
-// -- Start --------------------------------------------------------------------
-
 // The API says which day is "today", so the date box and idle detection follow the data's day.
 const syncClock = async () => {
     try {
@@ -582,7 +347,7 @@ const syncClock = async () => {
         el('date-input').value = health.today;
         clockOffsetMs = dayOffsetMs(health.today, Date.now());
     } catch {
-        el('date-input').value = new Date().toISOString().slice(0, 10);
+        el('date-input').value = localIsoDate(new Date());
     }
 };
 

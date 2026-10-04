@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
     escapeHtml, formatTime, shooterLabel, totalDisplay, matchesFilter, laneContext,
-    shotGroups, programLabel, tickerEntry,
+    shotGroups, programLabel, tickerEntry, localIsoDate,
 } from '../core/format.js';
 import { TRANSLATIONS, translate } from '../core/i18n.js';
 
@@ -48,6 +48,12 @@ describe('escapeHtml', () => {
 
     test('escapes apostrophes, which appear in Swiss club names', () => {
         assert.equal(escapeHtml("d'Arc"), 'd&#39;Arc');
+    });
+});
+
+describe('localIsoDate', () => {
+    test('uses the local day, not the UTC one', () => {
+        assert.equal(localIsoDate(new Date(2026, 6, 8, 23, 30)), '2026-07-08');
     });
 });
 

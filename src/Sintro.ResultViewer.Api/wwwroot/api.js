@@ -78,33 +78,27 @@ export class SintroApi {
         return this.get(`/api/v2/programs?${query}`);
     }
 
-    // Every pass matching the filters, following the cursor to the end.
-    async allPrograms(filters) {
+    // Every item matching the filters, following the cursor to the end.
+    async allPages(path, filters = {}) {
         const items = [];
         let cursor = null;
         do {
             const query = new URLSearchParams({ limit: '2000' });
             for (const [key, value] of Object.entries(filters)) if (value) query.set(key, value);
             if (cursor) query.set('cursor', cursor);
-            const page = await this.get(`/api/v2/programs?${query}`);
+            const page = await this.get(`${path}?${query}`);
             items.push(...page.items);
             cursor = page.hasMore ? page.nextCursor : null;
         } while (cursor);
         return items;
     }
 
-    async allShooters(filters = {}) {
-        const items = [];
-        let cursor = null;
-        do {
-            const query = new URLSearchParams({ limit: '2000' });
-            for (const [key, value] of Object.entries(filters)) if (value) query.set(key, value);
-            if (cursor) query.set('cursor', cursor);
-            const page = await this.get(`/api/v2/shooters?${query}`);
-            items.push(...page.items);
-            cursor = page.hasMore ? page.nextCursor : null;
-        } while (cursor);
-        return items;
+    allPrograms(filters) {
+        return this.allPages('/api/v2/programs', filters);
+    }
+
+    allShooters(filters = {}) {
+        return this.allPages('/api/v2/shooters', filters);
     }
 
     program(id) {
