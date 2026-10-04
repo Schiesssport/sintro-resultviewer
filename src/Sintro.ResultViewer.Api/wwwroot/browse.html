@@ -16,6 +16,7 @@
         <img src="/icon.svg" alt="">
         <h1 data-i18n="browse.title">Resultate durchsuchen</h1>
         <div class="header-right">
+            <a class="header-link" href="/" data-i18n="nav.live">Liveansicht</a>
             <select id="language-select" data-i18n-aria-label="aria.language" aria-label="Sprache">
                 <option value="de" selected>DE</option>
                 <option value="fr">FR</option>
@@ -25,8 +26,9 @@
 
     <div class="card">
         <form class="browse-filters" id="filters">
-            <label>
-                <span data-i18n="toolbar.date">Datum</span>
+            <div class="filter-group">
+            <label class="filter-date">
+                <span data-i18n="browse.dateRange">Datumsbereich</span>
                 <span class="browse-range">
                     <input type="date" id="from-input">
                     <input type="date" id="to-input">
@@ -34,47 +36,84 @@
             </label>
             <label>
                 <span data-i18n="browse.targetCode">Programmnummer</span>
-                <input type="text" id="target-code-input" data-i18n-placeholder="browse.listHint" autocomplete="off">
+                <span class="input-with-button">
+                    <input type="text" id="target-code-input" data-i18n-placeholder="browse.codeHint" autocomplete="off">
+                    <button type="button" class="input-button input-clear" data-clear="target-code-input" data-i18n-title="browse.clear" data-i18n-aria-label="browse.clear">&times;</button>
+                </span>
             </label>
             <label>
                 <span data-i18n="browse.matchCode">Stichnummer</span>
-                <input type="text" id="match-code-input" data-i18n-placeholder="browse.listHint" autocomplete="off">
+                <span class="input-with-button">
+                    <input type="text" id="match-code-input" data-i18n-placeholder="browse.codeHint" autocomplete="off">
+                    <button type="button" class="input-button input-clear" data-clear="match-code-input" data-i18n-title="browse.clear" data-i18n-aria-label="browse.clear">&times;</button>
+                </span>
             </label>
-            <label>
+            <label class="filter-license">
                 <span data-i18n="browse.license">Lizenz</span>
-                <input type="text" id="license-input" data-i18n-placeholder="browse.listHint" autocomplete="off">
+                <span class="input-with-button has-two-buttons">
+                    <input type="text" id="license-input" data-i18n-placeholder="browse.licenseHint" autocomplete="off">
+                    <button type="button" class="input-button input-clear" data-clear="license-input" data-i18n-title="browse.clear" data-i18n-aria-label="browse.clear">&times;</button>
+                    <button type="button" id="shooter-dialog-button" class="input-button" data-i18n-title="browse.pickShooter" data-i18n-aria-label="browse.pickShooter">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="9" cy="8" r="3.2"/><path d="M2.5 19c0-3.3 2.9-5.5 6.5-5.5s6.5 2.2 6.5 5.5"/>
+                            <circle cx="16.5" cy="9" r="2.6"/><path d="M15.5 13.6c3.3 0 6 2 6 5"/>
+                        </svg>
+                    </button>
+                </span>
             </label>
+            </div>
+            <div class="filter-group">
             <label>
-                <span data-i18n="browse.groupBy">Zeile pro</span>
+                <span data-i18n="browse.groupBy">Resultat pro</span>
                 <select id="group-select">
                     <option value="program" data-i18n="browse.group.program">Stich</option>
                     <option value="series" data-i18n="browse.group.series">Passe</option>
                     <option value="shot" data-i18n="browse.group.shot">Schuss</option>
                 </select>
             </label>
-            <label>
-                <span data-i18n="browse.detail">Detail</span>
-                <select id="detail-select">
-                    <option value="value" data-i18n="browse.detail.value">Wert</option>
-                    <option value="fineValue" data-i18n="browse.detail.fineValue">Zehntelwert</option>
+            <label class="filter-order">
+                <span data-i18n="browse.order">Schussreihenfolge</span>
+                <select id="order-select">
+                    <option value="time-time" data-i18n="browse.order.firstFirst">Erste Passe, Erster Schuss</option>
+                    <option value="time-value" data-i18n="browse.order.firstBest">Erste Passe, Bester Schuss</option>
+                    <option value="value-time" data-i18n="browse.order.bestFirst">Beste Passe, Erster Schuss</option>
+                    <option value="value-value" data-i18n="browse.order.bestBest">Beste Passe, Bester Schuss</option>
                 </select>
             </label>
-            <label>
-                <span data-i18n="browse.order">Reihenfolge</span>
-                <select id="order-select">
-                    <option value="time" data-i18n="browse.order.time">Zeitlich</option>
-                    <option value="value" data-i18n="browse.order.value">Bester zuerst</option>
+            <label class="filter-total">
+                <span data-i18n="browse.totalBetween">Resultate zwischen</span>
+                <span class="browse-range">
+                    <input type="number" id="total-min-input" data-i18n-placeholder="browse.from" autocomplete="off">
+                    <input type="number" id="total-max-input" data-i18n-placeholder="browse.to" autocomplete="off">
+                </span>
+            </label>
+            <label class="filter-detail">
+                <span data-i18n="browse.detail">Schussanzeige</span>
+                <select id="detail-select">
+                    <option value="value" data-i18n="browse.detail.value">Programmwertung</option>
+                    <option value="fineValue" data-i18n="browse.detail.fineValue">100er Wertung</option>
                 </select>
             </label>
             <div class="browse-actions">
-                <button type="submit" class="btn-secondary" data-i18n="toolbar.reload">Aktualisieren</button>
+                <button type="submit" class="icon-button" data-i18n-title="toolbar.reload" data-i18n-aria-label="toolbar.reload">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/>
+                    </svg>
+                </button>
+                <button type="button" id="export-button" class="icon-button" data-i18n-title="browse.export" data-i18n-aria-label="browse.export">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+                    </svg>
+                </button>
                 <span id="result-count" class="result-count"></span>
+            </div>
             </div>
         </form>
 
         <div class="table-scroll">
             <table class="results browse">
                 <colgroup>
+                    <col class="cg-time">
                     <col class="cg-license">
                     <col class="cg-shooter">
                     <col class="cg-club">
@@ -85,17 +124,18 @@
                 </colgroup>
                 <thead>
                     <tr>
+                        <th class="sortable" data-sort="at"><span data-i18n="browse.time">Zeit</span></th>
                         <th class="sortable" data-sort="license"><span data-i18n="browse.license">Lizenz</span></th>
                         <th class="sortable" data-sort="name"><span data-i18n="col.shooter">Schütze</span></th>
                         <th class="sortable" data-sort="club"><span data-i18n="col.club">Verein</span></th>
-                        <th class="sortable" data-sort="targetCode"><span data-i18n="browse.targetCode">Programmnummer</span></th>
-                        <th class="sortable" data-sort="matchCode"><span data-i18n="browse.matchCode">Wettkampfnummer</span></th>
+                        <th class="sortable" data-sort="targetCode"><span data-i18n="browse.col.targetCode">Prog.-Nr.</span></th>
+                        <th class="sortable" data-sort="matchCode"><span data-i18n="browse.col.matchCode">Wettk.-Nr.</span></th>
                         <th class="sortable col-total" data-sort="total"><span data-i18n="col.total">Resultat</span></th>
                         <th data-i18n="col.shots">Schüsse</th>
                     </tr>
                 </thead>
                 <tbody id="results-body">
-                    <tr><td colspan="7" class="message" data-i18n="browse.loading"></td></tr>
+                    <tr><td colspan="8" class="message" data-i18n="browse.loading"></td></tr>
                 </tbody>
             </table>
         </div>
@@ -106,6 +146,35 @@
         <a class="btn-secondary footer-api-link" href="/" data-i18n="app.title">Resultate</a>
     </footer>
 </div>
+
+<dialog id="export-dialog" class="shooter-dialog">
+    <form method="dialog" class="shooter-dialog-form">
+        <h2 class="shooter-dialog-title" data-i18n="browse.export">Exportieren</h2>
+        <dl id="export-summary" class="export-summary"></dl>
+        <h3 class="export-heading" data-i18n="browse.exportColumns">Spalten</h3>
+        <div id="export-columns" class="export-columns"></div>
+        <div class="shooter-dialog-actions">
+            <span id="export-status" class="result-count"></span>
+            <button type="button" id="export-cancel" class="btn-secondary" data-i18n="aria.close">Schliessen</button>
+            <button type="button" id="export-copy" class="btn-secondary" data-i18n="browse.copyTsv">In Zwischenablage (TSV)</button>
+            <button type="button" id="export-download" class="btn-action" data-i18n="browse.downloadCsv">CSV herunterladen</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="shooter-dialog" class="shooter-dialog">
+    <form method="dialog" class="shooter-dialog-form">
+        <h2 class="shooter-dialog-title" data-i18n="browse.pickShooter">Schützen wählen</h2>
+        <input type="search" id="shooter-search" class="filter-input" data-i18n-placeholder="toolbar.filterPlaceholder" autocomplete="off">
+        <label class="shooter-window"><input type="checkbox" id="shooter-window" checked> <span data-i18n="browse.onlyWithResults">Nur mit Resultaten im Zeitraum</span></label>
+        <div id="shooter-list" class="shooter-list"></div>
+        <div class="shooter-dialog-actions">
+            <span id="shooter-selection" class="result-count"></span>
+            <button type="button" id="shooter-cancel" class="btn-secondary" data-i18n="aria.close">Schliessen</button>
+            <button type="button" id="shooter-apply" class="btn-action" data-i18n="browse.apply">Übernehmen</button>
+        </div>
+    </form>
+</dialog>
 
 <script>window.SINTRO_TOKEN = "{{SESSION_TOKEN}}";</script>
 <script type="module" src="/browse.js"></script>

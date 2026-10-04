@@ -93,6 +93,20 @@ export class SintroApi {
         return items;
     }
 
+    async allShooters(filters = {}) {
+        const items = [];
+        let cursor = null;
+        do {
+            const query = new URLSearchParams({ limit: '2000' });
+            for (const [key, value] of Object.entries(filters)) if (value) query.set(key, value);
+            if (cursor) query.set('cursor', cursor);
+            const page = await this.get(`/api/v2/shooters?${query}`);
+            items.push(...page.items);
+            cursor = page.hasMore ? page.nextCursor : null;
+        } while (cursor);
+        return items;
+    }
+
     program(id) {
         return this.get(`/api/v2/programs/${encodeURIComponent(id)}`);
     }
