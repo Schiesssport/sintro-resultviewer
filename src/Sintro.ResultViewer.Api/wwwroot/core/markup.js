@@ -31,8 +31,8 @@ export const clubCell = (program) => {
     return name ? escapeHtml(name) : '<span class="value-none">–</span>';
 };
 
-export const shotRing = (sector) => {
-    const dial = shotDial({ hitSector: sector });
+export const shotRing = (shot) => {
+    const dial = shotDial(shot);
     const { cx, cy } = dial.geometry;
     const wedges = dial.wedges.map((wedge) =>
         `<path d="${wedge.ringPath}" class="${wedge.filled ? 'ring-wedge is-hit' : 'ring-wedge'}"/>`)
@@ -43,7 +43,7 @@ export const shotRing = (sector) => {
 
 const shotHtml = (shot, withRing) => {
     const value = `<span class="shot-value">${escapeHtml(shot.text)}</span>`;
-    const ring = withRing && shot.sector !== null ? shotRing(shot.sector) : '';
+    const ring = withRing && shot.sector !== null ? shotRing({ hitSector: shot.sector, innerTen: shot.innerTen }) : '';
 
     return `<span class="shot${withRing ? ' is-ringed' : ''}">${ring}${value}</span>`;
 };

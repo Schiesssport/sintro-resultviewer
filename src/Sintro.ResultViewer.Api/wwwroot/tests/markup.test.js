@@ -10,8 +10,9 @@ test('a message row spans every column it is given', () => {
     assert.match(messageRow('x', 5), /colspan="5"/);
 });
 
-test('a centre hit fills the whole ring', () => {
-    assert.match(shotRing(0), /shot-ring is-centre/);
+test('an inner ten fills the whole ring, a bare sector 0 does not', () => {
+    assert.match(shotRing({ hitSector: 0, innerTen: true }), /shot-ring is-centre/);
+    assert.doesNotMatch(shotRing({ hitSector: 0, innerTen: false }), /is-centre/);
 });
 
 const series = (targetType, valuation, subtotal) => ({ targetType, valuation, subtotal, shots: [] });

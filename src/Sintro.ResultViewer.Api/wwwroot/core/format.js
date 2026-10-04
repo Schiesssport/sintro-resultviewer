@@ -130,7 +130,7 @@ export const shotGroups = (program) => (program.series ?? []).map((series) => {
     const fineIsRing = series.valuation === 100;
     return {
         code: series.targetType ?? '',
-        shots: (series.shots ?? []).map((shot) => ({ text: String(shot.value), sector: shot.hitSector ?? null })),
+        shots: (series.shots ?? []).map((shot) => ({ text: String(shot.value), sector: shot.hitSector ?? null, innerTen: shot.innerTen === true })),
         bestFineValue: fineIsRing ? null : series.bestFineValue ?? null,
         lastFineValue: fineIsRing ? null : series.shots?.at(-1)?.fineValue ?? null,
         subtotal: series.subtotal,

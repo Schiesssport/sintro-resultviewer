@@ -58,8 +58,8 @@ internal static class V2Descriptions
         several, because a 5er series added to a 10er one is meaningless. Shots carry
         matchCode, the event match the operator entered for the pass (null outside events),
         innerTen (the device's centre-hit flag, a Mouche) and hitSector: 1 is twelve o'clock
-        and the numbers run clockwise in 45 degree steps, 0 is an inner ten, and null means
-        the device reported no sector.
+        and the numbers run clockwise in 45 degree steps, 0 means no direction (an inner ten,
+        or a shot the device could not place), and null means the device reported no sector.
 
         {CollectionHelp}
         """;

@@ -69,11 +69,18 @@ describe('shotDial', () => {
         assert.deepEqual(filledSectors(shotDial({ hitSector: 4 })), [4]);
     });
 
-    test('a centre hit fills no wedge but is flagged', () => {
-        // hitSector 0 means the shot is in the middle, not in any direction.
-        const dial = shotDial({ hitSector: 0 });
+    test('an inner ten fills no wedge but is flagged', () => {
+        const dial = shotDial({ hitSector: 0, innerTen: true });
 
         assert.equal(dial.isCentre, true);
+        assert.deepEqual(filledSectors(dial), []);
+    });
+
+    test('sector 0 without the inner-ten flag is a blank ring, not a black one', () => {
+        // A shot the device could not place also carries no direction.
+        const dial = shotDial({ hitSector: 0, innerTen: false });
+
+        assert.equal(dial.isCentre, false);
         assert.deepEqual(filledSectors(dial), []);
     });
 

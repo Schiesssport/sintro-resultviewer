@@ -22,9 +22,10 @@ public sealed record Shot(
     int? MatchCode,
     int Value,
     int FineValue,
-    // The device's inner-ten flag; it also reports such a hit as HitSector 0.
+    // The device's inner-ten flag; such a hit is also reported as HitSector 0.
     bool InnerTen,
-    // Clock sector 1-8 of the hit, 0 for a centre hit, null when the device reported none.
+    // Clock sector 1-8 of the hit, 0 for no direction (an inner ten, or a shot the device could
+    // not place), null when the device reported none.
     int? HitSector,
     double X,
     double Y,

@@ -306,10 +306,10 @@ describe('shotGroups shot entries', () => {
             { value: 8, innerTen: false, hitSector: null },
             { value: 0, innerTen: false, hitSector: 6 },
         ]), [
-            { text: '9', sector: 3 },
-            { text: '10', sector: 0 },
-            { text: '8', sector: null },
-            { text: '0', sector: 6 },
+            { text: '9', sector: 3, innerTen: false },
+            { text: '10', sector: 0, innerTen: true },
+            { text: '8', sector: null, innerTen: false },
+            { text: '0', sector: 6, innerTen: false },
         ]);
     });
 

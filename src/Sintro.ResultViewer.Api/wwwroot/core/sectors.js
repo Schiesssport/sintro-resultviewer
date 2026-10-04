@@ -2,7 +2,6 @@
 
 export const SECTOR_COUNT = 8;
 const SECTOR_SPAN_DEGREES = 360 / SECTOR_COUNT;
-const CENTRE_SECTOR = 0;
 
 // Mathematical angle (0° = right, counter-clockwise) at the middle of a sector.
 export const sectorCentreAngle = (sector) => 90 - (sector - 1) * SECTOR_SPAN_DEGREES;
@@ -38,13 +37,15 @@ export const ringWedgePath = (sector, { cx, cy, r, innerR }) => {
 // The hole must hold a three-digit value: the 100er valuation scores 0-100.
 export const DEFAULT_DIAL_GEOMETRY = { cx: 10, cy: 10, r: 9.5, innerR: 6.8 };
 
-// A miss still gets a dial: the sector says where it went.
+// A miss still gets a dial: the sector says where it went. Only the device's inner-ten flag
+// blackens the ring; sector 0 alone fills nothing, since a shot without a direction is not
+// necessarily a centre hit.
 export const shotDial = (shot, geometry = DEFAULT_DIAL_GEOMETRY) => {
     const sector = shot?.hitSector ?? null;
 
     return {
         geometry,
-        isCentre: sector === CENTRE_SECTOR,
+        isCentre: shot?.innerTen === true,
         wedges: Array.from({ length: SECTOR_COUNT }, (_, index) => ({
             sector: index + 1,
             ringPath: ringWedgePath(index + 1, geometry),
