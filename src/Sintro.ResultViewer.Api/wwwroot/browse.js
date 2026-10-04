@@ -4,6 +4,7 @@
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
 import { escapeHtml, formatTime } from './core/format.js';
 import { parseList, buildRows, sortRows, formatDateTime, filterShooters, summarize, filterByTotal, parseBound, exportText, exportFileName, EXPORT_COLUMNS, DEFAULT_EXPORT_COLUMNS } from './core/browse.js';
+import { applyTranslations } from './dom.js';
 import { SintroApi } from './api.js';
 
 const RELOAD_DEBOUNCE_MS = 400;
@@ -24,10 +25,7 @@ let reloadTimer = null;
 const renderStaticText = () => {
     document.documentElement.lang = language;
     document.title = t('browse.title');
-
-    for (const node of document.querySelectorAll('[data-i18n]')) node.textContent = t(node.dataset.i18n);
-    for (const node of document.querySelectorAll('[data-i18n-placeholder]')) node.placeholder = t(node.dataset.i18nPlaceholder);
-    for (const node of document.querySelectorAll('[data-i18n-aria-label]')) node.setAttribute('aria-label', t(node.dataset.i18nAriaLabel));
+    applyTranslations(t);
 };
 
 const query = () => ({

@@ -12,6 +12,7 @@ import { BOARDS_STORAGE_KEY, parseBoards, normaliseBoard, boardPath, boardQuery 
 import {
     tickerConfig, tickerDurationSeconds, tickerContentKey,
 } from './core/ticker.js';
+import { applyTranslations } from './dom.js';
 import { SintroApi } from './api.js';
 
 const RESULT_LIMIT = 50;   // office view; a display loads resultCount
@@ -277,18 +278,7 @@ const renderStaticText = () => {
     document.documentElement.lang = language;
     document.title = t('app.title');
 
-    for (const node of document.querySelectorAll('[data-i18n]')) {
-        node.textContent = t(node.dataset.i18n);
-    }
-    for (const node of document.querySelectorAll('[data-i18n-placeholder]')) {
-        node.placeholder = t(node.dataset.i18nPlaceholder);
-    }
-    for (const node of document.querySelectorAll('[data-i18n-title]')) {
-        node.title = t(node.dataset.i18nTitle);
-    }
-    for (const node of document.querySelectorAll('[data-i18n-aria-label]')) {
-        node.setAttribute('aria-label', t(node.dataset.i18nAriaLabel));
-    }
+    applyTranslations(t);
 
     liveState(liveStatus);
     showExposureWarning();
