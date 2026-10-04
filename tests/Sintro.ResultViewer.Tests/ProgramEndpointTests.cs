@@ -28,7 +28,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
         var withResult = await ProgramsAsync($"{ApiFixture.WholeRange}&limit=5000");
 
         Assert.NotEmpty(withResult.Items);
-        Assert.All(withResult.Items, program => Assert.True(program.Series.Sum(series => series.ShotCount) > 0));
+        Assert.All(withResult.Items, program => Assert.True(program.Series.Sum(series => series.Shots.Count) > 0));
     }
 
     [Fact]
@@ -146,8 +146,8 @@ public class ProgramEndpointTests(ApiFixture fixture)
         Assert.All(withSighting, program =>
         {
             Assert.All(program.Totals, total =>
-                Assert.Equal(program.Series.Where(series => series.TargetType == total.TargetType).Sum(series => series.ShotCount), total.FineValues.Count));
-            Assert.All(program.Sighting, series => Assert.True(series.ShotCount > 0));
+                Assert.Equal(program.Series.Where(series => series.TargetType == total.TargetType).Sum(series => series.Shots.Count), total.FineValues.Count));
+            Assert.All(program.Sighting, series => Assert.NotEmpty(series.Shots));
         });
     }
 

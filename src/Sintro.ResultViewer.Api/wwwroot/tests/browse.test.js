@@ -17,8 +17,8 @@ const program = (overrides = {}) => ({
         club: { id: 1, number: '1.02.1.04.133', name: 'Feldschützen Musterdorf' },
     },
     series: [
-        { index: 1, valuation: 10, targetType: 'A10', subtotal: 17, shots: [shot(1, 8, 84), shot(2, 9, 93)] },
-        { index: 2, valuation: 10, targetType: 'A10', subtotal: 10, shots: [shot(3, 10, 102)] },
+        { valuation: 10, targetType: 'A10', subtotal: 17, shots: [shot(1, 8, 84), shot(2, 9, 93)] },
+        { valuation: 10, targetType: 'A10', subtotal: 10, shots: [shot(3, 10, 102)] },
     ],
     ...overrides,
 });
@@ -58,8 +58,8 @@ describe('buildRows', () => {
 
     test('scales that do not add keep the first sum for sorting and show both in the text', () => {
         const mixed = program({ series: [
-            { index: 1, valuation: 10, targetType: 'A10', subtotal: 17, shots: [shot(1, 8, 84), shot(2, 9, 93)] },
-            { index: 2, valuation: 100, targetType: 'A100', subtotal: 95, shots: [shot(3, 95, 95)] },
+            { valuation: 10, targetType: 'A10', subtotal: 17, shots: [shot(1, 8, 84), shot(2, 9, 93)] },
+            { valuation: 100, targetType: 'A100', subtotal: 95, shots: [shot(3, 95, 95)] },
         ] });
         const [row] = buildRows([mixed]);
         assert.equal(row.total, 17);
@@ -68,8 +68,8 @@ describe('buildRows', () => {
 
     test('a 4er and a 5er series add up to one result', () => {
         const mixed = program({ series: [
-            { index: 1, valuation: 5, targetType: 'A5', subtotal: 23, shots: [shot(1, 5, 99)] },
-            { index: 2, valuation: 4, targetType: 'B4', subtotal: 56, shots: [shot(2, 4, 90)] },
+            { valuation: 5, targetType: 'A5', subtotal: 23, shots: [shot(1, 5, 99)] },
+            { valuation: 4, targetType: 'B4', subtotal: 56, shots: [shot(2, 4, 90)] },
         ] });
         const [row] = buildRows([mixed]);
         assert.equal(row.total, 79);
@@ -98,14 +98,14 @@ describe('buildRows', () => {
 
     test('value order lists the best shot first, fine value breaking ties', () => {
         const tied = program({
-            series: [{ index: 1, targetType: 'A10', subtotal: 27, shots: [shot(1, 9, 91), shot(2, 10, 100), shot(3, 9, 97)] }],
+            series: [{ targetType: 'A10', subtotal: 27, shots: [shot(1, 9, 91), shot(2, 10, 100), shot(3, 9, 97)] }],
         });
         const rows = buildRows([tied], { shotOrder: 'value', detail: 'fineValue' });
         assert.deepEqual(rows[0].breakdown[0].values, ['100', '97', '91']);
     });
 
     test('match codes: several in a pass are listed, none stays empty', () => {
-        const mixed = program({ series: [{ index: 1, targetType: 'A10', subtotal: 19, shots: [shot(1, 9, 90, 31), shot(2, 10, 100, 32), shot(3, 10, 100, null)] }] });
+        const mixed = program({ series: [{ targetType: 'A10', subtotal: 19, shots: [shot(1, 9, 90, 31), shot(2, 10, 100, 32), shot(3, 10, 100, null)] }] });
         assert.equal(buildRows([mixed])[0].matchCode, '31, 32');
         assert.equal(buildRows([mixed], { groupBy: 'shot' })[2].matchCode, '');
     });
@@ -120,8 +120,8 @@ describe('buildRows', () => {
 
     test('best series first orders the breakdown by subtotal, shots untouched', () => {
         const better = program({ series: [
-            { index: 1, targetType: 'A10', subtotal: 10, shots: [shot(1, 10, 100)] },
-            { index: 2, targetType: 'A10', subtotal: 17, shots: [shot(2, 8, 84), shot(3, 9, 93)] },
+            { targetType: 'A10', subtotal: 10, shots: [shot(1, 10, 100)] },
+            { targetType: 'A10', subtotal: 17, shots: [shot(2, 8, 84), shot(3, 9, 93)] },
         ] });
         const rows = buildRows([better], { seriesOrder: 'value' });
         assert.deepEqual(rows[0].breakdown.map((group) => group.values), [['8', '9'], ['10']]);
@@ -244,7 +244,7 @@ describe('exportText', () => {
     });
 
     test('one column per series pads shorter rows', () => {
-        const two = [program(), program({ id: 2001, series: [{ index: 1, targetType: 'A10', subtotal: 9, shots: [shot(1, 9, 90)] }] })];
+        const two = [program(), program({ id: 2001, series: [{ targetType: 'A10', subtotal: 9, shots: [shot(1, 9, 90)] }] })];
         assert.equal(exportText(buildRows(two), ['shotsBySeries'], headers, ';'),
             'Passe 1;Passe 2\r\n8 9;10\r\n9;');
     });

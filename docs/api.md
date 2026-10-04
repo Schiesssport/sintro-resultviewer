@@ -68,12 +68,11 @@ curl -H "Authorization: Bearer $TOKEN" \
       ],
       "series": [
         {
-          "index": 1,
-          "valuation": 5,
           "targetType": "A5",
-          "shotCount": 4,
+          "valuation": 5,
           "subtotal": 14,
           "bestFineValue": 74,
+          "fineValues": [74, 61, 78, 55],
           "shots": [
             { "number": 1, "matchCode": 12, "value": 4, "fineValue": 74, "mouche": false, "hitSector": 1,
               "x": 39, "y": 129, "at": "2026-07-08T20:46:12.55+02:00" }
@@ -97,7 +96,8 @@ curl -H "Authorization: Bearer $TOKEN" \
 | `totals` | One entry per target and ring scale, in the order first shot: `value` is the sum of the counting shots on that scale, `fineValues` their fine values in firing order. A pass shot on one scale has exactly one entry; a pass that changed scale has several, never one number across scales. `valuation: null` means the device recorded no scale for those series |
 | `totals[].valuation` | Ring scale: `4`, `5`, `10`, `100` |
 | `targetCode`, `targetProgram` | The program number and name as the operator set them on the device. Free text, not a key: operators rename programs |
-| `series` | Counting shots grouped by stage. `targetType` is target letter plus scale: `A10`, `B4`, `S10` (Sau). `bestFineValue` is the best tenth-value among hits |
+| `series` | Counting shots grouped by stage, in firing order; so are `shots` inside a series and `sighting`. The position in the array is the only ordinal: the third series is `series[2]`, its first three shots `series[2].shots[0:3]`. `targetType` is target letter plus scale: `A10`, `B4`, `S10` (Sau). `fineValues` are the shots' fine values in firing order; `bestFineValue` the best among hits (misses excluded), the usual tie-breaker |
+| `shots[].number` | The device's shot count: counting shots count from 1 across the whole pass, sighting shots have their own count. It matches the device display, it is not a position inside a series |
 | `shots[].matchCode` | The event match (Stich) the operator entered for the pass, stored by the device on every shot. `null` outside events. It is independent of `targetCode`: one program is shot under several match codes |
 | `shots[].fineValue` | Tenth-ring value (`74` = 7.4); the ring `value` follows from it, not the reverse, so the compact lists carry fine values. The usual tie-breaker, the best fine value of a series, is `series[].bestFineValue`. `mouche`: centre hit. `hitSector`: `1` is twelve o'clock, clockwise in 45° steps, `0` centre, `null` unknown. `x`, `y`: device coordinates |
 | `sighting` | Probe series, same shape as `series`, one per stage. Never counted in `totals` |

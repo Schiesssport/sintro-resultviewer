@@ -19,9 +19,9 @@ const program = (overrides = {}) => ({
     shooter: null,
     contestShooterName: null,
     series: [
-        { index: 1, valuation: 5, targetType: 'A5', subtotal: 14, shots: [4, 3, 4, 3].map((value) => ({ value })) },
-        { index: 2, valuation: 5, targetType: 'A5', subtotal: 11, shots: [3, 5, 3].map((value) => ({ value })) },
-        { index: 3, valuation: 5, targetType: 'A5', subtotal: 6, shots: [4, 2, 0].map((value) => ({ value })) },
+        { valuation: 5, targetType: 'A5', subtotal: 14, shots: [4, 3, 4, 3].map((value) => ({ value })) },
+        { valuation: 5, targetType: 'A5', subtotal: 11, shots: [3, 5, 3].map((value) => ({ value })) },
+        { valuation: 5, targetType: 'A5', subtotal: 6, shots: [4, 2, 0].map((value) => ({ value })) },
     ],
     sighting: [],
     ...overrides,
@@ -223,7 +223,7 @@ describe('shotGroups', () => {
     test('one group per series, carrying code, shots and best fine value', () => {
         const groups = shotGroups(withSeries([
             {
-                index: 1, valuation: 10, targetType: 'A10', subtotal: 19, bestFineValue: 96,
+                valuation: 10, targetType: 'A10', subtotal: 19, bestFineValue: 96,
                 shots: [{ value: 9, mouche: false }, { value: 10, mouche: true }],
             },
         ]));
@@ -237,8 +237,8 @@ describe('shotGroups', () => {
 
     test('keeps series order so the groups read as they were shot', () => {
         const groups = shotGroups(withSeries([
-            { index: 1, targetType: 'A10', subtotal: 9, shots: [{ value: 9 }] },
-            { index: 2, targetType: 'A10', subtotal: 8, shots: [{ value: 8 }] },
+            { targetType: 'A10', subtotal: 9, shots: [{ value: 9 }] },
+            { targetType: 'A10', subtotal: 8, shots: [{ value: 8 }] },
         ]));
 
         assert.deepEqual(groups.map((group) => group.subtotal), [9, 8]);
@@ -246,15 +246,15 @@ describe('shotGroups', () => {
 
     test('a B target keeps its own code', () => {
         const groups = shotGroups(withSeries([
-            { index: 1, valuation: 4, targetType: 'B4', subtotal: 4, shots: [{ value: 4 }] },
+            { valuation: 4, targetType: 'B4', subtotal: 4, shots: [{ value: 4 }] },
         ]));
         assert.equal(groups[0].code, 'B4');
     });
 
     test('sighting shots are excluded — they are not the result', () => {
         const groups = shotGroups(program({
-            series: [{ index: 1, targetType: 'A10', subtotal: 9, shots: [{ value: 9 }] }],
-            sighting: { index: 0, targetType: 'A5', subtotal: 5, shots: [{ value: 5 }] },
+            series: [{ targetType: 'A10', subtotal: 9, shots: [{ value: 9 }] }],
+            sighting: { targetType: 'A5', subtotal: 5, shots: [{ value: 5 }] },
         }));
 
         assert.equal(groups.length, 1);
@@ -268,8 +268,8 @@ describe('shotGroups', () => {
 
     test('carries the last shot\'s fine value, null when the series has none', () => {
         const groups = shotGroups(withSeries([
-            { index: 1, targetType: 'A10', subtotal: 19, shots: [{ value: 9, fineValue: 94 }, { value: 10, fineValue: 102 }] },
-            { index: 2, targetType: 'A10', subtotal: 0, shots: [] },
+            { targetType: 'A10', subtotal: 19, shots: [{ value: 9, fineValue: 94 }, { value: 10, fineValue: 102 }] },
+            { targetType: 'A10', subtotal: 0, shots: [] },
         ]));
         assert.equal(groups[0].lastFineValue, 102);
         assert.equal(groups[1].lastFineValue, null);
@@ -277,8 +277,8 @@ describe('shotGroups', () => {
 
     test('a 100er series drops its fine values, which only repeat the ring value', () => {
         const groups = shotGroups(withSeries([
-            { index: 1, valuation: 100, targetType: 'A100', subtotal: 97, bestFineValue: 97, shots: [{ value: 97, fineValue: 97 }] },
-            { index: 2, valuation: 10, targetType: 'A10', subtotal: 9, bestFineValue: 94, shots: [{ value: 9, fineValue: 94 }] },
+            { valuation: 100, targetType: 'A100', subtotal: 97, bestFineValue: 97, shots: [{ value: 97, fineValue: 97 }] },
+            { valuation: 10, targetType: 'A10', subtotal: 9, bestFineValue: 94, shots: [{ value: 9, fineValue: 94 }] },
         ]));
         assert.equal(groups[0].bestFineValue, null);
         assert.equal(groups[0].lastFineValue, null);
@@ -288,7 +288,7 @@ describe('shotGroups', () => {
 
     test('a missing best fine value stays null rather than rendering as 0', () => {
         const groups = shotGroups(withSeries([
-            { index: 1, targetType: 'A10', subtotal: 0, bestFineValue: null, shots: [{ value: 0 }] },
+            { targetType: 'A10', subtotal: 0, bestFineValue: null, shots: [{ value: 0 }] },
         ]));
         assert.equal(groups[0].bestFineValue, null);
     });
@@ -296,7 +296,7 @@ describe('shotGroups', () => {
 
 describe('shotGroups shot entries', () => {
     const shotsOf = (shots) => shotGroups(program({
-        series: [{ index: 1, targetType: 'A10', subtotal: 19, shots }],
+        series: [{ targetType: 'A10', subtotal: 19, shots }],
     }))[0].shots;
 
     test('each shot carries its text and the raw sector for the ring', () => {
@@ -325,7 +325,7 @@ describe('shotGroups shot entries', () => {
     test('a missing hitSector becomes null rather than undefined', () => {
         // The renderer decides "no ring" on === null, so undefined must not leak through.
         const groups = shotGroups(program({
-            series: [{ index: 1, targetType: 'A10', subtotal: 9, shots: [{ value: 9 }] }],
+            series: [{ targetType: 'A10', subtotal: 9, shots: [{ value: 9 }] }],
         }));
 
         assert.equal(groups[0].shots[0].sector, null);

@@ -55,8 +55,8 @@ const programRow = (program, detail, seriesOrder, shotOrder) => ({
     breakdown: orderSeries(program.series ?? [], seriesOrder).map((series) => seriesGroup(series, detail, shotOrder)),
 });
 
-const seriesRows = (program, detail, shotOrder) => (program.series ?? []).map((series) => ({
-    key: `p${program.id}s${series.index}`,
+const seriesRows = (program, detail, shotOrder) => (program.series ?? []).map((series, position) => ({
+    key: `p${program.id}s${position}`,
     ...shooterColumns(program),
     matchCode: distinctMatchCodes(series.shots ?? []),
     at: lastShotAt(series.shots ?? []) ?? program.startedAt ?? '',
@@ -64,8 +64,8 @@ const seriesRows = (program, detail, shotOrder) => (program.series ?? []).map((s
     breakdown: [seriesGroup(series, detail, shotOrder)],
 }));
 
-const shotRows = (program) => (program.series ?? []).flatMap((series) => (series.shots ?? []).map((shot) => ({
-    key: `p${program.id}s${series.index}n${shot.number}`,
+const shotRows = (program) => (program.series ?? []).flatMap((series, position) => (series.shots ?? []).map((shot, shotPosition) => ({
+    key: `p${program.id}s${position}n${shotPosition}`,
     ...shooterColumns(program),
     matchCode: shot.matchCode === null || shot.matchCode === undefined ? '' : String(shot.matchCode),
     at: shot.at ?? '',

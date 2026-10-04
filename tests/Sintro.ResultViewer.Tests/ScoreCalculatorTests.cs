@@ -88,7 +88,7 @@ public class ScoreCalculatorTests
             [Shot(1, 1, 9, 1), Shot(2, 9999, 0, 0, totalType: 7, hitPosition: 255, shotTime: null)],
             [Target(1, 10)]);
 
-        Assert.Equal(1, Assert.Single(score.Series).ShotCount);
+        Assert.Single(Assert.Single(score.Series).Shots);
         Assert.Equal(9, Assert.Single(score.Totals).Value);
     }
 
@@ -118,13 +118,13 @@ public class ScoreCalculatorTests
         var score = Calculate(shots, targets);
 
         var sighting = Assert.Single(score.Sighting);
-        Assert.Equal(2, sighting.ShotCount);
+        Assert.Equal(2, sighting.Shots.Count);
         Assert.Equal(5, sighting.Subtotal);
 
         var total = Assert.Single(score.Totals);
         Assert.Equal(19, total.Value);
         Assert.Equal(10, total.Valuation);
-        Assert.Equal(2, Assert.Single(score.Series).ShotCount);
+        Assert.Equal(2, Assert.Single(score.Series).Shots.Count);
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class ScoreCalculatorTests
             [Shot(1, 1, 3, 4, shotType: 0), Shot(2, 1, 9, 5, shotType: 1)],
             [Target(4, 5), Target(5, 10)]);
 
-        Assert.Equal(4, Assert.Single(score.Sighting).Index);
+        Assert.Equal(5, Assert.Single(score.Sighting).Valuation);
         Assert.Single(score.Series);
         Assert.Equal(10, Assert.Single(score.Totals).Valuation);
     }
@@ -164,7 +164,7 @@ public class ScoreCalculatorTests
 
         var score = Calculate(shots, targets);
 
-        Assert.Equal([0, 2], score.Sighting.Select(series => series.Index));
+        Assert.Equal(["A5", "A10"], score.Sighting.Select(series => series.TargetType));
         Assert.Equal([5, 10], score.Sighting.Select(series => series.Valuation));
         Assert.Equal([4, 9], score.Sighting.Select(series => series.Subtotal));
         Assert.Equal(8, Assert.Single(score.Totals).Value);
@@ -178,7 +178,7 @@ public class ScoreCalculatorTests
             [Shot(1, 1, 9, 1), Shot(2, 2, 8, 1, totalType: 7), Shot(3, 9999, 0, 1, totalType: 7)],
             [Target(1, 10)]);
 
-        Assert.Equal(2, Assert.Single(score.Series).ShotCount);
+        Assert.Equal(2, Assert.Single(score.Series).Shots.Count);
         Assert.Equal(17, Assert.Single(score.Totals).Value);
     }
 
@@ -205,7 +205,7 @@ public class ScoreCalculatorTests
     {
         var score = Calculate([Shot(1, 1, 0, 1), Shot(2, 2, 9, 1)], [Target(1, 10)]);
 
-        Assert.Equal(2, Assert.Single(score.Series).ShotCount);
+        Assert.Equal(2, Assert.Single(score.Series).Shots.Count);
         Assert.Equal(9, Assert.Single(score.Totals).Value);
         Assert.Equal([0, 0], Assert.Single(score.Totals).FineValues);
     }
@@ -339,7 +339,7 @@ public class ScoreCalculatorTests
 
         var score = Calculate(shots, [Target(1, 10), Target(2, 10)]);
 
-        Assert.Equal([1, 2], score.Series.Select(series => series.Index));
         Assert.Equal([8, 9, 6, 7], score.Series.SelectMany(series => series.Shots).Select(shot => shot.Value));
+        Assert.Equal([2, 2], score.Series.Select(series => series.FineValues.Count));
     }
 }

@@ -29,13 +29,13 @@ public sealed record Shot(
     double Y,
     DateTimeOffset? At);
 
+/// <summary>Series and shots are in firing order; a position in the array is the only ordinal, the device's group number is not exposed.</summary>
 public sealed record ShotSeries(
-    int Index,
-    int? Valuation,
     string TargetType,
-    int ShotCount,
+    int? Valuation,
     int Subtotal,
     int? BestFineValue,
+    IReadOnlyList<int> FineValues,
     IReadOnlyList<Shot> Shots);
 
 /// <summary>The sum over every counting series of one target and ring scale; a pass that changes scale has several, never one number across scales.</summary>

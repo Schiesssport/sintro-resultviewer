@@ -12,7 +12,7 @@ const NOW = at('2026-07-08T21:00:00+02:00');
 const shot = (iso) => ({ value: 9, at: iso });
 const program = (overrides = {}) => ({
     finishedAt: null,
-    series: [{ index: 1, shots: [shot('2026-07-08T20:55:00+02:00')] }],
+    series: [{ shots: [shot('2026-07-08T20:55:00+02:00')] }],
     sighting: [],
     ...overrides,
 });
