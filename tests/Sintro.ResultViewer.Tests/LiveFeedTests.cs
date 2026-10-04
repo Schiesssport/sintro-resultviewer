@@ -6,19 +6,18 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Sintro.ResultViewer.Live;
 
+using Sintro.ResultViewer.Api.V2;
+
 namespace Sintro.ResultViewer.Tests;
 
 [Collection(ApiCollection.Name)]
 public class LiveFeedTests(ApiFixture fixture)
 {
     [Fact]
-    public void theLaneFrameSerialisesWithItsDocumentedType()
+    public void theLaneFrameIsTheLanesAndNothingElse()
     {
         var json = JsonSerializer.Serialize(new LanesFrame([]), SintroJson.Options);
-        Assert.StartsWith("{\"type\":\"lanes\"", json);
-        using var document = JsonDocument.Parse(json);
-        Assert.Equal("lanes", document.RootElement.GetProperty("type").GetString());
-        Assert.Equal(JsonValueKind.Array, document.RootElement.GetProperty("lanes").ValueKind);
+        Assert.Equal("{\"lanes\":[]}", json);
     }
 
     private static async Task<string> ReceiveTextAsync(WebSocket socket, CancellationToken token)
@@ -83,11 +82,9 @@ public class LiveFeedTests(ApiFixture fixture)
 
         using var document = JsonDocument.Parse(await ReceiveTextAsync(socket, cts.Token));
 
-        Assert.Equal("lanes", document.RootElement.GetProperty("type").GetString());
-
         // Invariant, not a count: the pushed state must equal a plain GET of the same URL.
         var snapshot = (await fixture.CreateAuthorizedClient()
-            .GetFromJsonAsync<List<Domain.LaneStatus>>("/api/v2/live", SintroJson.Options))!;
+            .GetFromJsonAsync<LanesFrame>("/api/v2/live", SintroJson.Options))!.Lanes;
 
         var lanes = document.RootElement.GetProperty("lanes");
         Assert.Equal(snapshot.Count, lanes.GetArrayLength());
@@ -144,7 +141,7 @@ public class LiveFeedTests(ApiFixture fixture)
 
         var started = Stopwatch.StartNew();
         for (var index = 0; index < 50; index++)
-            hub.Broadcast(new { type = "lanes", lanes = Array.Empty<object>() });
+            hub.Broadcast(new { lanes = Array.Empty<object>() });
 
         Assert.True(started.Elapsed < TimeSpan.FromSeconds(5),
             $"broadcast took {started.Elapsed}, which means it waited on a client");
@@ -171,7 +168,7 @@ public class LiveFeedTests(ApiFixture fixture)
         var hub = fixture.Services.GetRequiredService<LiveHub>();
 
         for (var index = 0; index < 200; index++)
-            hub.Broadcast(new { type = "lanes", lanes = Array.Empty<object>() });
+            hub.Broadcast(new { lanes = Array.Empty<object>() });
 
         Assert.True(hub.ClientCount >= 1);
     }

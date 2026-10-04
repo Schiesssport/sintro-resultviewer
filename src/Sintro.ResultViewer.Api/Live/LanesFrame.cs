@@ -1,10 +1,6 @@
-using System.Text.Json.Serialization;
 using Sintro.ResultViewer.Domain;
 
 namespace Sintro.ResultViewer.Live;
 
-public sealed record LanesFrame(IReadOnlyList<LaneStatus> Lanes)
-{
-    [JsonPropertyOrder(-1)]
-    public string Type => "lanes";
-}
+/// <summary>The firing line now: what GET /live answers and what the WebSocket pushes on every change.</summary>
+public sealed record LanesFrame(IReadOnlyList<LaneStatus> Lanes);

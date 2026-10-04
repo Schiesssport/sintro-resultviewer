@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Sintro.ResultViewer.Api.V2;
 using Sintro.ResultViewer.Domain;
+using Sintro.ResultViewer.Live;
 
 namespace Sintro.ResultViewer.Tests;
 
@@ -86,7 +87,7 @@ public class ProgramEndpointTests(ApiFixture fixture)
     public async Task activePassesAreExactlyThoseOnALine()
     {
         var active = await AllProgramsAsync("&state=active");
-        var lanes = (await Client().GetFromJsonAsync<List<LaneStatus>>("/api/v2/live", SintroJson.Options))!;
+        var lanes = (await Client().GetFromJsonAsync<LanesFrame>("/api/v2/live", SintroJson.Options))!.Lanes;
 
         var onALine = lanes
             .Where(lane => lane.CurrentProgram is not null)

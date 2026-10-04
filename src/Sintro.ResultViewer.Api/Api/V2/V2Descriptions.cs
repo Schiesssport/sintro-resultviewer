@@ -22,12 +22,13 @@ internal static class V2Descriptions
         """;
 
     public const string Live = """
-        Returns every lane the installation reports, in lane-number order, each with the
-        program currently on it. A lane with nobody shooting has currentProgram: null, and
-        lanes are always all listed so a display can show the full firing line.
+        Returns {"lanes":[...]}: every lane the installation reports, in lane-number order,
+        each with the program currently on it. A lane with nobody shooting has
+        currentProgram: null, and lanes are always all listed so a display can show the
+        full firing line.
 
         The same URL upgrades to a WebSocket. On connect it pushes the current lane state
-        immediately, then a fresh {"type":"lanes","lanes":[...]} whenever a lane changes
+        immediately, then the same {"lanes":[...]} afresh whenever a lane changes
         or a shot is fired. Browsers cannot set headers on a handshake, so the WebSocket
         upgrade — and only the upgrade — accepts the token as ?token=<token>.
         """;
@@ -97,7 +98,7 @@ internal static class V2Descriptions
     public const string Clubs = $"q matches club name or club number.\n\n{CollectionHelp}";
 
     public const string Catalog = """
-        Not a lookup table and not paged. The operator renames programs freely, so one
+        Not a lookup table and not paged, so items only. The operator renames programs freely, so one
         targetCode can appear under several targetTitle names. Filter /programs by
         targetCode and/or targetTitle using the pairs listed here. timesShot is how many
         passes were shot under the pair, lastStartedAt when the last of them started.

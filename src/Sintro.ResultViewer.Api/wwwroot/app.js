@@ -350,7 +350,7 @@ const syncClock = async () => {
 // Lines arrive over the feed; results are re-fetched because a finished pass moves into the list.
 const openLiveFeed = () => api.openLive({
     onMessage: (payload) => {
-        if (payload?.type === 'lanes') applyLanes(payload.lanes);
+        if (payload?.lanes) applyLanes(payload.lanes);
         loadResults();
     },
     onStateChange: liveState,

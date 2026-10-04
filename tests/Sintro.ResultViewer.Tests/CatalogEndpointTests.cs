@@ -4,6 +4,7 @@ using System.Text.Json;
 using Sintro.ResultViewer.Api;
 using Sintro.ResultViewer.Api.V2;
 using Sintro.ResultViewer.Domain;
+using Sintro.ResultViewer.Live;
 
 namespace Sintro.ResultViewer.Tests;
 
@@ -16,7 +17,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
     [Fact]
     public async Task everyLineIsListedInOrder()
     {
-        var lanes = (await Client().GetFromJsonAsync<List<LaneStatus>>("/api/v2/live", SintroJson.Options))!;
+        var lanes = (await Client().GetFromJsonAsync<LanesFrame>("/api/v2/live", SintroJson.Options))!.Lanes;
 
         Assert.NotEmpty(lanes);
         Assert.Equal(lanes.Select(lane => lane.Number).OrderBy(number => number),
@@ -27,7 +28,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
     [Fact]
     public async Task aLineWithAPassOnItReportsThatPassAsActive()
     {
-        var lanes = (await Client().GetFromJsonAsync<List<LaneStatus>>("/api/v2/live", SintroJson.Options))!;
+        var lanes = (await Client().GetFromJsonAsync<LanesFrame>("/api/v2/live", SintroJson.Options))!.Lanes;
 
         Assert.All(lanes.Where(lane => lane.CurrentProgram is not null),
             lane => Assert.Equal(ProgramState.Active, lane.CurrentProgram!.State));
@@ -40,7 +41,7 @@ public class CatalogEndpointTests(ApiFixture fixture)
         var raw = await Client().GetStringAsync("/api/v2/live");
 
         using var document = JsonDocument.Parse(raw);
-        foreach (var lane in document.RootElement.EnumerateArray())
+        foreach (var lane in document.RootElement.GetProperty("lanes").EnumerateArray())
         {
             Assert.True(lane.TryGetProperty("currentProgram", out _),
                 $"line {lane.GetProperty("number")} is missing currentProgram");
@@ -240,8 +241,8 @@ public class CatalogEndpointTests(ApiFixture fixture)
     [Fact]
     public async Task theProgramCatalogAccountsForEveryPass()
     {
-        var catalog = (await Client().GetFromJsonAsync<List<ProgramCatalogEntry>>(
-            "/api/v2/program-catalog", SintroJson.Options))!;
+        var catalog = (await Client().GetFromJsonAsync<Collection<ProgramCatalogEntry>>(
+            "/api/v2/program-catalog", SintroJson.Options))!.Items;
 
         var everything = (await Client().GetFromJsonAsync<CursorPage<ShootingProgram>>(
             $"/api/v2/programs?{ApiFixture.WholeRange}&withoutResult=true&limit=5000",

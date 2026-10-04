@@ -102,7 +102,7 @@ export class SintroApi {
     }
 
     lanes() {
-        return this.get('/api/v2/live');
+        return this.get('/api/v2/live').then((frame) => frame.lanes);
     }
 
     health() {

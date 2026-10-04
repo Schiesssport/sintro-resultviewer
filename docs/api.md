@@ -145,8 +145,8 @@ device prunes its oldest passes.
 | `GET /shooters?q=&club=&from=&to=` | Registered shooters, paged. `q` matches name or licence; `from`/`to` keeps only shooters with a pass in that window |
 | `GET /shooters/{license}` | Every shooter on that licence plus their passes (paged with `cursor`, `limit`, `order`) |
 | `GET /clubs?q=` | The Swiss club register as held by the device, paged |
-| `GET /program-catalog` | Distinct `(targetCode, targetTitle)` pairs with `timesShot` and `lastStartedAt`; operators rename programs freely |
-| `GET /live` | Every line with the pass currently on it, `currentProgram: null` when free |
+| `GET /program-catalog` | Distinct `(targetCode, targetTitle)` pairs with `timesShot` and `lastStartedAt`; operators rename programs freely. Not paged: `{ items }` only |
+| `GET /live` | `{ "lanes": [...] }`, every line with the pass currently on it, `currentProgram: null` when free |
 | `GET /health` | `{ databaseReachable, today, liveClients, publicExposure }`, no token needed |
 
 ### Live updates
@@ -156,7 +156,7 @@ in the URL here and only here: `ws://range-pc:8080/api/v2/live?token=<token>`. O
 the current lane state, then a new frame whenever a line changes or a shot is fired:
 
 ```json
-{ "type": "lanes", "lanes": [ { "number": 1, "currentProgram": { ...program... } }, ... ] }
+{ "lanes": [ { "number": 1, "currentProgram": { ...program... } }, ... ] }
 ```
 
 Results are not pushed. When a lane frame shows a pass as `finished`, fetch `/programs` (or that

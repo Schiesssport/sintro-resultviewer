@@ -88,7 +88,7 @@ public static class V2Endpoints
         CancellationToken token)
     {
         if (!context.WebSockets.IsWebSocketRequest)
-            return TypedResults.Ok(await repository.ListLanesAsync(token));
+            return TypedResults.Ok(new LanesFrame(await repository.ListLanesAsync(token)));
 
         // Read before upgrading: after the upgrade there is no HTTP response left to fail with.
         var snapshot = new LanesFrame(await repository.ListLanesAsync(token));
@@ -216,9 +216,9 @@ public static class V2Endpoints
         TypedResults.Ok(await repository.ListClubsAsync(
             q, V2Query.ClampLimit(limit, options.Value), cursor, token));
 
-    private static async Task<Ok<IReadOnlyList<ProgramCatalogEntry>>> ListCatalog(
+    private static async Task<Ok<Collection<ProgramCatalogEntry>>> ListCatalog(
         ISintroRepository repository, CancellationToken token) =>
-        TypedResults.Ok(await repository.ListProgramCatalogAsync(token));
+        TypedResults.Ok(new Collection<ProgramCatalogEntry>(await repository.ListProgramCatalogAsync(token)));
 
     private static async Task<Results<Ok<HealthReport>, JsonHttpResult<ApiError>>> Health(
         ISintroRepository repository,
