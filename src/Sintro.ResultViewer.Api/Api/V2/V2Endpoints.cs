@@ -114,7 +114,8 @@ public static class V2Endpoints
            .WithSummary("Registered shooters")
            .WithDescription($"""
                 Registering a shooter is optional, so most programs have none. q matches surname,
-                first name or licence number.
+                first name or licence number. With from and/or to (YYYY-MM-DD, inclusive) only
+                shooters with a pass started inside that window are listed.
 
                 {CollectionHelp}
                 """);
@@ -249,10 +250,12 @@ public static class V2Endpoints
         CancellationToken token,
         [FromQuery] string? q = null,
         [FromQuery] int? club = null,
+        [FromQuery] DateOnly? from = null,
+        [FromQuery] DateOnly? to = null,
         [FromQuery] string? cursor = null,
         [FromQuery] int? limit = null) =>
         TypedResults.Ok(await repository.ListShootersAsync(
-            q, club, ClampLimit(limit, options.Value), cursor, token));
+            q, club, from, to, ClampLimit(limit, options.Value), cursor, token));
 
     private static async Task<Results<Ok<ShooterDetail>, NotFound<ApiError>, BadRequest<ApiError>>> GetShooter(
         string license,

@@ -181,6 +181,24 @@ public class CatalogEndpointTests(ApiFixture fixture)
     }
 
     [RequiresDatabaseFact]
+    public async Task aDateWindowKeepsOnlyShootersWithAPassInIt()
+    {
+        var programs = (await Client().GetFromJsonAsync<CursorPage<ShootingProgram>>(
+            $"/api/v2/programs?{ApiFixture.WholeRange}&withoutResult=true&limit=5000", SintroJson.Options))!;
+        var registered = programs.Items.Where(program => program.Shooter is not null).ToList();
+        if (registered.Count == 0) return;
+
+        var day = DateOnly.FromDateTime(registered[0].StartedAt.DateTime);
+        var expected = registered.Where(program => DateOnly.FromDateTime(program.StartedAt.DateTime) == day)
+            .Select(program => program.Shooter!.ShooterId).ToHashSet();
+
+        var shooters = (await Client().GetFromJsonAsync<CursorPage<Shooter>>(
+            $"/api/v2/shooters?from={day:yyyy-MM-dd}&to={day:yyyy-MM-dd}&limit=2000", SintroJson.Options))!;
+
+        Assert.Equal(expected.OrderBy(id => id), shooters.Items.Select(shooter => shooter.ShooterId).OrderBy(id => id));
+    }
+
+    [RequiresDatabaseFact]
     public async Task anUnknownLicenceIs404()
     {
         var response = await Client().GetAsync("/api/v2/shooters/999999999");

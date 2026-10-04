@@ -143,7 +143,7 @@ device prunes its oldest passes.
 | Endpoint | Returns |
 |---|---|
 | `GET /programs/{id}` | One pass, same shape as a list item |
-| `GET /shooters?q=&club=` | Registered shooters, paged. `q` matches name or licence |
+| `GET /shooters?q=&club=&from=&to=` | Registered shooters, paged. `q` matches name or licence; `from`/`to` keeps only shooters with a pass in that window |
 | `GET /shooters/{license}` | Every shooter on that licence plus their passes (paged with `cursor`, `limit`, `order`) |
 | `GET /clubs?q=` | The Swiss club register as held by the device, paged |
 | `GET /program-catalog` | Distinct `(targetCode, targetProgram)` pairs with counts; operators rename programs freely |

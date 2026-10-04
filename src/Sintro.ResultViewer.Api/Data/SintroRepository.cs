@@ -291,19 +291,28 @@ public sealed class SintroRepository(string connectionString, ISintroClock clock
 
     // -- Shooters & clubs ---------------------------------------------------------
 
+    // With a window, only shooters who have a pass starting inside it; the StartTime conversion mirrors ProgramProjection.
     public async Task<CursorPage<Shooter>> ListShootersAsync(
-        string? query, int? clubId, int limit, string? cursor, CancellationToken token)
+        string? query, int? clubId, DateOnly? from, DateOnly? to, int limit, string? cursor, CancellationToken token)
     {
         await using var connection = Connect();
 
         var parameters = new DynamicParameters();
         parameters.Add("query", ContainsPattern(query));
         parameters.Add("clubId", clubId);
+        parameters.Add("windowed", from is not null || to is not null ? 1 : 0);
+        parameters.Add("from", from?.ToDateTime(TimeOnly.MinValue).Date);
+        parameters.Add("to", to?.ToDateTime(TimeOnly.MinValue).Date);
         var cursorClause = ShooterCursorClause(cursor, parameters);
 
         var (rows, nextCursor, hasMore) = await QueryPageAsync<ShooterRow>(connection, $"""
             {ShooterProjection}
             WHERE   (@clubId IS NULL OR sh.ClubID = @clubId)
+              AND   (@windowed = 0 OR EXISTS (
+                        SELECT 1 FROM dbo.Programs p
+                        WHERE p.ShooterID = sh.ShooterID
+                          AND (@from IS NULL OR CONVERT(date, TRY_CONVERT(datetime2, REPLACE(p.StartTime, '-', ' '), 104)) >= @from)
+                          AND (@to   IS NULL OR CONVERT(date, TRY_CONVERT(datetime2, REPLACE(p.StartTime, '-', ' '), 104)) <= @to)))
               AND   (@query  IS NULL
                      OR sh.LastName  LIKE @query ESCAPE '\'
                      OR sh.FirstName LIKE @query ESCAPE '\'
