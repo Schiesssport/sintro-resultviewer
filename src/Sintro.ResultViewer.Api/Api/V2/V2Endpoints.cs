@@ -51,6 +51,7 @@ public static class V2Endpoints
 
     private static void MapLive(RouteGroupBuilder api) =>
         api.MapGet("/live", Live)
+           .WithMetadata(new QueryTokenOnUpgrade())
            .WithTags(TagLive)
            .WithSummary("Lane state now — and the WebSocket for push updates")
            .WithDescription("""
@@ -157,6 +158,7 @@ public static class V2Endpoints
 
     private static void MapOperations(RouteGroupBuilder api) =>
         api.MapGet("/health", Health)
+           .AllowAnonymous()
            .WithTags(TagOperations)
            .WithSummary("Database reachability")
            .WithDescription("""
@@ -179,7 +181,7 @@ public static class V2Endpoints
             return TypedResults.Ok(await repository.ListLanesAsync(token));
 
         // Read before upgrading: after the upgrade there is no HTTP response left to fail with.
-        var snapshot = new { type = "lanes", lanes = await repository.ListLanesAsync(token) };
+        var snapshot = new LanesFrame(await repository.ListLanesAsync(token));
 
         // RequestAborted fires only after Kestrel's shutdown drain; without ApplicationStopping, Ctrl+C waits on every idle display.
         using var session = CancellationTokenSource.CreateLinkedTokenSource(token, lifetime.ApplicationStopping);

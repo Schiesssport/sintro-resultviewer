@@ -1,12 +1,10 @@
 # AGENTS.md
 
-Blueprint for coding agents. Keep in sync; max 10 000 chars.
+Keep in sync; max 10 000 chars.
 
 ## Rules
 
-Non-negotiable.
-
-1. **Always read a file before editing it** — never edit from memory.
+1. **Always read a file before editing it**.
 2. **No real personal data anywhere.** `.db/` is gitignored and stays so; device exports hold real
    shooters' names and licences. Fixtures, tests and docs use invented ones (`Hans Muster`).
 3. **This API is read-only.** No endpoint or query may write to the device database.
@@ -46,15 +44,16 @@ Dev "today" is pinned with `Sintro__ReferenceDate`.
 
 ```
 src/Sintro.ResultViewer.Api/
-  Program.cs        DI, middleware order, endpoint mapping
+  Program.cs        composition root
   StartupChecks.cs  refuses to start on a weak token; warns on public exposure
+  StartupBanner.cs  display URLs after binding
   Domain/           the device-derived model
   Data/             SintroRepository (ALL SQL), ScoreCalculator, SintroTime, SintroClock,
                     LicenseNumber, TargetKind, Cursor, ProgramFilter
   Security/         NetworkGate (CIDR) → TokenAuth (bearer) → SessionToken
   Live/             LaneWatcher (polls) → LiveHub (WebSocket fan-out)
   Api/V2/           VERSION-SPECIFIC: routes, tags, wire envelopes
-  Viewer/           injects the session token into the HTML at serve time
+  Viewer/           page routes, session token injected
   wwwroot/          core/ = PURE logic (i18n, format, sectors, lanes, viewmode, ticker, boards, browse);
                     app.js, docs.js, browse.js = DOM; tests/
 tests/Sintro.ResultViewer.Tests/
@@ -130,15 +129,16 @@ fail silently if broken:
 ## Security model
 
 `NetworkGate` (CIDR allowlist, **before auth**) → `TokenAuth` (bearer, constant-time) →
-`SessionToken` (per process start, memory only, for the viewer). Easy to break by accident:
+`SessionToken` (per start, in memory, for the viewer):
 
 - **Tokens are arrays with scopes** (`ApiReadTokens` / `ApiWriteTokens`, write implies read).
-  Configuring none is valid: the session token still covers the viewer. `Authorization: Bearer` is
+  None configured is valid; the session token covers the viewer. `Authorization: Bearer` is
   the only accepted header. Tokens are compared as SHA-256 digests.
 - **`TrustedProxies` is a list, not a switch** — `X-Forwarded-For` is unwound only through hops in
-  it, stopping at the first stranger (`Security/ClientAddress.cs`).
+  it, stopping at the first stranger.
 - **`UseWebSockets()` must stay before `UseTokenAuth()`** — `?token=` is accepted only on a genuine
-  upgrade (`IsWebSocketRequest`); a plain GET with `?token=` is always 401. `LiveFeedTests` guards both.
+  upgrade to an endpoint carrying `QueryTokenOnUpgrade`; a plain GET with `?token=` is always 401
+  (`LiveFeedTests` guards both). `/health` is open via `.AllowAnonymous()`.
 - **A forwarded hop that does not parse resolves to *no* client**, and the gate refuses it. Falling
   back to the proxy's address would admit anyone behind a public proxy (`ClientAddressTests`).
 - **`/openapi/v2.json` is token-free** (schema, not data). Never put a real licence number or
@@ -161,6 +161,5 @@ fail silently if broken:
 
 Simplicity first, also over small optimisations. Comments are short to non-existent: names and
 structure explain *what*, a comment is one line for a *why* that cannot be inferred. Functions stay
-about 25 lines; split rather than comment sections.
-YAGNI: no speculative abstractions or helpers for one caller. Never cite one export's counts as
-schema facts. No emojis.
+about 25 lines; split rather than comment sections. YAGNI: no speculative abstractions or helpers
+for one caller. Never cite one export's counts as schema facts. No emojis.

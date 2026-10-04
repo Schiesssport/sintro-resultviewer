@@ -54,5 +54,7 @@ public sealed class NetworkOptions
 
 public sealed class LiveOptions
 {
+    public const int MinimumPollMilliseconds = 250;
+
     public int PollMilliseconds { get; set; } = 1000;
 }

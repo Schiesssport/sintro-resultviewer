@@ -49,7 +49,7 @@ public class SecurityTests(ApiFixture fixture)
     public async Task everyRefusalCarriesTheSameErrorEnvelope()
     {
         var response = await fixture.CreateClient().GetAsync("/api/v2/live");
-        var body = await response.Content.ReadFromJsonAsync<Api.V2.ApiError>(SintroJson.Options);
+        var body = await response.Content.ReadFromJsonAsync<Api.ApiError>(SintroJson.Options);
 
         Assert.Equal("unauthorized", body!.Error);
         Assert.False(string.IsNullOrWhiteSpace(body.Detail));
@@ -61,7 +61,7 @@ public class SecurityTests(ApiFixture fixture)
         var response = await fixture.CreateAuthorizedClient().GetAsync("/api/v2/programs/999999999");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<Api.V2.ApiError>(SintroJson.Options);
+        var body = await response.Content.ReadFromJsonAsync<Api.ApiError>(SintroJson.Options);
         Assert.Equal("not_found", body!.Error);
     }
 
@@ -318,6 +318,17 @@ public class StartupCheckTests
             Check(new SintroOptions { MaxPageSize = maxPageSize, DefaultPageSize = defaultPageSize }));
 
         Assert.Contains("PageSize", error.Message);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(249)]
+    public void aPollIntervalBelowTheFloor_refusesToStart(int milliseconds)
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            Check(new SintroOptions { Live = new LiveOptions { PollMilliseconds = milliseconds } }));
+
+        Assert.Contains("Sintro:Live:PollMilliseconds", error.Message);
     }
 
     [Fact]

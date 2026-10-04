@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using Microsoft.Extensions.Options;
-using Sintro.ResultViewer.Api.V2;
+using Sintro.ResultViewer.Api;
 
 namespace Sintro.ResultViewer.Security;
 

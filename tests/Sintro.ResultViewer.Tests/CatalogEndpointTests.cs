@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Sintro.ResultViewer.Api;
 using Sintro.ResultViewer.Api.V2;
 using Sintro.ResultViewer.Domain;
 

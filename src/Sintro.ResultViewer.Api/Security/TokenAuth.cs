@@ -1,7 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
-using Sintro.ResultViewer.Api.V2;
+using Sintro.ResultViewer.Api;
 
 namespace Sintro.ResultViewer.Security;
 
@@ -11,16 +12,13 @@ public sealed class TokenAuth(
     IOptions<SintroOptions> options,
     SessionToken sessionToken)
 {
-    private static readonly PathString LivePath = V2Endpoints.RoutePrefix + "/live";
-    private static readonly PathString HealthPath = V2Endpoints.RoutePrefix + "/health";
-
     // Digests, so FixedTimeEquals never returns early on a length mismatch and reveals a token's length.
     private readonly byte[][] _knownDigests =
         [.. options.Value.AllTokens.Select(Digest), Digest(sessionToken.Value)];
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (RequiresToken(context.Request.Path) && !IsKnownToken(PresentedToken(context)))
+        if (RequiresToken(context) && !IsKnownToken(PresentedToken(context)))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             context.Response.Headers.WWWAuthenticate = "Bearer";
@@ -33,9 +31,10 @@ public sealed class TokenAuth(
         await next(context);
     }
 
-    // /health stays open for monitoring; the network gate still guards it.
-    private static bool RequiresToken(PathString path) =>
-        path.StartsWithSegments("/api") && !path.StartsWithSegments(HealthPath);
+    // /api is the one convention shared by every version; an endpoint opts out with AllowAnonymous.
+    private static bool RequiresToken(HttpContext context) =>
+        context.Request.Path.StartsWithSegments("/api") &&
+        context.GetEndpoint()?.Metadata.GetMetadata<IAllowAnonymous>() is null;
 
     private static string? PresentedToken(HttpContext context)
     {
@@ -43,10 +42,9 @@ public sealed class TokenAuth(
         if (header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             return header["Bearer ".Length..].Trim();
 
-        // Browsers cannot set headers on a WebSocket handshake; ?token= is accepted on a genuine upgrade only,
-        // and IsWebSocketRequest is meaningful only after UseWebSockets has run.
+        // Browsers cannot set headers on a WebSocket handshake; IsWebSocketRequest is meaningful only after UseWebSockets.
         if (context.WebSockets.IsWebSocketRequest &&
-            context.Request.Path.StartsWithSegments(LivePath) &&
+            context.GetEndpoint()?.Metadata.GetMetadata<QueryTokenOnUpgrade>() is not null &&
             context.Request.Query.TryGetValue("token", out var query))
             return query[0];
 
