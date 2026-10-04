@@ -1,4 +1,4 @@
-namespace Sintro.ResultViewer.Data;
+namespace Sintro.ResultViewer.Data.Sintro300;
 
 // Raw device rows, column names spelled exactly as the tables do (including Targeinformation's missing "t").
 
@@ -6,7 +6,6 @@ public sealed record ProgramRow(
     int ProgramID,
     int Number,
     string Name,
-    string? StartTime,
     int LaneNr,
     string? ContestShooterName,
     int? ShooterID,
@@ -17,7 +16,7 @@ public sealed record ProgramRow(
 
 public sealed record ShotRow(
     int ShotID,
-    int? ProgramID,
+    int ProgramID,
     int ShotNr,
     int PrimaryResult,
     int SecondaryResult,

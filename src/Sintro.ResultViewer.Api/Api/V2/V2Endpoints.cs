@@ -172,7 +172,7 @@ public static class V2Endpoints
 
     private static async Task<IResult> Live(
         HttpContext context,
-        SintroRepository repository,
+        ISintroRepository repository,
         LiveHub hub,
         IHostApplicationLifetime lifetime,
         CancellationToken token)
@@ -193,7 +193,7 @@ public static class V2Endpoints
     }
 
     private static async Task<Results<Ok<CursorPage<ShootingProgram>>, BadRequest<ApiError>>> ListPrograms(
-        SintroRepository repository,
+        ISintroRepository repository,
         ISintroClock clock,
         IOptions<SintroOptions> options,
         CancellationToken token,
@@ -238,7 +238,7 @@ public static class V2Endpoints
     }
 
     private static async Task<Results<Ok<ShootingProgram>, NotFound<ApiError>>> GetProgram(
-        int id, SintroRepository repository, CancellationToken token)
+        int id, ISintroRepository repository, CancellationToken token)
     {
         var program = await repository.GetProgramAsync(id, token);
         return program is null
@@ -247,7 +247,7 @@ public static class V2Endpoints
     }
 
     private static async Task<Ok<CursorPage<Shooter>>> ListShooters(
-        SintroRepository repository,
+        ISintroRepository repository,
         IOptions<SintroOptions> options,
         CancellationToken token,
         [FromQuery] string? q = null,
@@ -257,11 +257,19 @@ public static class V2Endpoints
         [FromQuery] string? cursor = null,
         [FromQuery] int? limit = null) =>
         TypedResults.Ok(await repository.ListShootersAsync(
-            q, club, from, to, ClampLimit(limit, options.Value), cursor, token));
+            new ShooterFilter
+            {
+                Query = q,
+                ClubId = club,
+                From = from,
+                To = to,
+                Limit = ClampLimit(limit, options.Value),
+                Cursor = cursor,
+            }, token));
 
     private static async Task<Results<Ok<ShooterDetail>, NotFound<ApiError>, BadRequest<ApiError>>> GetShooter(
         string license,
-        SintroRepository repository,
+        ISintroRepository repository,
         IOptions<SintroOptions> options,
         CancellationToken token,
         [FromQuery] string? order = null,
@@ -289,7 +297,7 @@ public static class V2Endpoints
     }
 
     private static async Task<Ok<CursorPage<Club>>> ListClubs(
-        SintroRepository repository,
+        ISintroRepository repository,
         IOptions<SintroOptions> options,
         CancellationToken token,
         [FromQuery] string? q = null,
@@ -299,11 +307,11 @@ public static class V2Endpoints
             q, ClampLimit(limit, options.Value), cursor, token));
 
     private static async Task<Ok<IReadOnlyList<ProgramCatalogEntry>>> ListCatalog(
-        SintroRepository repository, CancellationToken token) =>
+        ISintroRepository repository, CancellationToken token) =>
         TypedResults.Ok(await repository.ListProgramCatalogAsync(token));
 
     private static async Task<Results<Ok<HealthReport>, JsonHttpResult<ApiError>>> Health(
-        SintroRepository repository,
+        ISintroRepository repository,
         ISintroClock clock,
         LiveHub hub,
         IOptions<SintroOptions> options,

@@ -2,7 +2,7 @@
 
 A working reference for contributors: what the Sintro 300 hit-target display stores, what the
 columns actually mean, and which of them lie. **Read this before writing or changing a query** —
-almost every rule in `Data/SintroRepository.cs` and `Data/ScoreCalculator.cs` exists because of
+almost every rule in `Data/Sintro300/SintroRepository*.cs` and `Data/Sintro300/ScoreCalculator.cs` exists because of
 something on this page.
 
 The schema is the device manufacturer's, not ours. It is undocumented, so everything here was
@@ -90,8 +90,8 @@ All of these relationships are enforced by foreign keys.
 
 ## Reading a pass
 
-This is the part that matters. Each rule below is implemented in `Data/ScoreCalculator.cs` or
-`Data/SintroRepository.cs`; changing one without reading its justification will produce results
+This is the part that matters. Each rule below is implemented in `Data/Sintro300/ScoreCalculator.cs` or
+`Data/Sintro300/SintroRepository*.cs`; changing one without reading its justification will produce results
 that look plausible and are wrong.
 
 ### Not every row in `Shots` is a shot
@@ -135,7 +135,9 @@ agree; where they do not, **the highest `TargeinformationID` is current**.
 ### Dates are text, in day-first format
 
 `Programs.StartTime` is a `varchar` shaped `dd.MM.yyyy-HH:mm:ss`. It sorts meaninglessly as text and
-must be parsed. `Shots.ShotTime` is a bare time of day with no date, so a shot's real timestamp is
+must be parsed.
+The SQL `TRY_CONVERT(…, 104)` is the only parser: a `StartTime` it cannot convert leaves the program out of every date window and reports its start as the Unix epoch when fetched by id.
+`Shots.ShotTime` is a bare time of day with no date, so a shot's real timestamp is
 the pass's date plus that time — and a pass that runs past midnight needs the rollover handled.
 
 `Shots.TimeSinceNewYear` holds centiseconds since 1 January and is a usable cross-check.
@@ -212,7 +214,7 @@ Irrelevant to results, and unused here.
 | Column | Notes |
 |---|---|
 | `TargetValuation` | Ring scale: `4`, `5`, `10` or `100` |
-| `TargetType` | The target: `0` = A, `1` = B, `3` = Sau silhouette. Confirmed by a clean correlation with the `A…`/`B…` prefixes operators put in program names. Mapped in `Data/TargetKind.cs`, the single place to extend |
+| `TargetType` | The target: `0` = A, `1` = B, `3` = Sau silhouette. Confirmed by a clean correlation with the `A…`/`B…` prefixes operators put in program names. Mapped in `Data/Sintro300/TargetKind.cs`, the single place to extend |
 
 Target and valuation combine into the notation the sport already uses — `A10`, `B4`, `A100`,
 `S10` — which is what the API exposes as `targetType` on each series.

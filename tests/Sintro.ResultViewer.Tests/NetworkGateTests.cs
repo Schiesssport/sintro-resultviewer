@@ -2,12 +2,11 @@ using System.Net;
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Sintro.ResultViewer.Data;
 
 namespace Sintro.ResultViewer.Tests;
 
 /// <summary>Boots the API with an allowlist that excludes the test client's own address, so the refusal path runs for real.</summary>
-public sealed class GatedApiFixture : WebApplicationFactory<SintroRepository>
+public sealed class GatedApiFixture : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -70,7 +69,7 @@ public class NetworkGateTests : IClassFixture<GatedApiFixture>
 }
 
 /// <summary>Same setup, but with the socket peer listed as a trusted proxy.</summary>
-public sealed class TrustedProxyApiFixture : WebApplicationFactory<SintroRepository>
+public sealed class TrustedProxyApiFixture : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

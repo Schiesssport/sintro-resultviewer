@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Options;
 using Sintro.ResultViewer;
 using Sintro.ResultViewer.Data;
+using Sintro.ResultViewer.Data.Sintro300;
 using Sintro.ResultViewer.Api.V2;
 using Sintro.ResultViewer.Live;
 using Sintro.ResultViewer.Security;
@@ -26,7 +27,7 @@ builder.Services.AddSingleton<ISintroClock, SintroClock>();
 builder.Services.AddSingleton<SessionToken>();
 builder.Services.AddSingleton<LiveHub>();
 builder.Services.AddSingleton<ViewerPage>();
-builder.Services.AddSingleton(provider => new SintroRepository(
+builder.Services.AddSingleton<ISintroRepository>(provider => new SintroRepository(
     provider.GetRequiredService<IConfiguration>().GetConnectionString("Sintro")
         ?? throw new InvalidOperationException(
             "ConnectionStrings:Sintro is not configured. See appsettings.jsonc."),
@@ -57,3 +58,5 @@ app.Lifetime.ApplicationStarted.Register(() => StartupBanner.LogReachableAddress
         ?? []));
 
 app.Run();
+
+public partial class Program;

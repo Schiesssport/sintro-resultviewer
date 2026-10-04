@@ -1,4 +1,5 @@
 using Sintro.ResultViewer.Data;
+using Sintro.ResultViewer.Data.Sintro300;
 using Sintro.ResultViewer.Domain;
 
 namespace Sintro.ResultViewer.Tests;

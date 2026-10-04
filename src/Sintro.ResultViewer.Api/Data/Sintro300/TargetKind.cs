@@ -1,4 +1,4 @@
-namespace Sintro.ResultViewer.Data;
+namespace Sintro.ResultViewer.Data.Sintro300;
 
 /// <summary>Maps Targetinformation.TargetType to the Swiss target letter (0=A, 1=B, 3=S for the Sau silhouette); the only place this mapping lives.</summary>
 public static class TargetKind

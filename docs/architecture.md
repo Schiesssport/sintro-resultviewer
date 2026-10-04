@@ -29,7 +29,8 @@ src/Sintro.ResultViewer.Api/
   StartupChecks.cs  refuses to start on a weak token; warns about public exposure
   SintroOptions.cs  every configurable value
   Domain/           the model derived from the device data
-  Data/             the only place that talks to SQL, plus the pure logic around it
+  Data/             ISintroRepository and the schema-independent helpers
+    Sintro300/      everything that knows the device schema, one file per entity
   Security/         NetworkGate (CIDR) → TokenAuth (bearer) → SessionToken
   Live/             LaneWatcher polls the device; LiveHub fans out over WebSocket
   Api/V2/           everything version-specific: routes, tags, wire envelopes
@@ -38,11 +39,14 @@ src/Sintro.ResultViewer.Api/
 tests/              the .NET suite
 ```
 
-**`Data/` is the boundary.** `SintroRepository` holds every SQL statement in the project; a query
-written anywhere else is a bug, because the schema's traps are documented and handled in exactly one
-place. Around it sit small pure helpers that carry most of the test weight: `ScoreCalculator`
-(series, valuations, totals), `SintroTime` (the device's text dates), `LicenseNumber`, `TargetKind`,
-`Cursor`.
+**`Data/` is the boundary.** `ISintroRepository` is the only way the rest of the code reads the
+device. Its Sintro 300 implementation, `Data/Sintro300/SintroRepository*.cs` (one partial file per
+entity: programs, lanes, shooters and clubs, catalog), holds every SQL statement in the project; a
+query written anywhere else is a bug, because the schema's traps are documented and handled in
+exactly one place. Beside it sit the small pure helpers that carry most of the test weight:
+`ScoreCalculator` (series, valuations, totals), `SintroTime` (the device's text dates) and
+`TargetKind`. Another device or schema version is a sibling folder implementing `ISintroRepository`;
+`LicenseNumber`, `Cursor` and the filters stay shared.
 
 **`Api/V2/` is the only version-aware folder.** Routes, OpenAPI descriptions and the wire envelopes
 live there; `Domain/`, `Data/`, `Security/`, `Live/` and `Viewer/` are shared. Adding a v3 means
@@ -61,7 +65,7 @@ adding `Api/V3/` and one `app.MapV3()` line — nothing else moves. The implemen
    handshake. Tokens are arrays with scopes (`ApiReadTokens` / `ApiWriteTokens`, write implies
    read); no endpoint writes yet.
 3. **The endpoint** in `Api/V2/` parses query parameters and calls the repository.
-4. **`SintroRepository`** runs the SQL, then hands raw rows to `ScoreCalculator`.
+4. **`SintroRepository`** (via `ISintroRepository`) runs the SQL, then hands raw rows to `ScoreCalculator`.
 5. The result is serialised. **Nulls are written, never omitted** — `shooter: null` and
    `currentProgram: null` are documented states, and dropping the keys would make clients guess.
 

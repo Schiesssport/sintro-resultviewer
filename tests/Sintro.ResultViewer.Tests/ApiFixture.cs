@@ -8,7 +8,7 @@ using Sintro.ResultViewer.Data;
 namespace Sintro.ResultViewer.Tests;
 
 /// <summary>Boots the real API against the seeded dev database, with "today" pinned to the backup's last shooting day.</summary>
-public sealed class ApiFixture : WebApplicationFactory<SintroRepository>
+public sealed class ApiFixture : WebApplicationFactory<Program>
 {
     public const string BackupDate = "2026-07-08";
     public const string Token = "integration-test-token-0123456789";
@@ -39,7 +39,7 @@ public sealed class ApiFixture : WebApplicationFactory<SintroRepository>
     }
 
     public Task<bool> DatabaseReachableAsync() =>
-        Services.GetRequiredService<SintroRepository>().CanReachDatabaseAsync(CancellationToken.None);
+        Services.GetRequiredService<ISintroRepository>().CanReachDatabaseAsync(CancellationToken.None);
 
     /// <summary>A licence number from the loaded export, so tests never name a real shooter; null when it has none.</summary>
     public async Task<string?> AnyLicenceAsync()

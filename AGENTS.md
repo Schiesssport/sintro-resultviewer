@@ -21,7 +21,7 @@ electronic 300m target system whose MSSQL Express schema the API hides from even
 
 ## Toolchain — all in Docker
 
-No .NET, SQL Server or Node on the host. Docker is dev only; a range runs the published exe.
+No .NET, SQL Server or Node on the host. Docker is dev only.
 
 | Command | Does |
 |---|---|
@@ -37,8 +37,8 @@ No .NET, SQL Server or Node on the host. Docker is dev only; a range runs the pu
 
 (all under `scripts/`)
 
-`.container-home/` is the container's `HOME` and NuGet cache. **Solution file: `.slnx`** (.NET 10).
-Dev "today" is pinned with `Sintro__ReferenceDate`.
+`.container-home/` is the container HOME and NuGet cache. **Solution file: `.slnx`** (.NET 10).
+Dev "today" is set by `Sintro__ReferenceDate`.
 
 ## Architecture
 
@@ -48,8 +48,9 @@ src/Sintro.ResultViewer.Api/
   StartupChecks.cs  refuses to start on a weak token; warns on public exposure
   StartupBanner.cs  display URLs after binding
   Domain/           the device-derived model
-  Data/             SintroRepository (ALL SQL), ScoreCalculator, SintroTime, SintroClock,
-                    LicenseNumber, TargetKind, Cursor, ProgramFilter
+  Data/             ISintroRepository, SintroClock, LicenseNumber, Cursor, filters
+    Sintro300/      EVERYTHING device-schema-aware; one file per entity:
+                    SintroRepository* (ALL SQL), ScoreCalculator, SintroTime, TargetKind
   Security/         NetworkGate (CIDR) → TokenAuth (bearer) → SessionToken
   Live/             LaneWatcher (polls) → LiveHub (WebSocket fan-out)
   Api/V2/           VERSION-SPECIFIC: routes, tags, wire envelopes
@@ -60,15 +61,15 @@ tests/Sintro.ResultViewer.Tests/
 ```
 
 **Layering:** anything testable without a browser belongs in `wwwroot/core/` — `app.js` may touch
-the DOM, `core/` may not. Server-side the pure `Data/` classes carry the weight.
+the DOM, `core/` may not. Another device or schema is a new folder implementing `ISintroRepository`.
 
 **API versioning.** `Api/V2/` owns routes, tags, descriptions and wire envelopes; everything else is
-shared, so v3 is a new folder plus one `app.MapV3()` line. v1 is the legacy Grapevine service.
+shared: v3 is a new folder plus one `app.MapV3()` line.
 
 ## Single sources of truth
 
-- **SQL** → `Data/SintroRepository.cs`. A query anywhere else is a bug.
-- **Scoring** → `Data/ScoreCalculator.cs`. **Hit sectors** → `wwwroot/core/sectors.js`.
+- **SQL** → `Data/Sintro300/SintroRepository*.cs`. A query anywhere else is a bug.
+- **Scoring** → `Data/Sintro300/ScoreCalculator.cs`. **Hit sectors** → `wwwroot/core/sectors.js`.
 - **Translations** → `wwwroot/core/i18n.js` (`de` default, `fr`). `data-i18n[-title|-aria-label]` in
   HTML, `t('key', {params})` in JS. Tests assert identical keys in both languages and that every key
   is used and every used key exists.
@@ -78,7 +79,7 @@ shared, so v3 is a new folder plus one `app.MapV3()` line. v1 is the legacy Grap
 - **JSON options** → `SintroJson.Options`, shared by the endpoints, the live hub and the tests.
 - **Config** → `SintroOptions.cs` + `appsettings.jsonc` (operator-facing, every setting explained
   inline; registered by hand in `Program.cs`, ordered so environment variables still win).
-- **Target letters** → `Data/TargetKind.cs` (`0=A`, `1=B`, `3=S`).
+- **Target letters** → `Data/Sintro300/TargetKind.cs` (`0=A`, `1=B`, `3=S`).
 - **Docs ordering** → numbered OpenAPI tags in `Api/V2/V2Endpoints.cs`; the docs page sorts numerically.
 
 ## Vocabulary
@@ -90,8 +91,6 @@ A row of `dbo.Programs` is one shooter's pass at the target: a **`program`** in 
 `ShootingProgram` since `Program` is the entry point. **Never call it a `match`.**
 
 ## Mapping rules you must not undo
-
-The integration tests assert the resulting counts.
 
 | Rule | Why |
 |---|---|
@@ -152,7 +151,7 @@ fail silently if broken:
 
 1. `scripts/test.sh` — stays fully green.
 2. Touched a query or mapping rule? Verify with `scripts/sql.sh`. Integration tests assert
-   **invariants, not counts** — never hard-code a total, name or id from one export.
+   **invariants, not counts** — never hard-code a total, name or id from one export, nor cite one as a schema fact.
 3. Touched `wwwroot/`? `scripts/run.sh`; load `/`, each `/fullscreen/*`, `/browse`, `/docs`.
 4. New translation key? Add it to **both** `de` and `fr`.
 5. Learned something about the schema? Record it in `docs/device-database.md`.
@@ -162,4 +161,4 @@ fail silently if broken:
 Simplicity first, also over small optimisations. Comments are short to non-existent: names and
 structure explain *what*, a comment is one line for a *why* that cannot be inferred. Functions stay
 about 25 lines; split rather than comment sections. YAGNI: no speculative abstractions or helpers
-for one caller. Never cite one export's counts as schema facts. No emojis.
+for one caller. No emojis.

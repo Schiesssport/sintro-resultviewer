@@ -5,7 +5,7 @@ namespace Sintro.ResultViewer.Live;
 
 /// <summary>Polls the lane state and broadcasts it when it changes. Polling because the range PC's SQL Express has no Service Broker or CDC.</summary>
 public sealed class LaneWatcher(
-    SintroRepository repository,
+    ISintroRepository repository,
     LiveHub hub,
     IOptions<SintroOptions> options,
     ILogger<LaneWatcher> logger) : BackgroundService
