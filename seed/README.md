@@ -40,8 +40,9 @@ elsewhere.
 - 5 sessions in the last seven days, about 60 Stiche in all, roughly one in ten anonymous,
   every program shot by at least three different named shooters: four training evenings and an
   event day today. Event Stiche carry the program family with a leading 1 as match
-  code (111, 121, 122, 131, 171, 191). The event day also holds an abandoned pass (marker only)
-  and a pass still active on a lane. Lanes are assigned by the generator, next free lane first.
+  code (111, 121, 122, 131, 171, 191). The event day also holds a pass ended without a shot
+  (marker only, finished with no result), an abandoned one (shots, no marker, lane moved on) and
+  a pass still active on a lane. Lanes are assigned by the generator, next free lane first.
 
 ## Device conventions reproduced
 

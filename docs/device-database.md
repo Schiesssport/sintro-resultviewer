@@ -101,7 +101,8 @@ results that look plausible and are wrong.
 
 The device writes synthetic marker rows to close a pass: `ShotNr = 9999`, `TotalType = 7`,
 `HitPosition = 255`, all values zero. **Filter them out before scoring.** A pass can consist of
-nothing but a marker — started and abandoned — and must then report no result rather than a zero.
+nothing but a marker — loaded and ended without a shot — and must then report no result rather
+than a zero; to the API it is `finished`, since the end total was written.
 **`ShotNr = 9999` is the only test.** `TotalType = 7` is not: the last real shot of a pass carries
 it as well (measured in one export: 645 real shots with `TotalType 7` and ring values up to 10,
 against 438 markers). Filtering on the flag would drop every final shot.

@@ -134,8 +134,8 @@ const buildPass = ({ session, pass, programId, startAt }) => {
     let at = new Date(startAt.getTime() + 45_000);
     let logEvent = 0;
     const shots = [];
-    const shotsToFire = state === 'abandoned' ? [] : stages.slice(0, pass.stopAfter ?? stages.length);
-    const lastStage = state === 'active' ? -1 : shotsToFire.length - 1;
+    const shotsToFire = state === 'markerOnly' ? [] : stages.slice(0, pass.stopAfter ?? stages.length);
+    const lastStage = state === 'finished' || state === 'markerOnly' ? shotsToFire.length - 1 : -1;
 
     const insertShot = (row) => shots.push({ at, sql: `INSERT INTO dbo.Shots (${SHOT_COLUMNS}, ProgramID) VALUES (${row.join(', ')}, ${programId});` });
 
@@ -155,7 +155,7 @@ const buildPass = ({ session, pass, programId, startAt }) => {
         }
     });
 
-    if (state !== 'active') {
+    if (state === 'finished' || state === 'markerOnly') {
         at = new Date(at.getTime() + 5_000);
         insertShot(markerRow({ lane: pass.lane, at, matchCode: pass.matchCode ?? session.matchCode }));
     }

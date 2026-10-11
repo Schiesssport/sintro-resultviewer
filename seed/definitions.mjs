@@ -71,7 +71,8 @@ export const parseStages = (name) => name.split(/\s+/).map((token) => {
 // session's. Event Stiche are the program family with a leading 1: 111, 121, …
 // stopAfter: the shooter ends the program after that many stages (the A100 program is often
 // stopped after 4 or 5 of its 8). state: 'finished' (default), 'active' (still on the lane, no
-// end marker), 'abandoned' (loaded and left: only the marker row, no shots).
+// end marker), 'abandoned' (shots but no end marker, the lane moved on: the API's third state),
+// 'markerOnly' (loaded and ended without a shot: finished to the API, with no result).
 //
 // Aim: about 60 Stiche, roughly one in ten anonymous, every program shot by at least three
 // different named shooters, all within the last seven days.
@@ -113,7 +114,8 @@ export const SESSIONS = [
         ...each(31, [3], { stopAfter: 5, matchCode: 131 }),
         anonymous(31, { matchCode: 131 }),
         ...each(91, [5, 1], { matchCode: 191 }),
-        anonymous(21, { state: 'abandoned' }),
+        anonymous(21, { state: 'markerOnly' }),
+        ...each(21, [7], { state: 'abandoned', stopAfter: 1, matchCode: 121 }),
         ...each(22, [1], { state: 'active', matchCode: 122 }),
     ] },
 ];
