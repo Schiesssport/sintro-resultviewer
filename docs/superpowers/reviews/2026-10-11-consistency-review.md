@@ -236,3 +236,17 @@ the invented `Hans Muster` / `012345`.
 | `node seed/generate.mjs` into a scratch directory (inspection only) | 63 programs, 260 valuation rows, 1162 shots |
 
 Docker was up; nothing was skipped.
+
+## Resolution, 2026-10-11
+
+Fixed on `main` the same day, one commit per batch: B1 (CORS only under `/api`, test on every
+viewer page), B2, B3, N4 (browse export, error path, shot total), I1 (same-scale merge pinned by
+a test and documented as intended), I2 (seed: a true abandoned pass, the marker-only pass renamed),
+I3 to I8 and N15 (docs, descriptions, English OpenAPI tags, "Stich" for a program), I6 as a
+behaviour change (`/programs` lists every day without a date filter, `dates=today` is resolved by
+the server, the viewer asks for it, the docs tester starts paged lists with `limit=50`), I11
+(fixtures match the wire), I12 (`core/http.js` with tests, `tokenRejected` tested), I13
+(AGENTS.md at 8 781 characters), N2, N3, N9 (a licence-shaped-number guard on the OpenAPI
+document), N11 (a token holding whitespace is refused at startup).
+
+Left as reported: I9 (bare 404/405/500 bodies), I10, N1, N5 to N8, N10, N12 to N14.
