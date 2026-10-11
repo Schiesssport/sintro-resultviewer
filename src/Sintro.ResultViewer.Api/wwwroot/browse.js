@@ -1,7 +1,7 @@
 // Every filter is an API query, so the rows are always current; only the row shape and the column sort are decided here.
 
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
-import { escapeHtml } from './core/format.js';
+import { escapeHtml, formatDay } from './core/format.js';
 import { messageRow, browseRowHtml } from './core/markup.js';
 import { parseList, buildRows, sortRows, filterShooters, summarize, filterByTotal, parseBound, exportText, exportFileName, EXPORT_COLUMNS, DEFAULT_EXPORT_COLUMNS, addDay, removeDay, dateQuery, dateSummary } from './core/browse.js';
 import { applyTranslations, readToday } from './dom.js';
@@ -34,12 +34,14 @@ const dateFilter = () => ({ mode: el('date-mode-select').value, from: el('from-i
 
 // The field shows the days read-only; the dialog is where they are added and removed.
 const renderDays = () => {
+    // The browser's locale, not the page language: that is the notation its date picker shows.
+    const shown = (day) => escapeHtml(formatDay(day, navigator.language));
     el('days-field').innerHTML = days.length
-        ? days.map((day) => `<span class="day-chip">${day}</span>`).join('')
+        ? days.map((day) => `<span class="day-chip">${shown(day)}</span>`).join('')
         : `<span class="days-empty">${escapeHtml(t('browse.noDays'))}</span>`;
     el('day-list').innerHTML = days.length
         ? days.map((day) =>
-            `<span class="day-chip">${day}<button type="button" data-remove-day="${day}" title="${escapeHtml(t('browse.removeDay'))}" aria-label="${escapeHtml(t('browse.removeDay'))}">&times;</button></span>`).join('')
+            `<span class="day-chip">${shown(day)}<button type="button" data-remove-day="${day}" title="${escapeHtml(t('browse.removeDay'))}" aria-label="${escapeHtml(t('browse.removeDay'))}">&times;</button></span>`).join('')
         : `<span class="days-empty">${escapeHtml(t('browse.noDays'))}</span>`;
 };
 

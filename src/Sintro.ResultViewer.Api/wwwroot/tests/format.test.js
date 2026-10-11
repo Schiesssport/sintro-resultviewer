@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-    escapeHtml, formatTime, shooterLabel, resultTotals, resultText, activeTotal, matchesFilter, laneContext,
+    escapeHtml, formatTime, formatDay, shooterLabel, resultTotals, resultText, activeTotal, matchesFilter, laneContext,
     shotGroups, programLabel, tickerEntry, localIsoDate,
 } from '../core/format.js';
 import { TRANSLATIONS, translate } from '../core/i18n.js';
@@ -55,6 +55,19 @@ describe('escapeHtml', () => {
 describe('localIsoDate', () => {
     test('uses the local day, not the UTC one', () => {
         assert.equal(localIsoDate(new Date(2026, 6, 8, 23, 30)), '2026-07-08');
+    });
+});
+
+describe('formatDay', () => {
+    test('writes the day in the given locale, from the ISO text', () => {
+        assert.equal(formatDay('2026-07-05', 'de-CH'), '05.07.2026');
+        assert.equal(formatDay('2026-07-05', 'en-US'), '07/05/2026');
+        assert.equal(formatDay('2026-07-05', 'fr-CH'), '05.07.2026');
+    });
+
+    test('a malformed day is empty, an unknown locale falls back to ISO', () => {
+        assert.equal(formatDay('05.07.2026', 'de-CH'), '');
+        assert.equal(formatDay('2026-07-05', 'no-such-locale-!!'), '2026-07-05');
     });
 });
 

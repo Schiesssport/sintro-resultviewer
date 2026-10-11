@@ -19,6 +19,19 @@ export const formatDateTime = (iso) => {
     return match ? `${match[3]}.${match[2]}. ${match[4]}` : '';
 };
 
+// A day in the reader's own notation, the one the browser's date picker shows. A local-midnight
+// Date formatted in the local zone names the same day everywhere; an unknown locale falls back to ISO.
+export const formatDay = (isoDay, locale) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDay ?? ''));
+    if (!match) return '';
+    try {
+        return new Intl.DateTimeFormat(locale, { year: 'numeric', month: '2-digit', day: '2-digit' })
+            .format(new Date(+match[1], +match[2] - 1, +match[3]));
+    } catch {
+        return isoDay;
+    }
+};
+
 // Most passes are anonymous; the chain name → licence → free text → line + time never fails.
 export const shooterLabel = (program, t) => {
     const shooter = program.shooter ?? null;
