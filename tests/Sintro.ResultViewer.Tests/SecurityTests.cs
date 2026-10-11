@@ -172,6 +172,22 @@ public class SecurityTests(ApiFixture fixture)
         Assert.Equal("*", response.Headers.GetValues("Access-Control-Allow-Origin").Single());
     }
 
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/fullscreen/live")]
+    [InlineData("/browse")]
+    [InlineData("/docs")]
+    public async Task theViewerPagesCarryTheSessionToken_soNoOriginMayReadThem(string path)
+    {
+        var client = fixture.CreateClient();
+        client.DefaultRequestHeaders.Add("Origin", "http://evil.example");
+
+        var response = await client.GetAsync(path);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"), $"{path} answered a cross-origin read");
+    }
+
     [Fact]
     public async Task aPreflightNeverOpensTheDoorForATokenlessRead()
     {

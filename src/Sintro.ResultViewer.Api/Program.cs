@@ -45,7 +45,9 @@ StartupChecks.Run(app.Logger, settings, app.Services.GetRequiredService<SessionT
 app.UseNetworkGate();
 // A browser on another origin (an event's own pages) may read the API: a preflight carries no token, so CORS answers it
 // after the gate and before auth. The gate and the token remain the protection; the origin was never one.
-app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+// Only under /api: the viewer pages embed the session token, and the same-origin policy is what keeps it there.
+app.UseWhen(context => context.Request.Path.StartsWithSegments("/api"),
+    api => api.UseCors(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 app.UseWebSockets();
 app.UseTokenAuth();
 
