@@ -164,9 +164,9 @@ export const parseBound = (text) => {
 export const EXPORT_COLUMNS = ['time', 'license', 'shooter', 'club', 'targetCode', 'matchCode', 'total', 'shots', 'shotsBySeries', 'shotsByShot'];
 export const DEFAULT_EXPORT_COLUMNS = ['shooter', 'total'];
 
-const exportCell = (row, column) => {
+const exportCell = (row, column, locale) => {
     switch (column) {
-        case 'time': return formatDateTime(row.at);
+        case 'time': return formatDateTime(row.at, locale, { withYear: true });
         case 'shooter': return `${row.lastName} ${row.firstName}`.trim();
         case 'total': return totalsText(row.totals);
         case 'targetCode': return row.targetCode === null ? '' : String(row.targetCode);
@@ -200,10 +200,10 @@ const shotHeaders = (headers, layout, width) => {
 const quote = (text, delimiter) =>
     /["\r\n]/.test(text) || text.includes(delimiter) ? `"${text.replace(/"/g, '""')}"` : text;
 
-export const exportText = (rows, columns, headers, delimiter) => {
+export const exportText = (rows, columns, headers, delimiter, locale) => {
     const widths = Object.fromEntries(Object.entries(SHOT_LAYOUTS).map(([column, layout]) => [column, shotWidth(rows, layout)]));
     const cells = (row) => columns.flatMap((column) =>
-        (column in SHOT_LAYOUTS ? shotCells(row, SHOT_LAYOUTS[column], widths[column]) : [exportCell(row, column)]));
+        (column in SHOT_LAYOUTS ? shotCells(row, SHOT_LAYOUTS[column], widths[column]) : [exportCell(row, column, locale)]));
     const head = columns.flatMap((column) =>
         (column in SHOT_LAYOUTS ? shotHeaders(headers, SHOT_LAYOUTS[column], widths[column]) : [headers[column] ?? column]));
     const line = (values) => values.map((value) => quote(String(value), delimiter)).join(delimiter);

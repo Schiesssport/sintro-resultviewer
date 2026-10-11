@@ -36,8 +36,9 @@ const dateFilter = () => ({ mode: el('date-mode-select').value, from: el('from-i
 const renderDays = () => {
     // The browser's locale, not the page language: that is the notation its date picker shows.
     const shown = (day) => escapeHtml(formatDay(day, navigator.language));
+    const shownShort = (day) => escapeHtml(formatDay(day, navigator.language, { withYear: false }));
     el('days-field').innerHTML = days.length
-        ? days.map((day) => `<span class="day-chip">${shown(day)}</span>`).join('')
+        ? days.map((day) => `<span class="day-chip">${shownShort(day)}</span>`).join('')
         : `<span class="days-empty">${escapeHtml(t('browse.noDays'))}</span>`;
     el('day-list').innerHTML = days.length
         ? days.map((day) =>
@@ -105,7 +106,7 @@ const render = () => {
 
     const bounded = bounds.min !== null || bounds.max !== null;
     el('result-count').textContent = t('browse.count', summarize(programs)) + (bounded ? ` · ${t('browse.rowCount', { rows: rows.length })}` : '');
-    el('results-body').innerHTML = rows.length ? rows.map(browseRowHtml).join('') : browseMessage(t('browse.empty'));
+    el('results-body').innerHTML = rows.length ? rows.map((row) => browseRowHtml(row, navigator.language)).join('') : browseMessage(t('browse.empty'));
     renderSortMarkers();
 };
 
@@ -221,7 +222,7 @@ const openExportDialog = () => {
 
 const exportColumns = () => [...el('export-columns').querySelectorAll('input:checked')].map((box) => box.value);
 
-const buildExport = (delimiter) => exportText(currentRows, exportColumns(), exportColumnLabels(), delimiter);
+const buildExport = (delimiter) => exportText(currentRows, exportColumns(), exportColumnLabels(), delimiter, navigator.language);
 
 const copyExport = async () => {
     try {

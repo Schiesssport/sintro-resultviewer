@@ -207,13 +207,18 @@ describe('sortRows', () => {
 });
 
 describe('formatDateTime', () => {
-    test('shows day, month and the time of day from the ISO text', () => {
-        assert.equal(formatDateTime('2026-09-19T17:52:08.55+02:00'), '19.09. 17:52:08');
+    test('shows day and month in the locale, the time of day from the ISO text', () => {
+        assert.equal(formatDateTime('2026-09-19T17:52:08.55+02:00', 'de-CH'), '19.09. 17:52:08');
+        assert.equal(formatDateTime('2026-09-19T17:52:08.55+02:00', 'en-US'), '09/19 17:52:08');
+    });
+
+    test('exports carry the year', () => {
+        assert.equal(formatDateTime('2026-09-19T17:52:08.55+02:00', 'de-CH', { withYear: true }), '19.09.2026 17:52:08');
     });
 
     test('is empty for nothing or nonsense', () => {
-        assert.equal(formatDateTime(null), '');
-        assert.equal(formatDateTime('later'), '');
+        assert.equal(formatDateTime(null, 'de-CH'), '');
+        assert.equal(formatDateTime('later', 'de-CH'), '');
     });
 });
 

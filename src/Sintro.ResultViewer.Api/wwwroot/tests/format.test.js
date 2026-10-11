@@ -63,6 +63,7 @@ describe('formatDay', () => {
         assert.equal(formatDay('2026-07-05', 'de-CH'), '05.07.2026');
         assert.equal(formatDay('2026-07-05', 'en-US'), '07/05/2026');
         assert.equal(formatDay('2026-07-05', 'fr-CH'), '05.07.2026');
+        assert.equal(formatDay('2026-07-05', 'de-CH', { withYear: false }), '05.07.');
     });
 
     test('a malformed day is empty, an unknown locale falls back to ISO', () => {

@@ -13,23 +13,24 @@ const pad = (n) => String(n).padStart(2, '0');
 // Local day: toISOString is UTC, which is behind local time, so it names the previous day shortly after midnight.
 export const localIsoDate = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
-// "19.09. 17:52:08", read off the ISO text.
-export const formatDateTime = (iso) => {
-    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2}:\d{2})/.exec(String(iso ?? ''));
-    return match ? `${match[3]}.${match[2]}. ${match[4]}` : '';
-};
-
 // A day in the reader's own notation, the one the browser's date picker shows. A local-midnight
 // Date formatted in the local zone names the same day everywhere; an unknown locale falls back to ISO.
-export const formatDay = (isoDay, locale) => {
+export const formatDay = (isoDay, locale, { withYear = true } = {}) => {
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDay ?? ''));
     if (!match) return '';
     try {
-        return new Intl.DateTimeFormat(locale, { year: 'numeric', month: '2-digit', day: '2-digit' })
+        return new Intl.DateTimeFormat(locale, { ...(withYear ? { year: 'numeric' } : {}), month: '2-digit', day: '2-digit' })
             .format(new Date(+match[1], +match[2] - 1, +match[3]));
     } catch {
-        return isoDay;
+        return withYear ? isoDay : isoDay.slice(5);
     }
+};
+
+// "19.09. 17:52:08" in de-CH: the day in the reader's notation, the time of day read off the ISO
+// text so a tablet in the wrong timezone cannot shift range times. The year only on request (exports).
+export const formatDateTime = (iso, locale, { withYear = false } = {}) => {
+    const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})/.exec(String(iso ?? ''));
+    return match ? `${formatDay(match[1], locale, { withYear })} ${match[2]}` : '';
 };
 
 // Most passes are anonymous; the chain name → licence → free text → line + time never fails.

@@ -100,9 +100,9 @@ export const browseGroupHtml = (group) => `
         </span>`;
 
 // Program name and start time ride along as a tooltip: in series and shot mode many rows share a shooter.
-export const browseRowHtml = (row) => `
+export const browseRowHtml = (row, locale) => `
     <tr title="${escapeHtml(`${row.program} ${formatTime(row.startedAt)}`.trim())}">
-        <td class="col-time">${formatDateTime(row.at)}</td>
+        <td class="col-time">${formatDateTime(row.at, locale)}</td>
         <td class="col-license">${escapeHtml(row.license)}</td>
         <td class="col-shooter">${escapeHtml(`${row.lastName} ${row.firstName}`.trim())}</td>
         <td class="col-club">${escapeHtml(row.club)}</td>
