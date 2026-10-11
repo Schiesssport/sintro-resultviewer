@@ -32,9 +32,15 @@ let days = [];
 
 const dateFilter = () => ({ mode: el('date-mode-select').value, from: el('from-input').value, to: el('to-input').value, days });
 
+// The field shows the days read-only; the dialog is where they are added and removed.
 const renderDays = () => {
-    el('day-list').innerHTML = days.map((day) =>
-        `<span class="day-chip">${day}<button type="button" data-remove-day="${day}" title="${escapeHtml(t('browse.removeDay'))}" aria-label="${escapeHtml(t('browse.removeDay'))}">&times;</button></span>`).join('');
+    el('days-field').innerHTML = days.length
+        ? days.map((day) => `<span class="day-chip">${day}</span>`).join('')
+        : `<span class="days-empty">${escapeHtml(t('browse.noDays'))}</span>`;
+    el('day-list').innerHTML = days.length
+        ? days.map((day) =>
+            `<span class="day-chip">${day}<button type="button" data-remove-day="${day}" title="${escapeHtml(t('browse.removeDay'))}" aria-label="${escapeHtml(t('browse.removeDay'))}">&times;</button></span>`).join('')
+        : `<span class="days-empty">${escapeHtml(t('browse.noDays'))}</span>`;
 };
 
 // Switching to days starts from the window's first day, so the list is never empty by surprise.
@@ -42,10 +48,14 @@ const onDateModeChange = () => {
     const daysMode = el('date-mode-select').value === 'days';
     el('range-filter').classList.toggle('hidden', daysMode);
     el('days-filter').classList.toggle('hidden', !daysMode);
-    el('day-list').classList.toggle('hidden', !daysMode);
     if (daysMode && days.length === 0) days = addDay(days, el('from-input').value);
     renderDays();
     load();
+};
+
+const openDaysDialog = () => {
+    el('days-dialog').showModal();
+    el('day-input').focus();
 };
 
 const onAddDay = () => {
@@ -259,6 +269,10 @@ const init = async () => {
     el('date-mode-select').addEventListener('change', onDateModeChange);
     el('day-input').addEventListener('change', onAddDay);
     el('day-list').addEventListener('click', onRemoveDay);
+    el('days-dialog-button').addEventListener('click', openDaysDialog);
+    el('days-field').addEventListener('click', openDaysDialog);
+    el('days-field').addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDaysDialog(); } });
+    el('days-close').addEventListener('click', () => el('days-dialog').close());
     for (const id of ['target-code-input', 'match-code-input', 'license-input']) el(id).addEventListener('input', scheduleLoad);
     for (const id of ['group-select', 'detail-select', 'order-select']) el(id).addEventListener('change', render);
     for (const id of ['total-min-input', 'total-max-input']) el(id).addEventListener('input', render);

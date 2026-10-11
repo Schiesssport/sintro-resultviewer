@@ -759,7 +759,22 @@ body.is-fullscreen.is-ticker-hidden #ui-wrapper { padding-bottom: 0; }
 .browse-filters .filter-detail { width: 190px; }
 .browse-range { display: flex; gap: 6px; }
 .browse-range input { flex: 1 1 0; }
-.day-list { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; }
+/* Reads as an input: the chips live inside a bordered field, the calendar button opens the dialog. */
+.days-field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    min-height: var(--btn-height);
+    padding: 4px 38px 4px 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    cursor: pointer;
+}
+.days-field:focus-visible { outline: none; border-color: var(--emerald); box-shadow: 0 0 0 3px color-mix(in srgb, var(--emerald) 18%, transparent); }
+.days-empty { color: var(--muted); font-size: 13px; padding-left: 4px; }
+.day-list { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; }
 .day-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; border-radius: var(--radius); background: var(--row-focus); font-size: 12px; font-variant-numeric: tabular-nums; }
 .day-chip button { border: 0; background: none; color: var(--ink-soft); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 4px; height: auto; min-height: 0; }
 .day-chip button:hover { color: var(--danger-ink); }

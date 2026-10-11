@@ -39,10 +39,15 @@
                     <input type="date" id="from-input">
                     <input type="date" id="to-input">
                 </span>
-                <span class="browse-range hidden" id="days-filter">
-                    <input type="date" id="day-input" data-i18n-title="browse.pickDay" title="Tag wählen, er wird der Liste hinzugefügt">
+                <span class="input-with-button hidden" id="days-filter">
+                    <span class="days-field" id="days-field" tabindex="0" role="button" data-i18n-title="browse.pickDays" title="Tage wählen"></span>
+                    <button type="button" id="days-dialog-button" class="input-button" data-i18n-title="browse.pickDays" data-i18n-aria-label="browse.pickDays">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>
+                            <path d="M8 14h2M12 14h2M16 14h2M8 17.5h2M12 17.5h2"/>
+                        </svg>
+                    </button>
                 </span>
-                <span class="day-list hidden" id="day-list"></span>
             </div>
             <label>
                 <span data-i18n="browse.targetCode">Programmnummer</span>
@@ -167,6 +172,17 @@
             <button type="button" id="export-cancel" class="btn-secondary" data-i18n="aria.close">Schliessen</button>
             <button type="button" id="export-copy" class="btn-secondary" data-i18n="browse.copyTsv">In Zwischenablage (TSV)</button>
             <button type="button" id="export-download" class="btn-action" data-i18n="browse.downloadCsv">CSV herunterladen</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="days-dialog" class="shooter-dialog">
+    <form method="dialog" class="shooter-dialog-form">
+        <h2 class="shooter-dialog-title" data-i18n="browse.pickDays">Tage wählen</h2>
+        <input type="date" id="day-input" data-i18n-title="browse.pickDay" title="Tag wählen, er wird der Liste hinzugefügt">
+        <div id="day-list" class="day-list"></div>
+        <div class="shooter-dialog-actions">
+            <button type="button" id="days-close" class="btn-secondary" data-i18n="aria.close">Schliessen</button>
         </div>
     </form>
 </dialog>
