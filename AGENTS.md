@@ -148,6 +148,8 @@ is in `core/format.js`; keep it. Viewer rules that fail silently if broken (see
   guards both).
 - **A forwarded hop that does not parse resolves to *no* client**, and the gate refuses it. Falling
   back to the proxy would admit anyone behind a public proxy (`ClientAddressTests`).
+- **CORS allows every origin, after the gate, before auth** (a preflight carries no token). The
+  gate and the token protect; the origin never did.
 - **`/openapi/v2.json` is token-free** (schema, not data). Never put a real licence number or
   shooter name in an endpoint description; a test asserts neither appears.
 - **A null remote address counts as loopback** (in-process; TCP cannot forge it). Non-private

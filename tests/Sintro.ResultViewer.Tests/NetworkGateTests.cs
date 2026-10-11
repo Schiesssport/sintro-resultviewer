@@ -51,6 +51,19 @@ public class NetworkGateTests : IClassFixture<GatedApiFixture>
     }
 
     [Fact]
+    public async Task aPreflightFromADisallowedSourceIsRefusedBeforeCors()
+    {
+        var preflight = new HttpRequestMessage(HttpMethod.Options, "/api/v2/programs");
+        preflight.Headers.Add("Origin", "http://event-pc:3000");
+        preflight.Headers.Add("Access-Control-Request-Method", "GET");
+
+        var response = await _fixture.CreateClient().SendAsync(preflight);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
+    }
+
+    [Fact]
     public async Task theWebSurfaceIsGatedIndependently()
     {
         Assert.Equal(HttpStatusCode.Forbidden,

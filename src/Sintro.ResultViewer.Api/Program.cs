@@ -34,6 +34,7 @@ builder.Services.AddSingleton<ISintroRepository>(provider => new SintroRepositor
     provider.GetRequiredService<ISintroClock>()));
 builder.Services.AddHostedService<LaneWatcher>();
 builder.Services.AddOpenApi(V2Endpoints.Version);
+builder.Services.AddCors();
 
 var app = builder.Build();
 
@@ -42,6 +43,9 @@ StartupChecks.Run(app.Logger, settings, app.Services.GetRequiredService<SessionT
 
 // Gate before token; UseWebSockets before UseTokenAuth, or ?token= on the handshake is never accepted.
 app.UseNetworkGate();
+// A browser on another origin (an event's own pages) may read the API: a preflight carries no token, so CORS answers it
+// after the gate and before auth. The gate and the token remain the protection; the origin was never one.
+app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 app.UseWebSockets();
 app.UseTokenAuth();
 

@@ -147,6 +147,41 @@ public class SecurityTests(ApiFixture fixture)
     }
 
     [Fact]
+    public async Task aPreflightFromAnotherOriginIsAnsweredWithoutAToken()
+    {
+        var preflight = new HttpRequestMessage(HttpMethod.Options, "/api/v2/programs");
+        preflight.Headers.Add("Origin", "http://event-pc:3000");
+        preflight.Headers.Add("Access-Control-Request-Method", "GET");
+        preflight.Headers.Add("Access-Control-Request-Headers", "authorization");
+
+        var response = await fixture.CreateClient().SendAsync(preflight);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal("*", response.Headers.GetValues("Access-Control-Allow-Origin").Single());
+        Assert.Contains("authorization", response.Headers.GetValues("Access-Control-Allow-Headers").Single(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task aCrossOriginReadCarriesTheAllowOriginHeader()
+    {
+        var client = fixture.CreateAuthorizedClient();
+        client.DefaultRequestHeaders.Add("Origin", "null");
+
+        var response = await client.GetAsync("/api/v2/health");
+
+        Assert.Equal("*", response.Headers.GetValues("Access-Control-Allow-Origin").Single());
+    }
+
+    [Fact]
+    public async Task aPreflightNeverOpensTheDoorForATokenlessRead()
+    {
+        var client = fixture.CreateClient();
+        client.DefaultRequestHeaders.Add("Origin", "http://event-pc:3000");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/v2/programs")).StatusCode);
+    }
+
+    [Fact]
     public async Task staticAssetsAreServedWithoutAToken()
     {
         Assert.Equal(HttpStatusCode.OK, (await fixture.CreateClient().GetAsync("/styles.css")).StatusCode);
@@ -248,6 +283,17 @@ public class StartupCheckTests
             Check(new SintroOptions { ApiReadTokens = [token] }));
 
         Assert.Contains("refuses to start", error.Message);
+    }
+
+    [Theory]
+    [InlineData("feldschützen-token-0123456789")]
+    [InlineData("écoleDeTir-token-0123456789")]
+    public void aTokenWithNonAsciiCharacters_refusesToStart(string token)
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            Check(new SintroOptions { ApiReadTokens = [token] }));
+
+        Assert.Contains("outside ASCII", error.Message);
     }
 
     [Fact]
