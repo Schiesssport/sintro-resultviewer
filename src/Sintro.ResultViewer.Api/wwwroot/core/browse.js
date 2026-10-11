@@ -55,12 +55,17 @@ const programRow = (program, detail, seriesOrder, shotOrder) => ({
     breakdown: orderSeries(program.series ?? [], seriesOrder).map((series) => seriesGroup(series, detail, shotOrder)),
 });
 
+// Every row kind carries totals, since the row markup and the export read it; a missing value is an empty list, shown as a dash.
+const singleTotal = (targetType, value) =>
+    value === null || value === undefined ? [] : [{ label: targetType ?? '', value }];
+
 const seriesRows = (program, detail, shotOrder) => (program.series ?? []).map((series, position) => ({
     key: `p${program.id}s${position}`,
     ...shooterColumns(program),
     matchCode: distinctMatchCodes(series.shots ?? []),
     at: lastShotAt(series.shots ?? []) ?? program.startedAt ?? '',
     total: series.subtotal ?? null,
+    totals: singleTotal(series.targetType, series.subtotal),
     breakdown: [seriesGroup(series, detail, shotOrder)],
 }));
 
@@ -70,6 +75,7 @@ const shotRows = (program) => (program.series ?? []).flatMap((series, position) 
     matchCode: shot.matchCode === null || shot.matchCode === undefined ? '' : String(shot.matchCode),
     at: shot.at ?? '',
     total: shot.value,
+    totals: singleTotal(series.targetType, shot.value),
     breakdown: [{ code: series.targetType ?? '', values: [String(shot.fineValue ?? '')] }],
 })));
 

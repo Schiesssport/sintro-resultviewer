@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { parseList, buildRows, sortRows, filterShooters, summarize, filterByTotal, parseBound, exportText, exportFileName, EXPORT_COLUMNS, DEFAULT_EXPORT_COLUMNS } from '../core/browse.js';
 import { formatDateTime } from '../core/format.js';
+import { browseRowHtml } from '../core/markup.js';
 
 const shot = (number, value, fineValue, matchCode = 11) =>
     ({ number, value, fineValue, matchCode, at: `2026-07-08T20:46:0${number}+02:00` });
@@ -80,7 +81,22 @@ describe('buildRows', () => {
         const rows = buildRows([program()], { groupBy: 'series' });
 
         assert.deepEqual(rows.map((row) => row.total), [17, 10]);
+        assert.deepEqual(rows.map((row) => row.totals), [[{ label: 'A10', value: 17 }], [{ label: 'A10', value: 10 }]]);
         assert.deepEqual(rows[0].breakdown, [{ code: 'A10', values: ['8', '9'] }]);
+    });
+
+    test('series and shot rows render through the row markup like program rows', () => {
+        for (const groupBy of ['program', 'series', 'shot']) {
+            const rows = buildRows([program()], { groupBy });
+            assert.ok(rows.length > 0, groupBy);
+            for (const row of rows) assert.ok(browseRowHtml(row).includes('col-total'), groupBy);
+        }
+    });
+
+    test('a series without a subtotal renders a dash, not an error', () => {
+        const rows = buildRows([program({ series: [{ valuation: 10, targetType: 'A10', subtotal: null, shots: [] }] })], { groupBy: 'series' });
+        assert.deepEqual(rows[0].totals, []);
+        assert.ok(browseRowHtml(rows[0]).includes('col-total'));
     });
 
     test('shot mode: one row per shot, ring value as total, fine value as breakdown', () => {
@@ -88,6 +104,7 @@ describe('buildRows', () => {
         assert.deepEqual(rows.map((row) => row.matchCode), ['11', '11', '11']);
 
         assert.deepEqual(rows.map((row) => row.total), [8, 9, 10]);
+        assert.deepEqual(rows.map((row) => row.totals[0].value), [8, 9, 10]);
         assert.deepEqual(rows.map((row) => row.breakdown[0].values[0]), ['84', '93', '102']);
     });
 
