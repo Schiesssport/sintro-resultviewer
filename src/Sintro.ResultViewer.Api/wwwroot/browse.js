@@ -122,6 +122,7 @@ const load = async () => {
     } catch (error) {
         if (sequence !== loadSequence) return;
         programs = [];
+        render();
         el('results-body').innerHTML = browseMessage(t('msg.error', { detail: error.message }));
     }
 };

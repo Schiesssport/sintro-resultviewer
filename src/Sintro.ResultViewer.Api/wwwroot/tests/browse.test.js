@@ -132,6 +132,11 @@ describe('buildRows', () => {
         assert.deepEqual(rows.map((row) => row.breakdown[0].values[0]), ['84', '93', '102']);
     });
 
+    test('a shot without a value has no total, like a series without a subtotal', () => {
+        const row = buildRows([program({ series: [{ targetType: 'A10', subtotal: 0, shots: [{ value: undefined }] }] })], { groupBy: 'shot' })[0];
+        assert.equal(row.total, null);
+    });
+
     test('fine value detail shows tenths instead of rings', () => {
         const rows = buildRows([program()], { detail: 'fineValue' });
         assert.deepEqual(rows[0].breakdown[0].values, ['84', '93']);
@@ -302,6 +307,11 @@ describe('exportText', () => {
 
     test('the shot layouts combine side by side', () => {
         assert.equal(exportText(rows, ['shots', 'shotsBySeries'], headers, ';'), 'Schüsse;Passe 1;Passe 2\r\n8 9 10;8 9;10');
+    });
+
+    test('a season of shot rows exports without exhausting the stack', () => {
+        const many = Array.from({ length: 200_000 }, (_, index) => ({ ...rows[0], key: `r${index}` }));
+        assert.ok(exportText(many, ['total'], headers, ';').length > many.length);
     });
 
     test('defaults export shooter and result only', () => {

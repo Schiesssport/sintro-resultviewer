@@ -90,7 +90,7 @@ const shotRows = (program) => (program.series ?? []).flatMap((series, position) 
     ...shooterColumns(program),
     matchCode: shot.matchCode === null || shot.matchCode === undefined ? '' : String(shot.matchCode),
     at: shot.at ?? '',
-    total: shot.value,
+    total: shot.value ?? null,
     totals: singleTotal(series.targetType, shot.value),
     breakdown: [{ code: series.targetType ?? '', values: [String(shot.fineValue ?? '')] }],
 })));
@@ -187,7 +187,7 @@ const shotCells = (row, layout, width) => {
 const shotWidth = (rows, layout) => {
     if (layout === 'single') return 1;
     const count = (row) => (layout === 'shot' ? row.breakdown.reduce((sum, group) => sum + group.values.length, 0) : row.breakdown.length);
-    return Math.max(1, ...rows.map(count));
+    return rows.reduce((width, row) => Math.max(width, count(row)), 1);
 };
 
 const shotHeaders = (headers, layout, width) => {
