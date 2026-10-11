@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { typeOf, groupByTag, isProbeAllowed } from '../core/openapi.js';
+import { typeOf, groupByTag, isProbeAllowed, tryUrl } from '../core/openapi.js';
 
 describe('typeOf', () => {
     test('reads primitive, formatted, array and referenced schemas', () => {
@@ -15,14 +15,14 @@ describe('typeOf', () => {
 describe('groupByTag', () => {
     const spec = {
         paths: {
-            '/a': { get: { tags: ['2 · Resultate'] } },
+            '/a': { get: { tags: ['2 · Results'] } },
             '/b': { get: { tags: ['10 · Später'] } },
             '/c': { get: { tags: ['1 · Live'] }, post: { tags: ['1 · Live'] } },
         },
     };
 
     test('sorts numbered tags numerically, so a tenth group lands last', () => {
-        assert.deepEqual(groupByTag(spec).map(([tag]) => tag), ['1 · Live', '2 · Resultate', '10 · Später']);
+        assert.deepEqual(groupByTag(spec).map(([tag]) => tag), ['1 · Live', '2 · Results', '10 · Später']);
     });
 
     test('keeps every method of every path under its tag', () => {
@@ -54,5 +54,18 @@ describe('isProbeAllowed', () => {
         assert.equal(isProbeAllowed('/', origin), false);
         assert.equal(isProbeAllowed('/docs', origin), false);
         assert.equal(isProbeAllowed('', origin), false);
+    });
+});
+
+describe('tryUrl', () => {
+    test('a paged list starts with a small page, so the try box never pulls a season', () => {
+        const paged = { parameters: [{ name: 'state', in: 'query' }, { name: 'limit', in: 'query' }] };
+        assert.equal(tryUrl('/api/v2/programs', paged), '/api/v2/programs?limit=50');
+    });
+
+    test('anything else is tried as is', () => {
+        assert.equal(tryUrl('/api/v2/health', { parameters: [] }), '/api/v2/health');
+        assert.equal(tryUrl('/api/v2/programs/{id}', { parameters: [{ name: 'id', in: 'path' }] }), '/api/v2/programs/{id}');
+        assert.equal(tryUrl('/api/v2/live', {}), '/api/v2/live');
     });
 });

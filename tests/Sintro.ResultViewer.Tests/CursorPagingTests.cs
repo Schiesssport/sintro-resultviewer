@@ -108,20 +108,6 @@ public class CursorPagingTests(ApiFixture fixture)
     }
 
     [Fact]
-    public async Task aCursorLiftsTheTodayOnlyDefault()
-    {
-        // A client syncing the morning after must not lose yesterday's late passes to the today window.
-        var first = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&order=asc&limit=1");
-        var cursor = Uri.EscapeDataString(first.NextCursor!);
-
-        var windowed = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&order=asc&limit=5000&cursor={cursor}");
-        var bare = await ProgramsAsync($"withoutResult=true&order=asc&limit=5000&cursor={cursor}");
-
-        Assert.NotEmpty(bare.Items);
-        Assert.Equal(windowed.Items.Select(program => program.Id), bare.Items.Select(program => program.Id));
-    }
-
-    [Fact]
     public async Task finishedPassesAreListedInFinishingOrder()
     {
         // A pass that ends late must arrive after a syncing client's cursor, whenever it started.

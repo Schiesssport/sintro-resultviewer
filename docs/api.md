@@ -10,8 +10,8 @@ needs; the complete, generated reference is at `/docs` on the running service (o
    the environment variable `Sintro__ApiReadTokens__0=<token>`. 16 characters minimum, 128
    recommended, ASCII only: a browser sends header values Latin-1 encoded, and the server would
    answer an umlaut in the header with a bare 400 before reaching the API.
-2. Your machine must sit in one of the `Sintro:Network:Api` ranges. Private LAN ranges are
-   allowed by default; anything else is a `403 forbidden_network`.
+2. Your machine must sit in one of the `Sintro:Network:Api` ranges; the shipped settings list
+   the private LAN ranges. Anything else is a `403 forbidden_network`.
 3. Send the token on every request:
 
 ```
@@ -29,12 +29,12 @@ ranges and the token, not by the page's origin.
 
 ## The results list: `GET /api/v2/programs`
 
-One item is one *program*: one shooter's pass at the target, a "Passe". Newest first.
+One item is one *program*: one shooter's pass at the target, a "Stich" (its series are the "Passen"). Newest first.
 
 | Parameter | Meaning |
 |---|---|
-| `from`, `to` | Date window, `YYYY-MM-DD`, inclusive. **Default: today only.** |
-| `dates` | Individual days instead of a window, comma-separated: `dates=2026-10-10,2026-10-17`. Combined with `from` or `to` it is `400 invalid_filter` |
+| `from`, `to` | Date window, `YYYY-MM-DD`, inclusive. **Without any date filter every day is listed** |
+| `dates` | Individual days instead of a window, comma-separated: `dates=2026-10-10,2026-10-17`. `dates=today` is resolved by the server. Combined with `from` or `to` it is `400 invalid_filter` |
 | `state` | `active` (on a line now), `finished` (end total written), `abandoned` (neither) |
 | `targetCode` | Program number on the device, one or a comma-separated list: `targetCode=41,44` |
 | `targetTitle` | Program name contains text |
@@ -71,7 +71,7 @@ curl -H "Authorization: Bearer $TOKEN" \
       },
       "contestShooterName": null,
       "totals": [
-        { "targetType": "A5", "valuation": 5, "value": 31,
+        { "targetType": "A5", "valuation": 5, "value": 33,
           "fineValues": [74, 61, 78, 55, 59, 93, 60, 72, 44, 0] }
       ],
       "series": [
@@ -148,7 +148,7 @@ device prunes its oldest passes.
 | Endpoint | Returns |
 |---|---|
 | `GET /programs/{id}` | One pass, same shape as a list item |
-| `GET /shooters?q=&club=&from=&to=&dates=` | Registered shooters, paged. `q` matches name or licence; `from`/`to` or `dates` keeps only shooters with a pass on those days |
+| `GET /shooters?q=&club=&from=&to=&dates=` | Registered shooters, paged. `q` matches name or licence, `club` a club id; `from`/`to` or `dates` keeps only shooters with a pass on those days |
 | `GET /shooters/{license}` | Every shooter on that licence plus their passes (paged with `cursor`, `limit`, `order`) |
 | `GET /clubs?q=` | The Swiss club register as held by the device, paged |
 | `GET /program-catalog` | Distinct `(targetCode, targetTitle)` pairs with `timesShot` and `lastStartedAt`; operators rename programs freely. Not paged: `{ items }` only |

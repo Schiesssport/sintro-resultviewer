@@ -51,7 +51,7 @@ a synonym for something already listed.
 | hit sector | Trefferlage | `Shots.HitPosition` | Clock direction of the hit; `0` is no direction. API: `hitSector` |
 | valuation | Wertung | `Targetinformation.TargetValuation` | Ring scale: 4, 5, 10 or 100 |
 | target | Scheibe | `Targetinformation.TargetType` | A, B or Sau silhouette |
-| target code | — | derived | `A10`, `B4`, `S10`: target letter + valuation |
+| target type | — | derived | `A10`, `B4`, `S10`: target letter + valuation. API: `targetType` |
 | totals | Total / Resultat | derived | One sum per target and ring scale, never across scales. API: `totals` |
 | subtotal | Zwischentotal | derived | Sum of one series. API: `series[].subtotal` |
 | program catalog | — | derived | The distinct program numbers shot, with how often (`timesShot`) |

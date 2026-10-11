@@ -42,14 +42,18 @@ internal static class V2Query
         return null;
     }
 
-    public static ApiError? ParseDateList(string? raw, DateOnly? from, DateOnly? to, out List<DateOnly> dates)
+    // "today" is resolved here so a simple consumer never has to know which day the API calls today.
+    public static ApiError? ParseDateList(string? raw, DateOnly? from, DateOnly? to, DateOnly today, out List<DateOnly> dates)
     {
         dates = [];
         foreach (var part in SplitList(raw))
         {
-            if (!DateOnly.TryParseExact(part, "yyyy-MM-dd", out var date))
-                return new ApiError("invalid_filter", $"dates must be YYYY-MM-DD or a comma-separated list of such days, got '{part}'.");
-            dates.Add(date);
+            if (part.Equals("today", StringComparison.OrdinalIgnoreCase))
+                dates.Add(today);
+            else if (DateOnly.TryParseExact(part, "yyyy-MM-dd", out var date))
+                dates.Add(date);
+            else
+                return new ApiError("invalid_filter", $"dates must be YYYY-MM-DD, today, or a comma-separated list of such days, got '{part}'.");
         }
 
         return dates.Count > 0 && (from is not null || to is not null)

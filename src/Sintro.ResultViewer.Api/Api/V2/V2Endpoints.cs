@@ -16,9 +16,9 @@ public static class V2Endpoints
 
     // The numeric prefix is what the docs page sorts on: what is happening now, results, reference data, operations.
     public const string TagLive = "1 · Live";
-    public const string TagResults = "2 · Resultate";
-    public const string TagReference = "3 · Stammdaten";
-    public const string TagOperations = "4 · Betrieb";
+    public const string TagResults = "2 · Results";
+    public const string TagReference = "3 · Reference data";
+    public const string TagOperations = "4 · Operations";
 
     public static void MapV2(this WebApplication app)
     {
@@ -42,7 +42,7 @@ public static class V2Endpoints
     {
         api.MapGet("/programs", ListPrograms)
            .WithTags(TagResults)
-           .WithSummary("Programs (Passen), newest first")
+           .WithSummary("Programs (Stiche), newest first")
            .WithDescription(V2Descriptions.Programs);
 
         api.MapGet("/programs/{id:int}", GetProgram)
@@ -126,10 +126,7 @@ public static class V2Endpoints
         if (V2Query.ParseOrder(order, out var ascending) is { } orderError) return TypedResults.BadRequest(orderError);
         if (V2Query.ParseIntList("targetCode", targetCode, out var targetCodes) is { } targetError) return TypedResults.BadRequest(targetError);
         if (V2Query.ParseIntList("matchCode", matchCode, out var matchCodes) is { } matchError) return TypedResults.BadRequest(matchError);
-        if (V2Query.ParseDateList(dates, from, to, out var days) is { } datesError) return TypedResults.BadRequest(datesError);
-
-        // Today only unless a window, days or a cursor is given: the cursor is the position, and a stored one must not lose yesterday's late passes.
-        var explicitWindow = from is not null || to is not null || days.Count > 0 || !string.IsNullOrWhiteSpace(cursor);
+        if (V2Query.ParseDateList(dates, from, to, clock.Today, out var days) is { } datesError) return TypedResults.BadRequest(datesError);
 
         var filter = new ProgramFilter
         {
@@ -139,8 +136,8 @@ public static class V2Endpoints
             MatchCodes = matchCodes,
             Licenses = V2Query.SplitList(license),
             Lane = lane,
-            From = explicitWindow ? from : clock.Today,
-            To = explicitWindow ? to : clock.Today,
+            From = from,
+            To = to,
             Dates = days,
             WithoutResult = withoutResult,
             Ascending = ascending,
@@ -162,6 +159,7 @@ public static class V2Endpoints
 
     private static async Task<Results<Ok<CursorPage<Shooter>>, BadRequest<ApiError>>> ListShooters(
         ISintroRepository repository,
+        ISintroClock clock,
         IOptions<SintroOptions> options,
         CancellationToken token,
         [FromQuery] string? q = null,
@@ -172,7 +170,7 @@ public static class V2Endpoints
         [FromQuery] string? cursor = null,
         [FromQuery] int? limit = null)
     {
-        if (V2Query.ParseDateList(dates, from, to, out var days) is { } datesError) return TypedResults.BadRequest(datesError);
+        if (V2Query.ParseDateList(dates, from, to, clock.Today, out var days) is { } datesError) return TypedResults.BadRequest(datesError);
 
         return TypedResults.Ok(await repository.ListShootersAsync(
             new ShooterFilter

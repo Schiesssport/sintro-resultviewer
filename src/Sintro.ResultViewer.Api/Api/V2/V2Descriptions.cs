@@ -16,7 +16,7 @@ internal static class V2Descriptions
         event's shooting days (the range is also used for training), or `dates` listing them
         individually, page until `hasMore` is false and store the last `nextCursor`. Passing it
         again later with the same days returns exactly the passes that finished since, whenever
-        they started. Without a window a cursor request covers every day, not just today.
+        they started.
 
         Errors — every non-2xx answer carries `{"error": "<stable code>", "detail": "<text>"}`.
         """;
@@ -35,11 +35,12 @@ internal static class V2Descriptions
 
     public const string Programs = $"""
         One program is one shooter shooting one program on one lane at one time — a
-        "Passe". This is the main result endpoint.
+        "Stich" (its series are the "Passen"). This is the main result endpoint.
 
-        Defaults to today only; pass from and/or to for any other window, or dates as a
+        Every day unless filtered: pass from and/or to for a window, or dates as a
         comma-separated list of individual days (YYYY-MM-DD) for an event on non-contiguous
-        days. dates and from/to together are answered with 400. Programs with no
+        days. dates=today is resolved by the server, so a simple consumer never has to know
+        the date. dates and from/to together are answered with 400. Programs with no
         counting shots (aborted or cleared runs) are omitted unless withoutResult=true.
         Use /live for what is being shot right now.
 
@@ -79,9 +80,9 @@ internal static class V2Descriptions
 
     public const string Shooters = $"""
         Registering a shooter is optional, so a program may have none. q matches surname,
-        first name or licence number. With from and/or to (YYYY-MM-DD, inclusive), or dates
-        as a comma-separated list of days, only shooters with a pass started on those days
-        are listed.
+        first name or licence number. club keeps one club's shooters. With from and/or to
+        (YYYY-MM-DD, inclusive), or dates as a comma-separated list of days (today allowed),
+        only shooters with a pass started on those days are listed.
 
         {CollectionHelp}
         """;
@@ -110,7 +111,7 @@ internal static class V2Descriptions
 
     public const string Health = """
         The only data endpoint that needs no token, so monitoring can reach it. today is
-        the date the today-only default resolves to. publicExposure lists any non-private
+        the date dates=today resolves to. publicExposure lists any non-private
         network ranges the server is configured to accept. Answers 503 with the same body
         shape as every other error when the database cannot be reached.
         """;

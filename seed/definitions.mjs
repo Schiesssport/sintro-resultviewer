@@ -45,7 +45,7 @@ export const FINE_VALUE_BANDS = [
 // where the target is A, B or S, the kind P (Probe, sighting), E (Einzelfeuer, precision) or
 // S (Serienfeuer, rapid fire). The device stores number and name; the stages are what it
 // shoots. Numbers by family so they are easy to remember: 01x A5, 02x A10, 03x A100, 07x B4,
-// 09x special (91 changes target and valuation mid-pass, so the API withholds its grand total).
+// 09x special (91 changes target and valuation mid-pass, so the API answers two totals entries).
 export const PROGRAMS = [
     { number: 11, name: 'A5P2 A5E2 A5S3 A5S3' },
     { number: 21, name: 'A10P2 A10E10' },

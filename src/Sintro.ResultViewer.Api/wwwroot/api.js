@@ -52,6 +52,8 @@ export class SintroApi {
         if (date) {
             query.set('from', date);
             query.set('to', date);
+        } else {
+            query.set('dates', 'today');
         }
         if (state) query.set('state', state);
         query.set('limit', String(limit));

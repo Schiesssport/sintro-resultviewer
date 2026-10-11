@@ -33,3 +33,9 @@ export const isProbeAllowed = (input, origin) => {
     if (url.origin !== origin) return false;
     return url.pathname.startsWith('/api/') || url.pathname.startsWith('/openapi/');
 };
+
+// A paged list is tried with a small page: the default of 200 passes is more than a reader wants to scroll.
+export const tryUrl = (path, operation) =>
+    (operation?.parameters ?? []).some((parameter) => parameter.in === 'query' && parameter.name === 'limit')
+        ? `${path}?limit=50`
+        : path;

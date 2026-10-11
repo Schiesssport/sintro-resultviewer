@@ -34,8 +34,8 @@ elsewhere.
 - The 7 programs below and no others, in the operator's notation, one token per stage
   (`A5P2 A5E2 A5S3 A5S3` = two sighting shots, two precision, two series of three), parsed by
   `parseStages`. Numbered by family so they are easy to remember: 01x A5, 02x A10, 03x A100,
-  07x B4, 09x special. 91 changes target and valuation mid-pass, so the API withholds its grand
-  total; the eight-series A100 program (31) is stopped after 4, 5 or all 8 series (`stopAfter`
+  07x B4, 09x special. 91 changes target and valuation mid-pass, so the API answers two `totals`
+  entries; the eight-series A100 program (31) is stopped after 4, 5 or all 8 series (`stopAfter`
   on the pass).
 - 5 sessions in the last seven days, about 60 Stiche in all, roughly one in ten anonymous,
   every program shot by at least three different named shooters: four training evenings and an

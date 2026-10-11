@@ -17,9 +17,9 @@ export const addDay = (days, day) =>
 
 export const removeDay = (days, day) => days.filter((entry) => entry !== day);
 
-// The API query for the date filter: from/to, or dates as a comma-separated list. No day chosen is today.
+// The API query for the date filter: from/to, or dates as a comma-separated list. No day chosen is today, which the API resolves.
 export const dateQuery = ({ mode, from, to, days }) =>
-    mode === 'days' ? (days.length ? { dates: days.join(',') } : {}) : { from, to };
+    mode === 'days' ? { dates: days.length ? days.join(',') : 'today' } : { from, to };
 
 export const dateSummary = ({ mode, from, to, days }) =>
     mode === 'days' ? days.join(', ') : `${from} – ${to}`;

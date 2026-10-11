@@ -13,7 +13,7 @@ Free and open source, for Swiss shooting clubs.
 ## Für Anwender:innen
 
 **Sintro Resultviewer** zeigt die Resultate der Trefferanzeige im Browser: oben alle Linien mit
-des Stichs, der gerade geschossen wird, darunter die zuletzt beendeten – mit Schütze, Resultat und
+dem Stich, der gerade geschossen wird, darunter die zuletzt beendeten – mit Schütze, Resultat und
 allen Einzelschüssen. Bei den laufenden Stichen zeigt ein Ring um jeden Schuss, in welchem der acht
 Sektoren er sitzt.
 
@@ -117,9 +117,9 @@ with [`docs/api.md`](docs/api.md): access setup, the results list field by field
 | Endpoint | Returns |
 |---|---|
 | `GET /live` | Every line and the pass currently on it. The same URL upgrades to a **WebSocket** pushing changes |
-| `GET /programs` | Passes, newest first. `state`, `targetCode`, `targetTitle`, `matchCode`, `license`, `lane`, `from`, `to`, `withoutResult`, `order`, `cursor`, `limit` |
+| `GET /programs` | Passes, newest first. `state`, `targetCode`, `targetTitle`, `matchCode`, `license`, `lane`, `from`, `to`, `dates`, `withoutResult`, `order`, `cursor`, `limit` |
 | `GET /programs/{id}` | One pass with all series and shots |
-| `GET /shooters`, `/shooters/{license}` | Registered shooters, optionally only those with a pass in `from`/`to`; licence lookup with their passes (also cursor-paged) |
+| `GET /shooters`, `/shooters/{license}` | Registered shooters, optionally only those with a pass in `from`/`to` or on `dates`; licence lookup with their passes (also cursor-paged) |
 | `GET /clubs` | The Swiss club register held by the device |
 | `GET /program-catalog` | Distinct `(targetCode, targetTitle)` pairs present, how often shot and when last |
 | `GET /health` | Database reachability (no token required) |
@@ -138,7 +138,7 @@ finished since — nothing to diff. See [`docs/api.md`](docs/api.md).
 
 A few things worth knowing before building against it:
 
-- **Lists default to today.** Pass `from`/`to` for anything else.
+- **No date filter lists every day.** Pass `from`/`to`, or `dates` with days or `today`.
 - **`shooter` is `null` when nobody logged in at the line** — identifying yourself is optional —
   so `lane` and `startedAt` are what always identify a pass.
 - **A pass is `active`, `finished` or `abandoned`.** The third is real: started, never ended, and

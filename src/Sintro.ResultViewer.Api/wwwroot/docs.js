@@ -1,6 +1,6 @@
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
 import { escapeHtml } from './core/format.js';
-import { typeOf, groupByTag } from './core/openapi.js';
+import { typeOf, groupByTag, tryUrl } from './core/openapi.js';
 import { applyTranslations } from './dom.js';
 import { SintroApi } from './api.js';
 
@@ -50,7 +50,7 @@ const endpointCard = (path, method, operation, index) => `
                 ? '<p class="endpoint-note">Replace the placeholder in curly braces with a real value before sending, e.g. /api/v2/programs/2000 or /api/v2/shooters/123456.</p>'
                 : ''}
             <div class="try-row">
-                <input type="text" data-url="${index}" value="${escapeHtml(path)}" spellcheck="false">
+                <input type="text" data-url="${index}" value="${escapeHtml(tryUrl(path, operation))}" spellcheck="false">
                 <button class="btn-action" data-send="${index}">Send</button>
                 <button class="btn-secondary hidden" data-open="${index}">Open in browser</button>
             </div>

@@ -85,10 +85,10 @@ The consumer-facing guide is [`api.md`](api.md); this section is the reasoning b
   the table.
 - **`state=finished&order=asc` plus a stored cursor is an incremental sync.** Finished passes are
   keyed by finishing order (the end marker's `ShotID`), so a pass that ends late still arrives after
-  the cursor; a request with a cursor drops the today-only default; `nextCursor` is always present so
+  the cursor; `nextCursor` is always present so
   the last page leaves a position to resume from.
-- **Today only by default.** Shooting across midnight is unrealistic, and one consistent rule beats
-  special-casing the viewer. `from`/`to` widen the window.
+- **No date filter means every day.** `from`/`to` or `dates` narrow the list; `dates=today` is
+  resolved by the server, so the viewer and simple consumers never compute the date.
 - **A bad filter value is a 400, never an ignored parameter.** Dropping `?state=finishd` silently
   returned everything — the opposite of the request, and invisible to an importer. The same goes
   for a cursor this API did not issue, or one issued for the other sort order: `400 invalid_cursor`
@@ -96,8 +96,8 @@ The consumer-facing guide is [`api.md`](api.md); this section is the reasoning b
 - **One error shape.** Every non-2xx answer, from the middlewares as well as the endpoints, is
   `{"error": "<stable code>", "detail": "<text>"}` (`ApiError` in `Api/`). The viewer has exactly
   one error parser.
-- **Every list is `{items, nextCursor, hasMore}`**, the program catalog included, so one client
-  helper reads them all. `/live` answers `{lanes}` on GET and pushes the same frame on the socket,
+- **Every paged list is `{items, nextCursor, hasMore}`**, so one client helper reads them all; the
+  program catalog is `{items}` alone. `/live` answers `{lanes}` on GET and pushes the same frame on the socket,
   with no type tag: the URL already says what arrives.
 - **`totals` has one entry per target and ring scale**, each with its sum and the fine values of its
   shots in firing order. A pass that changed scale has two entries rather than one number that adds

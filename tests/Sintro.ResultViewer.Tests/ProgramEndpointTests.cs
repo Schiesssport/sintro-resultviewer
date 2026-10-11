@@ -99,14 +99,24 @@ public class ProgramEndpointTests(ApiFixture fixture)
     }
 
     [Fact]
-    public async Task theDefaultWindowIsASingleDay()
+    public async Task withoutADateFilterEveryDayIsListed()
     {
-        // No from/to means today only, and ReferenceDate pins today to the export's day.
-        var page = await ProgramsAsync("withoutResult=true&limit=5000");
-        if (page.Items.Count == 0) return;
+        var bare = await ProgramsAsync("withoutResult=true&limit=5000");
+        var whole = await ProgramsAsync($"{ApiFixture.WholeRange}&withoutResult=true&limit=5000");
 
-        var days = page.Items.Select(program => DateOnly.FromDateTime(program.StartedAt.Date)).Distinct();
-        Assert.Single(days);
+        Assert.NotEmpty(bare.Items);
+        Assert.Equal(whole.Items.Select(program => program.Id), bare.Items.Select(program => program.Id));
+    }
+
+    [Fact]
+    public async Task datesTodayIsResolvedByTheServer()
+    {
+        // ReferenceDate pins today to the export's day, so a consumer never has to know which day that is.
+        var spelled = await ProgramsAsync($"dates={ApiFixture.Today}&withoutResult=true&limit=5000");
+        var today = await ProgramsAsync("dates=today&withoutResult=true&limit=5000");
+
+        Assert.NotEmpty(spelled.Items);
+        Assert.Equal(spelled.Items.Select(program => program.Id), today.Items.Select(program => program.Id));
     }
 
     [Fact]

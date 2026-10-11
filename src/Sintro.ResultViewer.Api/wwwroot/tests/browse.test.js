@@ -42,8 +42,8 @@ describe('date filter', () => {
         assert.deepEqual(dateQuery({ mode: 'days', from: '2026-10-10', to: '2026-10-11', days: ['2026-10-03', '2026-10-10'] }), { dates: '2026-10-03,2026-10-10' });
     });
 
-    test('days without a day send nothing, which the API answers with today', () => {
-        assert.deepEqual(dateQuery({ mode: 'days', from: '', to: '', days: [] }), {});
+    test('days without a day ask for today, which the API resolves', () => {
+        assert.deepEqual(dateQuery({ mode: 'days', from: '', to: '', days: [] }), { dates: 'today' });
     });
 
     test('days stay sorted and unique, and an empty pick is ignored', () => {
