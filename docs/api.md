@@ -8,7 +8,8 @@ needs; the complete, generated reference is at `/docs` on the running service (o
 
 1. The operator adds a token for you in `appsettings.jsonc` under `Sintro:ApiReadTokens`, or as
    the environment variable `Sintro__ApiReadTokens__0=<token>`. 16 characters minimum, 128
-   recommended.
+   recommended, ASCII only: a browser sends header values Latin-1 encoded, and the server would
+   answer an umlaut in the header with a bare 400 before reaching the API.
 2. Your machine must sit in one of the `Sintro:Network:Api` ranges. Private LAN ranges are
    allowed by default; anything else is a `403 forbidden_network`.
 3. Send the token on every request:
@@ -20,6 +21,12 @@ Authorization: Bearer <token>
 
 Only `/api/v2/health` is open without a token.
 
+A page in a browser may call the API from any origin: every `/api` response carries
+`Access-Control-Allow-Origin: *`, and a preflight is answered without a token. Send the token on
+the request itself (`fetch(url, { headers: { Authorization: 'Bearer ...' } })`); the browser never
+sends cookies, so the wildcard is safe. Who may reach the API is still decided by the network
+ranges and the token, not by the page's origin.
+
 ## The results list: `GET /api/v2/programs`
 
 One item is one *program*: one shooter's pass at the target, a "Passe". Newest first.
@@ -27,6 +34,7 @@ One item is one *program*: one shooter's pass at the target, a "Passe". Newest f
 | Parameter | Meaning |
 |---|---|
 | `from`, `to` | Date window, `YYYY-MM-DD`, inclusive. **Default: today only.** |
+| `dates` | Individual days instead of a window, comma-separated: `dates=2026-10-10,2026-10-17`. Combined with `from` or `to` it is `400 invalid_filter` |
 | `state` | `active` (on a line now), `finished` (end total written), `abandoned` (neither) |
 | `targetCode` | Program number on the device, one or a comma-separated list: `targetCode=41,44` |
 | `targetTitle` | Program name contains text |
@@ -109,11 +117,11 @@ page, so the last page still gives you a position to resume from.
 
 To keep your own database up to date with the results of an event:
 
-1. Let the operator enter the event's shooting days, and always send them as `from` and `to`.
-   The range is also used for training and tests; without the window those passes would be
-   imported as results.
-2. `GET /programs?state=finished&order=asc&from=<first day>&to=<last day>` and page until
-   `hasMore` is `false`.
+1. Let the operator enter the event's shooting days, and always send them as `from` and `to`,
+   or as `dates` when the days are not contiguous. The range is also used for training and
+   tests; without the days those passes would be imported as results.
+2. `GET /programs?state=finished&order=asc&from=<first day>&to=<last day>` (or
+   `dates=<day>,<day>`) and page until `hasMore` is `false`.
 3. Store the last `nextCursor`.
 4. Later, call again with the same `from`, `to` and `cursor=<stored>`. You receive exactly the
    passes inside the window that finished since, whenever they were started, and no others. Store
@@ -140,7 +148,7 @@ device prunes its oldest passes.
 | Endpoint | Returns |
 |---|---|
 | `GET /programs/{id}` | One pass, same shape as a list item |
-| `GET /shooters?q=&club=&from=&to=` | Registered shooters, paged. `q` matches name or licence; `from`/`to` keeps only shooters with a pass in that window |
+| `GET /shooters?q=&club=&from=&to=&dates=` | Registered shooters, paged. `q` matches name or licence; `from`/`to` or `dates` keeps only shooters with a pass on those days |
 | `GET /shooters/{license}` | Every shooter on that licence plus their passes (paged with `cursor`, `limit`, `order`) |
 | `GET /clubs?q=` | The Swiss club register as held by the device, paged |
 | `GET /program-catalog` | Distinct `(targetCode, targetTitle)` pairs with `timesShot` and `lastStartedAt`; operators rename programs freely. Not paged: `{ items }` only |

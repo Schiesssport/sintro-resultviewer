@@ -31,6 +31,16 @@ public static class StartupChecks
                 Environment.NewLine + Environment.NewLine +
                 "  " + GenerateToken());
 
+        // Browsers send header values as Latin-1 and Kestrel reads UTF-8, so an umlaut in a token is a bare 400 from every browser client.
+        var nonAscii = settings.AllTokens.Where(token => token.Any(character => character > 127)).ToList();
+        if (nonAscii.Count > 0)
+            throw new InvalidOperationException(
+                $"{nonAscii.Count} configured API token(s) contain characters outside ASCII (umlauts, accents), " +
+                "which browsers cannot send in an Authorization header, so the API refuses to start. " +
+                "Use letters, digits and punctuation only, for example:" +
+                Environment.NewLine + Environment.NewLine +
+                "  " + GenerateToken());
+
         if (settings.ReadTokens.Intersect(settings.WriteTokens).Any())
             throw new InvalidOperationException(
                 "The same token appears in both Sintro:ApiReadTokens and Sintro:ApiWriteTokens. " +

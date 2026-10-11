@@ -32,8 +32,8 @@
     // and nothing else gets in.
     //
     // One token per consumer, so one can be revoked without disturbing the others. Minimum 16
-    // characters, 128 recommended; the service refuses to start on a shorter one. For example,
-    // in PowerShell:
+    // characters, 128 recommended, ASCII only (no umlauts: browsers cannot send them in a
+    // header); the service refuses to start otherwise. For example, in PowerShell:
     //   [Convert]::ToBase64String((1..64 | % { Get-Random -Max 256 }))
     "ApiReadTokens": [
       // "paste-a-long-random-token-here"
