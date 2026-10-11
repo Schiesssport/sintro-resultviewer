@@ -164,8 +164,8 @@ read across a room. They are real routes so each can be bookmarked and pointed a
 server returns the same page for the three of them and the client reads `location.pathname`. Any
 other path under `/fullscreen/` is a 404.
 
-`/browse` is the result browser (`browse.js` over `core/browse.js`). Every filter — date window,
-programme number, match code, licence — is an API query, so rows are always current; only the row
+`/browse` is the result browser (`browse.js` over `core/browse.js`). Every filter — date window or
+individual days, programme number, match code, licence — is an API query, so rows are always current; only the row
 shape (per pass, series or shot), the shot order, a result range and the column sort happen in the
 page. A shooter dialog lists the register, by default only shooters with a pass in the window
 (`GET /shooters?from&to`). An export dialog writes the visible rows as TSV to the clipboard or as a

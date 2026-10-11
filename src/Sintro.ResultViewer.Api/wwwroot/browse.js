@@ -3,7 +3,7 @@
 import { TRANSLATIONS, DEFAULT_LANGUAGE, translate } from './core/i18n.js';
 import { escapeHtml } from './core/format.js';
 import { messageRow, browseRowHtml } from './core/markup.js';
-import { parseList, buildRows, sortRows, filterShooters, summarize, filterByTotal, parseBound, exportText, exportFileName, EXPORT_COLUMNS, DEFAULT_EXPORT_COLUMNS } from './core/browse.js';
+import { parseList, buildRows, sortRows, filterShooters, summarize, filterByTotal, parseBound, exportText, exportFileName, EXPORT_COLUMNS, DEFAULT_EXPORT_COLUMNS, addDay, removeDay, dateQuery, dateSummary } from './core/browse.js';
 import { applyTranslations, readToday } from './dom.js';
 import { SintroApi } from './api.js';
 
@@ -28,9 +28,43 @@ const renderStaticText = () => {
     applyTranslations(t);
 };
 
+let days = [];
+
+const dateFilter = () => ({ mode: el('date-mode-select').value, from: el('from-input').value, to: el('to-input').value, days });
+
+const renderDays = () => {
+    el('day-list').innerHTML = days.map((day) =>
+        `<span class="day-chip">${day}<button type="button" data-remove-day="${day}" title="${escapeHtml(t('browse.removeDay'))}" aria-label="${escapeHtml(t('browse.removeDay'))}">&times;</button></span>`).join('');
+};
+
+// Switching to days starts from the window's first day, so the list is never empty by surprise.
+const onDateModeChange = () => {
+    const daysMode = el('date-mode-select').value === 'days';
+    el('range-filter').classList.toggle('hidden', daysMode);
+    el('days-filter').classList.toggle('hidden', !daysMode);
+    el('day-list').classList.toggle('hidden', !daysMode);
+    if (daysMode && days.length === 0) days = addDay(days, el('from-input').value);
+    renderDays();
+    load();
+};
+
+const onAddDay = () => {
+    days = addDay(days, el('day-input').value);
+    el('day-input').value = '';
+    renderDays();
+    load();
+};
+
+const onRemoveDay = (event) => {
+    const button = event.target.closest('[data-remove-day]');
+    if (!button) return;
+    days = removeDay(days, button.dataset.removeDay);
+    renderDays();
+    load();
+};
+
 const query = () => ({
-    from: el('from-input').value,
-    to: el('to-input').value,
+    ...dateQuery(dateFilter()),
     targetCode: parseList(el('target-code-input').value).join(','),
     matchCode: parseList(el('match-code-input').value).join(','),
     license: parseList(el('license-input').value).join(','),
@@ -116,7 +150,7 @@ const loadShooters = async () => {
     el('shooter-list').innerHTML = `<p class="message">${escapeHtml(t('browse.loading'))}</p>`;
     const windowed = el('shooter-window').checked;
     try {
-        shooters = await api.allShooters(windowed ? { from: el('from-input').value, to: el('to-input').value } : {});
+        shooters = await api.allShooters(windowed ? dateQuery(dateFilter()) : {});
         renderShooterList();
         el('shooter-search').focus();
     } catch (error) {
@@ -150,7 +184,7 @@ const selectedText = (id) => el(id).selectedOptions[0]?.textContent ?? '';
 const orNone = (text) => text || '–';
 
 const exportSummary = () => [
-    [t('browse.dateRange'), `${el('from-input').value} – ${el('to-input').value}`],
+    [t('browse.date'), dateSummary(dateFilter())],
     [t('browse.targetCode'), orNone(el('target-code-input').value)],
     [t('browse.matchCode'), orNone(el('match-code-input').value)],
     [t('browse.license'), orNone(el('license-input').value)],
@@ -222,6 +256,10 @@ const init = async () => {
         load();
     });
     for (const id of ['from-input', 'to-input']) el(id).addEventListener('change', load);
+    el('date-mode-select').addEventListener('change', onDateModeChange);
+    el('add-day').addEventListener('click', onAddDay);
+    el('day-input').addEventListener('change', onAddDay);
+    el('day-list').addEventListener('click', onRemoveDay);
     for (const id of ['target-code-input', 'match-code-input', 'license-input']) el(id).addEventListener('input', scheduleLoad);
     for (const id of ['group-select', 'detail-select', 'order-select']) el(id).addEventListener('change', render);
     for (const id of ['total-min-input', 'total-max-input']) el(id).addEventListener('input', render);

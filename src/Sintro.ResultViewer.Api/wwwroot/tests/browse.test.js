@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseList, buildRows, sortRows, filterShooters, summarize, filterByTotal, parseBound, exportText, exportFileName, EXPORT_COLUMNS, DEFAULT_EXPORT_COLUMNS } from '../core/browse.js';
+import { parseList, buildRows, sortRows, filterShooters, summarize, filterByTotal, parseBound, exportText, exportFileName, EXPORT_COLUMNS, DEFAULT_EXPORT_COLUMNS, DATE_MODES, addDay, removeDay, dateQuery, dateSummary } from '../core/browse.js';
 import { formatDateTime } from '../core/format.js';
 import { browseRowHtml } from '../core/markup.js';
 
@@ -33,6 +33,30 @@ describe('parseList', () => {
 
     test('numeric lists lose leading zeros so licences agree with the API', () => {
         assert.deepEqual(parseList('012345, 0', { numeric: true }), ['12345', '0']);
+    });
+});
+
+describe('date filter', () => {
+    test('a window queries from and to, days query a comma-separated dates list', () => {
+        assert.deepEqual(dateQuery({ mode: 'range', from: '2026-10-10', to: '2026-10-11', days: ['2026-10-03'] }), { from: '2026-10-10', to: '2026-10-11' });
+        assert.deepEqual(dateQuery({ mode: 'days', from: '2026-10-10', to: '2026-10-11', days: ['2026-10-03', '2026-10-10'] }), { dates: '2026-10-03,2026-10-10' });
+    });
+
+    test('days without a day send nothing, which the API answers with today', () => {
+        assert.deepEqual(dateQuery({ mode: 'days', from: '', to: '', days: [] }), {});
+    });
+
+    test('days stay sorted and unique, and an empty pick is ignored', () => {
+        assert.deepEqual(addDay(['2026-10-10'], '2026-10-03'), ['2026-10-03', '2026-10-10']);
+        assert.deepEqual(addDay(['2026-10-10'], '2026-10-10'), ['2026-10-10']);
+        assert.deepEqual(addDay(['2026-10-10'], ''), ['2026-10-10']);
+        assert.deepEqual(removeDay(['2026-10-03', '2026-10-10'], '2026-10-03'), ['2026-10-10']);
+    });
+
+    test('the export summary names the window or lists the days', () => {
+        assert.equal(dateSummary({ mode: 'range', from: '2026-10-10', to: '2026-10-11', days: [] }), '2026-10-10 – 2026-10-11');
+        assert.equal(dateSummary({ mode: 'days', from: '', to: '', days: ['2026-10-03', '2026-10-10'] }), '2026-10-03, 2026-10-10');
+        assert.deepEqual(DATE_MODES, ['range', 'days']);
     });
 });
 

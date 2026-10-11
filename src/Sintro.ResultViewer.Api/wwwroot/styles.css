@@ -753,8 +753,14 @@ body.is-fullscreen.is-ticker-hidden #ui-wrapper { padding-bottom: 0; }
 .browse-filters .filter-total { width: 170px; }
 .browse-filters .filter-order { width: 250px; }
 .browse-filters .filter-detail { width: 190px; }
+.browse-filters .filter-date-mode { width: 150px; }
 .browse-range { display: flex; gap: 6px; }
 .browse-range input { flex: 1 1 0; }
+.browse-range .btn-secondary { flex: 0 0 auto; }
+.day-list { display: flex; flex-wrap: wrap; gap: 6px; align-self: center; max-width: 320px; }
+.day-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; border-radius: var(--radius); background: var(--row-focus); font-size: 12px; font-variant-numeric: tabular-nums; }
+.day-chip button { border: 0; background: none; color: var(--ink-soft); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 4px; }
+.day-chip button:hover { color: var(--danger-ink); }
 .browse-actions { display: flex; align-items: center; gap: 8px; white-space: nowrap; height: var(--btn-height); }
 
 table.browse .cg-time      { width: 104px; }

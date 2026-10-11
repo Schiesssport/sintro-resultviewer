@@ -8,6 +8,22 @@ export const parseList = (text, { numeric = false } = {}) =>
         .filter(Boolean)
         .map((part) => (numeric ? part.replace(/^0+(?=\d)/, '') : part));
 
+// The date filter is a window by default; "days" lists individual dates for an event whose days
+// are not contiguous, when a window would sweep up the training in between.
+export const DATE_MODES = ['range', 'days'];
+
+export const addDay = (days, day) =>
+    !day || days.includes(day) ? [...days] : [...days, day].sort();
+
+export const removeDay = (days, day) => days.filter((entry) => entry !== day);
+
+// The API query for the date filter: from/to, or dates as a comma-separated list. No day chosen is today.
+export const dateQuery = ({ mode, from, to, days }) =>
+    mode === 'days' ? (days.length ? { dates: days.join(',') } : {}) : { from, to };
+
+export const dateSummary = ({ mode, from, to, days }) =>
+    mode === 'days' ? days.join(', ') : `${from} – ${to}`;
+
 const countingShots = (program) => (program.series ?? []).flatMap((series) => series.shots ?? []);
 
 const byValueDesc = (a, b) => (b.value - a.value) || ((b.fineValue ?? 0) - (a.fineValue ?? 0));
