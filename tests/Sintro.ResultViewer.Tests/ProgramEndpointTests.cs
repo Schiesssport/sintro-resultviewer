@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Sintro.ResultViewer.Api;
 using Sintro.ResultViewer.Api.V2;
 using Sintro.ResultViewer.Domain;
 using Sintro.ResultViewer.Live;
@@ -290,6 +291,39 @@ public class ProgramEndpointTests(ApiFixture fixture)
 
         var response = await Client().GetAsync($"/api/v2/programs?{ApiFixture.WholeRange}&targetCode=41,abc");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task datesListsIndividualDaysAndEqualsTheSameDayAsAWindow()
+    {
+        var all = await AllProgramsAsync();
+        var days = all.Items.Select(program => DateOnly.FromDateTime(program.StartedAt.Date)).Distinct().OrderBy(day => day).ToList();
+        Assert.NotEmpty(days);
+
+        var single = days[0].ToString("yyyy-MM-dd");
+        var windowed = await ProgramsAsync($"from={single}&to={single}&withoutResult=true&limit=5000");
+        var listed = await ProgramsAsync($"dates={single}&withoutResult=true&limit=5000");
+        Assert.Equal(windowed.Items.Select(program => program.Id), listed.Items.Select(program => program.Id));
+
+        if (days.Count < 2) return;
+        var two = $"{days[0]:yyyy-MM-dd},{days[^1]:yyyy-MM-dd}";
+        var both = await ProgramsAsync($"dates={two}&withoutResult=true&limit=5000");
+        Assert.All(both.Items, program => Assert.Contains(DateOnly.FromDateTime(program.StartedAt.Date), new[] { days[0], days[^1] }));
+        Assert.Contains(both.Items, program => DateOnly.FromDateTime(program.StartedAt.Date) == days[^1]);
+    }
+
+    [Fact]
+    public async Task datesRefusesAWindowAlongsideAndAMalformedDay()
+    {
+        var mixed = await Client().GetAsync($"/api/v2/programs?dates={ApiFixture.Today}&from={ApiFixture.Today}");
+        Assert.Equal(HttpStatusCode.BadRequest, mixed.StatusCode);
+        Assert.Equal("invalid_filter", (await mixed.Content.ReadFromJsonAsync<ApiError>(SintroJson.Options))!.Error);
+
+        var malformed = await Client().GetAsync("/api/v2/programs?dates=10.10.2026");
+        Assert.Equal(HttpStatusCode.BadRequest, malformed.StatusCode);
+
+        var shooters = await Client().GetAsync($"/api/v2/shooters?dates={ApiFixture.Today}&to={ApiFixture.Today}");
+        Assert.Equal(HttpStatusCode.BadRequest, shooters.StatusCode);
     }
 
     [Fact]

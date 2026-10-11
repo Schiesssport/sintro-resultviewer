@@ -28,6 +28,12 @@ public sealed partial class SintroRepository(string connectionString, ISintroClo
         return (rows, rows.Count > 0 ? encodeCursor(rows[^1]) : null, hasMore);
     }
 
+    // Dapper expands a list into IN (...); an empty list would expand to invalid SQL, so a never-matching day stands in behind @anyDate = 0.
+    private static List<DateTime> DateListParameter(IReadOnlyList<DateOnly> dates) =>
+        dates.Count > 0
+            ? dates.Select(date => date.ToDateTime(TimeOnly.MinValue).Date).ToList()
+            : [new DateTime(1900, 1, 1)];
+
     // LIKE treats %, _ and [ as wildcards; escaping them makes the caller's text match literally.
     private static string? ContainsPattern(string? text)
     {

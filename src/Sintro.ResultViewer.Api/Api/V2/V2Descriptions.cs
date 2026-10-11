@@ -13,10 +13,10 @@ internal static class V2Descriptions
         `invalid_cursor` rather than silently restarting from page one.
 
         Syncing results — request `state=finished&order=asc` with `from` and `to` set to the
-        event's shooting days (the range is also used for training), page until `hasMore` is
-        false and store the last `nextCursor`. Passing it again later with the same window
-        returns exactly the passes that finished since, whenever they started. Without a window a
-        cursor request covers every day, not just today.
+        event's shooting days (the range is also used for training), or `dates` listing them
+        individually, page until `hasMore` is false and store the last `nextCursor`. Passing it
+        again later with the same days returns exactly the passes that finished since, whenever
+        they started. Without a window a cursor request covers every day, not just today.
 
         Errors — every non-2xx answer carries `{"error": "<stable code>", "detail": "<text>"}`.
         """;
@@ -37,7 +37,9 @@ internal static class V2Descriptions
         One program is one shooter shooting one program on one lane at one time — a
         "Passe". This is the main result endpoint.
 
-        Defaults to today only; pass from and/or to for any other window. Programs with no
+        Defaults to today only; pass from and/or to for any other window, or dates as a
+        comma-separated list of individual days (YYYY-MM-DD) for an event on non-contiguous
+        days. dates and from/to together are answered with 400. Programs with no
         counting shots (aborted or cleared runs) are omitted unless withoutResult=true.
         Use /live for what is being shot right now.
 
@@ -77,8 +79,9 @@ internal static class V2Descriptions
 
     public const string Shooters = $"""
         Registering a shooter is optional, so a program may have none. q matches surname,
-        first name or licence number. With from and/or to (YYYY-MM-DD, inclusive) only
-        shooters with a pass started inside that window are listed.
+        first name or licence number. With from and/or to (YYYY-MM-DD, inclusive), or dates
+        as a comma-separated list of days, only shooters with a pass started on those days
+        are listed.
 
         {CollectionHelp}
         """;

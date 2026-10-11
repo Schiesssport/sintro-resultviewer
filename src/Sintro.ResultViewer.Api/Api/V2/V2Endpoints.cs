@@ -116,6 +116,7 @@ public static class V2Endpoints
         [FromQuery] int? lane = null,
         [FromQuery] DateOnly? from = null,
         [FromQuery] DateOnly? to = null,
+        [FromQuery] string? dates = null,
         [FromQuery] bool withoutResult = false,
         [FromQuery] string? order = null,
         [FromQuery] string? cursor = null,
@@ -125,9 +126,10 @@ public static class V2Endpoints
         if (V2Query.ParseOrder(order, out var ascending) is { } orderError) return TypedResults.BadRequest(orderError);
         if (V2Query.ParseIntList("targetCode", targetCode, out var targetCodes) is { } targetError) return TypedResults.BadRequest(targetError);
         if (V2Query.ParseIntList("matchCode", matchCode, out var matchCodes) is { } matchError) return TypedResults.BadRequest(matchError);
+        if (V2Query.ParseDateList(dates, from, to, out var days) is { } datesError) return TypedResults.BadRequest(datesError);
 
-        // Today only unless a window or a cursor is given: the cursor is the position, and a stored one must not lose yesterday's late passes.
-        var explicitWindow = from is not null || to is not null || !string.IsNullOrWhiteSpace(cursor);
+        // Today only unless a window, days or a cursor is given: the cursor is the position, and a stored one must not lose yesterday's late passes.
+        var explicitWindow = from is not null || to is not null || days.Count > 0 || !string.IsNullOrWhiteSpace(cursor);
 
         var filter = new ProgramFilter
         {
@@ -139,6 +141,7 @@ public static class V2Endpoints
             Lane = lane,
             From = explicitWindow ? from : clock.Today,
             To = explicitWindow ? to : clock.Today,
+            Dates = days,
             WithoutResult = withoutResult,
             Ascending = ascending,
             Cursor = cursor,
@@ -157,7 +160,7 @@ public static class V2Endpoints
             : TypedResults.Ok(program);
     }
 
-    private static async Task<Ok<CursorPage<Shooter>>> ListShooters(
+    private static async Task<Results<Ok<CursorPage<Shooter>>, BadRequest<ApiError>>> ListShooters(
         ISintroRepository repository,
         IOptions<SintroOptions> options,
         CancellationToken token,
@@ -165,18 +168,24 @@ public static class V2Endpoints
         [FromQuery] int? club = null,
         [FromQuery] DateOnly? from = null,
         [FromQuery] DateOnly? to = null,
+        [FromQuery] string? dates = null,
         [FromQuery] string? cursor = null,
-        [FromQuery] int? limit = null) =>
-        TypedResults.Ok(await repository.ListShootersAsync(
+        [FromQuery] int? limit = null)
+    {
+        if (V2Query.ParseDateList(dates, from, to, out var days) is { } datesError) return TypedResults.BadRequest(datesError);
+
+        return TypedResults.Ok(await repository.ListShootersAsync(
             new ShooterFilter
             {
                 Query = q,
                 ClubId = club,
                 From = from,
                 To = to,
+                Dates = days,
                 Limit = V2Query.ClampLimit(limit, options.Value),
                 Cursor = cursor,
             }, token));
+    }
 
     private static async Task<Results<Ok<ShooterDetail>, NotFound<ApiError>, BadRequest<ApiError>>> GetShooter(
         string license,

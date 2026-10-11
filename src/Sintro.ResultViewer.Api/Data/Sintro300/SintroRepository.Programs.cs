@@ -44,6 +44,7 @@ public sealed partial class SintroRepository
     private const string ProgramWhere = """
         WHERE   (@from        IS NULL OR CONVERT(date, e.StartedAt) >= @from)
           AND   (@to          IS NULL OR CONVERT(date, e.StartedAt) <= @to)
+          AND   (@anyDate = 0 OR CONVERT(date, e.StartedAt) IN @dates)
           AND   (@anyTargetCode = 0 OR e.Number IN @targetCodes)
           AND   (@anyMatchCode = 0 OR EXISTS (SELECT 1 FROM dbo.Shots s
                                             WHERE s.ProgramID = e.ProgramID AND s.ShotNr <> 9999
@@ -94,6 +95,8 @@ public sealed partial class SintroRepository
         var parameters = new DynamicParameters();
         parameters.Add("from", filter.From?.ToDateTime(TimeOnly.MinValue).Date);
         parameters.Add("to", filter.To?.ToDateTime(TimeOnly.MinValue).Date);
+        parameters.Add("anyDate", filter.Dates.Count > 0 ? 1 : 0);
+        parameters.Add("dates", DateListParameter(filter.Dates));
         parameters.Add("anyTargetCode", filter.TargetCodes.Count > 0 ? 1 : 0);
         parameters.Add("targetCodes", filter.TargetCodes.Count > 0 ? filter.TargetCodes : [0]);
         parameters.Add("anyMatchCode", filter.MatchCodes.Count > 0 ? 1 : 0);

@@ -21,9 +21,11 @@ public sealed partial class SintroRepository
         var parameters = new DynamicParameters();
         parameters.Add("query", ContainsPattern(filter.Query));
         parameters.Add("clubId", filter.ClubId);
-        parameters.Add("windowed", filter.From is not null || filter.To is not null ? 1 : 0);
+        parameters.Add("windowed", filter.From is not null || filter.To is not null || filter.Dates.Count > 0 ? 1 : 0);
         parameters.Add("from", filter.From?.ToDateTime(TimeOnly.MinValue).Date);
         parameters.Add("to", filter.To?.ToDateTime(TimeOnly.MinValue).Date);
+        parameters.Add("anyDate", filter.Dates.Count > 0 ? 1 : 0);
+        parameters.Add("dates", DateListParameter(filter.Dates));
         var cursorClause = ShooterCursorClause(filter.Cursor, parameters);
 
         var (rows, nextCursor, hasMore) = await QueryPageAsync<ShooterRow>(connection, $"""
@@ -33,7 +35,8 @@ public sealed partial class SintroRepository
                         SELECT 1 FROM dbo.Programs p
                         WHERE p.ShooterID = sh.ShooterID
                           AND (@from IS NULL OR CONVERT(date, {string.Format(StartedAtSql, "p.StartTime")}) >= @from)
-                          AND (@to   IS NULL OR CONVERT(date, {string.Format(StartedAtSql, "p.StartTime")}) <= @to)))
+                          AND (@to   IS NULL OR CONVERT(date, {string.Format(StartedAtSql, "p.StartTime")}) <= @to)
+                          AND (@anyDate = 0 OR CONVERT(date, {string.Format(StartedAtSql, "p.StartTime")}) IN @dates)))
               AND   (@query  IS NULL
                      OR sh.LastName  LIKE @query ESCAPE '\'
                      OR sh.FirstName LIKE @query ESCAPE '\'

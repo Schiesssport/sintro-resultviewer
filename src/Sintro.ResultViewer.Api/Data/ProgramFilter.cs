@@ -13,6 +13,8 @@ public sealed record ProgramFilter
     public int? Lane { get; init; }
     public DateOnly? From { get; init; }
     public DateOnly? To { get; init; }
+    /// <summary>Individual start days, an alternative to the From/To window for events on non-contiguous days.</summary>
+    public IReadOnlyList<DateOnly> Dates { get; init; } = [];
 
     /// <summary>Include passes with no counting shots (aborted or cleared runs); off by default so lists show results.</summary>
     public bool WithoutResult { get; init; }
