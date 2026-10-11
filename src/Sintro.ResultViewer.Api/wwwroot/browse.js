@@ -257,7 +257,6 @@ const init = async () => {
     });
     for (const id of ['from-input', 'to-input']) el(id).addEventListener('change', load);
     el('date-mode-select').addEventListener('change', onDateModeChange);
-    el('add-day').addEventListener('click', onAddDay);
     el('day-input').addEventListener('change', onAddDay);
     el('day-list').addEventListener('click', onRemoveDay);
     for (const id of ['target-code-input', 'match-code-input', 'license-input']) el(id).addEventListener('input', scheduleLoad);

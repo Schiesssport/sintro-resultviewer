@@ -744,24 +744,26 @@ body.is-fullscreen.is-ticker-hidden #ui-wrapper { padding-bottom: 0; }
 
 /* Two groups, filters then display options. Each stays on one line while it fits; the display group
    drops to its own line first, and only then do the groups wrap internally. */
-.browse-filters { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; margin-bottom: 16px; }
-.filter-group { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; }
+/* Labels align at the top, so a date block that grows a row of day chips extends downward without
+   dragging its neighbours along. */
+.browse-filters { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-start; margin-bottom: 16px; }
+.filter-group { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-start; }
 .browse-filters label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--label); width: 150px; }
 .browse-filters input, .browse-filters select { width: 100%; min-width: 0; }
-.browse-filters .filter-date { width: 300px; }
+.browse-filters .filter-date { display: flex; flex-direction: column; gap: 4px; width: 300px; font-size: 12px; color: var(--label); }
+.filter-date-head { display: flex; justify-content: space-between; align-items: center; height: 1.4em; }
+.browse-filters .date-mode { width: auto; height: 22px; padding: 0 22px 0 6px; font-size: 11px; line-height: 1; color: var(--ink-soft); background-position: right 6px center; }
 .browse-filters .filter-license { width: 200px; }
 .browse-filters .filter-total { width: 170px; }
 .browse-filters .filter-order { width: 250px; }
 .browse-filters .filter-detail { width: 190px; }
-.browse-filters .filter-date-mode { width: 150px; }
 .browse-range { display: flex; gap: 6px; }
 .browse-range input { flex: 1 1 0; }
-.browse-range .btn-secondary { flex: 0 0 auto; }
-.day-list { display: flex; flex-wrap: wrap; gap: 6px; align-self: center; max-width: 320px; }
+.day-list { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; }
 .day-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; border-radius: var(--radius); background: var(--row-focus); font-size: 12px; font-variant-numeric: tabular-nums; }
-.day-chip button { border: 0; background: none; color: var(--ink-soft); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 4px; }
+.day-chip button { border: 0; background: none; color: var(--ink-soft); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 4px; height: auto; min-height: 0; }
 .day-chip button:hover { color: var(--danger-ink); }
-.browse-actions { display: flex; align-items: center; gap: 8px; white-space: nowrap; height: var(--btn-height); }
+.browse-actions { display: flex; align-items: center; gap: 8px; white-space: nowrap; height: var(--btn-height); align-self: flex-end; }
 
 table.browse .cg-time      { width: 104px; }
 table.browse .cg-license   { width: 72px; }

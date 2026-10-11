@@ -27,28 +27,23 @@
     <div class="card">
         <form class="browse-filters" id="filters">
             <div class="filter-group">
-            <label class="filter-date-mode">
-                <span data-i18n="browse.date">Datum</span>
-                <select id="date-mode-select">
-                    <option value="range" data-i18n="browse.dateMode.range">Zeitraum</option>
-                    <option value="days" data-i18n="browse.dateMode.days">Einzelne Tage</option>
-                </select>
-            </label>
-            <label class="filter-date" id="range-filter">
-                <span data-i18n="browse.dateRange">Datumsbereich</span>
-                <span class="browse-range">
+            <div class="filter-date">
+                <span class="filter-date-head">
+                    <label for="from-input" data-i18n="browse.date">Datum</label>
+                    <select id="date-mode-select" class="date-mode" data-i18n-aria-label="browse.date" aria-label="Datum">
+                        <option value="range" data-i18n="browse.dateMode.range">Zeitraum</option>
+                        <option value="days" data-i18n="browse.dateMode.days">Einzelne Tage</option>
+                    </select>
+                </span>
+                <span class="browse-range" id="range-filter">
                     <input type="date" id="from-input">
                     <input type="date" id="to-input">
                 </span>
-            </label>
-            <label class="filter-date hidden" id="days-filter">
-                <span data-i18n="browse.days">Tage</span>
-                <span class="browse-range">
-                    <input type="date" id="day-input">
-                    <button type="button" class="btn-secondary" id="add-day" data-i18n="browse.addDay">Hinzufügen</button>
+                <span class="browse-range hidden" id="days-filter">
+                    <input type="date" id="day-input" data-i18n-title="browse.pickDay" title="Tag wählen, er wird der Liste hinzugefügt">
                 </span>
-            </label>
-            <span class="day-list hidden" id="day-list"></span>
+                <span class="day-list hidden" id="day-list"></span>
+            </div>
             <label>
                 <span data-i18n="browse.targetCode">Programmnummer</span>
                 <span class="input-with-button">
