@@ -33,7 +33,7 @@ export const formatDateTime = (iso, locale, { withYear = false } = {}) => {
     return match ? `${formatDay(match[1], locale, { withYear })} ${match[2]}` : '';
 };
 
-// Most passes are anonymous; the chain name → licence → free text → line + time never fails.
+// A pass has a shooter only when one logged in; the chain name → licence → free text → line + time never fails.
 export const shooterLabel = (program, t) => {
     const shooter = program.shooter ?? null;
 
@@ -59,6 +59,7 @@ export const shooterLabel = (program, t) => {
 
 // In the sport, 4er and 5er results are added together (an A5 series and a B4 series make one result);
 // every other scale stands alone, and a series whose scale the device never recorded does too.
+// Within one scale the target letter does not matter: an A10 and a B10 series are one result.
 const SCALES_SUMMED_TOGETHER = [4, 5];
 
 const scaleFamily = (valuation) =>

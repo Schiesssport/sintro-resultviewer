@@ -132,7 +132,8 @@ parts live:
 - `format.js`: labels, the shooter fallback chain, and the result a pass shows. It is derived from
   `series[]`, never read from `totals`: 4er and 5er series add up to one number, any other mix
   shows every scale labelled (`A10 87` beside `A100 173`), and a live lane shows only the scale
-  being shot right now.
+  being shot right now. Within one scale the target letter does not matter: an A10 and a B10
+  series are one result, where the API keeps one `totals` entry per target. Both are on purpose.
 - `markup.js`: the HTML strings of every view.
 - `sectors.js`: the hit dial. A wedge per sector; the ring turns black on `innerTen` only, a bare
   sector 0 stays blank.

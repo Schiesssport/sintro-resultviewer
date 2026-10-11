@@ -1,5 +1,6 @@
 import { INITIAL_RETRY_MS, nextRetryDelay } from './core/reconnect.js';
 import { isProbeAllowed } from './core/openapi.js';
+import { describeFailure, prettyJson } from './core/http.js';
 
 const openSocket = (url, { onOpen, onMessage, onClose }) => {
     const ws = new WebSocket(url);
@@ -16,14 +17,6 @@ const openSocket = (url, { onOpen, onMessage, onClose }) => {
     return ws;
 };
 
-const prettyJson = (text) => {
-    try {
-        return JSON.stringify(JSON.parse(text), null, 2);
-    } catch {
-        return text;
-    }
-};
-
 export class SintroApi {
     constructor(token) {
         this.token = token;
@@ -38,7 +31,7 @@ export class SintroApi {
         const body = await response.text();
 
         if (!response.ok) {
-            throw new Error(this.describeFailure(response.status, body));
+            throw new Error(describeFailure(response.status, body));
         }
 
         return body ? JSON.parse(body) : null;
@@ -52,16 +45,6 @@ export class SintroApi {
 
         const response = await fetch(path, { headers: this.headers });
         return { status: response.status, statusText: response.statusText, body: prettyJson(await response.text()) };
-    }
-
-    describeFailure(status, body) {
-        try {
-            const parsed = JSON.parse(body);
-            if (parsed?.detail) return `${status} — ${parsed.detail}`;
-            if (parsed?.error) return `${status} — ${parsed.error}`;
-        } catch {
-        }
-        return `HTTP ${status}`;
     }
 
     programs({ date, state, limit = 100 }) {

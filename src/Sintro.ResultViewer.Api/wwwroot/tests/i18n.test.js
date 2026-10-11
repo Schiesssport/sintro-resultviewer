@@ -31,7 +31,7 @@ const pageFiles = () => [
 const keysInUse = () => {
     const keys = keysInFiles(pageFiles());
 
-    // Built from state: t(`live.${state}`), t(display.reasonKey), t(`fullscreen.mode.${target}`).
+    // Built from state: t(`live.${state}`) in app.js, t(`fullscreen.mode.${mode}`) in boards-dialog.js.
     for (const key of [
         'live.connected', 'live.connecting', 'live.offline',
         'fullscreen.mode.live+results', 'fullscreen.mode.live', 'fullscreen.mode.results',

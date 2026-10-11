@@ -162,6 +162,10 @@ describe('resultText', () => {
         assert.equal(resultText(program()), '31');
     });
 
+    test('one scale on two targets is one result: the rings are the same', () => {
+        assert.equal(resultText(program({ series: [series('A10', 10, 87), series('B10', 10, 50)] })), '137');
+    });
+
     test('labelled sums when scales do not add', () => {
         assert.equal(resultText(program({ series: [series('A10', 10, 87), series('A100', 100, 173)] })), 'A10 87 · A100 173');
     });
@@ -185,7 +189,7 @@ describe('activeTotal', () => {
 describe('laneContext', () => {
     test('club and program, separated by a middle dot', () => {
         assert.equal(
-            laneContext(program({ shooter: { club: { name: 'SG Muster' } }, name: 'Obligatorisches Programm' })),
+            laneContext(program({ shooter: { club: { name: 'SG Muster' } }, targetTitle: 'Obligatorisches Programm' })),
             'SG Muster · Obligatorisches Programm');
     });
 
@@ -268,7 +272,7 @@ describe('shotGroups', () => {
     test('sighting shots are excluded — they are not the result', () => {
         const groups = shotGroups(program({
             series: [{ targetType: 'A10', subtotal: 9, shots: [{ value: 9 }] }],
-            sighting: { targetType: 'A5', subtotal: 5, shots: [{ value: 5 }] },
+            sighting: [{ targetType: 'A5', valuation: 5, subtotal: 5, shots: [{ value: 5 }] }],
         }));
 
         assert.equal(groups.length, 1);
