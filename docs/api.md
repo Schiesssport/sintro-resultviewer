@@ -8,8 +8,8 @@ needs; the complete, generated reference is at `/docs` on the running service (o
 
 1. The operator adds a token for you in `appsettings.jsonc` under `Sintro:ApiReadTokens`, or as
    the environment variable `Sintro__ApiReadTokens__0=<token>`. 16 characters minimum, 128
-   recommended, ASCII only: a browser sends header values Latin-1 encoded, and the server would
-   answer an umlaut in the header with a bare 400 before reaching the API.
+   recommended, ASCII only and no spaces: a browser sends header values Latin-1 encoded, and the
+   server would answer an umlaut in the header with a bare 400 before reaching the API.
 2. Your machine must sit in one of the `Sintro:Network:Api` ranges; the shipped settings list
    the private LAN ranges. Anything else is a `403 forbidden_network`.
 3. Send the token on every request:

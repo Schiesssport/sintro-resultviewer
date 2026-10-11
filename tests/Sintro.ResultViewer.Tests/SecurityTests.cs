@@ -240,6 +240,17 @@ public class SecurityTests(ApiFixture fixture)
     }
 
     [Fact]
+    public async Task theOpenApiDocumentCarriesNoLicenceShapedNumberButTheDocumentedExamples()
+    {
+        // Licences are six digits today, up to nine planned; the export check above only knows the shooters it was given.
+        var spec = await fixture.CreateClient().GetStringAsync("/openapi/v2.json");
+        var documentedExamples = new[] { "12345", "012345", "123456" };
+
+        var numbers = System.Text.RegularExpressions.Regex.Matches(spec, @"(?<![\d.])\d{5,9}(?![\d.])").Select(match => match.Value);
+        Assert.All(numbers, number => Assert.Contains(number, documentedExamples));
+    }
+
+    [Fact]
     public async Task theLiveEndpointServesLaneStateOverPlainHttp()
     {
         var response = await fixture.CreateAuthorizedClient().GetAsync("/api/v2/live");
@@ -310,6 +321,19 @@ public class StartupCheckTests
             Check(new SintroOptions { ApiReadTokens = [token] }));
 
         Assert.Contains("outside ASCII", error.Message);
+    }
+
+    [Theory]
+    [InlineData(" feldschuetzen-token-0123456789")]
+    [InlineData("feldschuetzen-token-0123456789\t")]
+    [InlineData("feldschuetzen token 0123456789")]
+    public void aTokenWithWhitespace_refusesToStart(string token)
+    {
+        // The presented token is trimmed and sent as one header value; a configured one with whitespace could never match.
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            Check(new SintroOptions { ApiReadTokens = [token] }));
+
+        Assert.Contains("whitespace", error.Message);
     }
 
     [Fact]

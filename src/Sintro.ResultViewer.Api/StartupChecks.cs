@@ -41,6 +41,15 @@ public static class StartupChecks
                 Environment.NewLine + Environment.NewLine +
                 "  " + GenerateToken());
 
+        // The presented token is trimmed and travels as one header value, so a configured one holding whitespace could never match.
+        var withWhitespace = settings.AllTokens.Count(token => token.Any(char.IsWhiteSpace));
+        if (withWhitespace > 0)
+            throw new InvalidOperationException(
+                $"{withWhitespace} configured API token(s) contain whitespace, which a client cannot send, " +
+                "so the API refuses to start. Remove the spaces, or generate a fresh one:" +
+                Environment.NewLine + Environment.NewLine +
+                "  " + GenerateToken());
+
         if (settings.ReadTokens.Intersect(settings.WriteTokens).Any())
             throw new InvalidOperationException(
                 "The same token appears in both Sintro:ApiReadTokens and Sintro:ApiWriteTokens. " +
